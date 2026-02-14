@@ -88,6 +88,8 @@ export interface InventoryItem {
   unitCost: number; // Cost per unit for the clinic
   minStockLevel: number; // Minimum stock before re-order alert
   expiryDate?: string; // YYYY-MM-DD
+  source?: 'manual' | 'supplier_invoice'; // Track how the item was added/updated
+  supplierInvoiceId?: string; // Link to the supplier invoice if added via invoice
 }
 
 export enum ExpenseCategory {
@@ -260,7 +262,7 @@ export interface SupplierInvoice {
     dueDate?: string; // YYYY-MM-DD
     amount: number;
     status: SupplierInvoiceStatus;
-    items: { description: string; amount: number; }[];
+    items: { description: string; amount: number; inventoryItemId?: string; quantity?: number; }[];
     payments: { expenseId: string; amount: number; date: string; }[];
     labCaseId?: string; // Optional lab case ID for dental lab invoices
     invoiceImageUrl?: string; // URL for the invoice image

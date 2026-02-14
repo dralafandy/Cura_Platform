@@ -302,23 +302,23 @@ const CreatePurchaseOrderModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-900/30 dark:to-amber-900/20">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+                <header className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-900/30 dark:to-amber-900/20 flex-shrink-0">
+                    <h2 className="text-base sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">
                         {editingOrder ? t('purchaseOrder.editDraft') : t('purchaseOrder.createOrder')}
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </header>
 
-                <main className="p-6 overflow-y-auto flex-1 space-y-6">
+                <main className="p-3 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-6">
                     {/* Order Name (for draft identification) */}
                     <div>
-                        <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400 mb-1.5 sm:mb-2">
                             {t('purchaseOrder.orderName')} ({t('purchaseOrder.optional')})
                         </label>
                         <input
@@ -326,19 +326,19 @@ const CreatePurchaseOrderModal: React.FC<{
                             value={orderName}
                             onChange={(e) => setOrderName(e.target.value)}
                             placeholder={t('purchaseOrder.orderNamePlaceholder')}
-                            className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            className="p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
                     {/* Supplier Selection */}
                     <div>
-                        <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400 mb-1.5 sm:mb-2">
                             {t('purchaseOrder.selectSupplier')} *
                         </label>
                         <select
                             value={selectedSupplierId}
                             onChange={(e) => setSelectedSupplierId(e.target.value)}
-                            className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            className="p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                         >
                             <option value="">{t('purchaseOrder.selectSupplier')}</option>
                             {materialSuppliers.map(s => (
@@ -349,24 +349,24 @@ const CreatePurchaseOrderModal: React.FC<{
 
                     {/* Order Date */}
                     <div>
-                        <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400 mb-1.5 sm:mb-2">
                             {t('purchaseOrder.orderDate')}
                         </label>
                         <input
                             type="date"
                             value={orderDate}
                             onChange={(e) => setOrderDate(e.target.value)}
-                            className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            className="p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
                     {/* Material Search & Add */}
                     <div>
-                        <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400 mb-1.5 sm:mb-2">
                             {t('purchaseOrder.addMaterial')}
                         </label>
                         <div className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zm0 1l-10 9m10-9l10 9m-10-9v10" />
                             </svg>
                             <input
@@ -374,20 +374,20 @@ const CreatePurchaseOrderModal: React.FC<{
                                 placeholder={t('purchaseOrder.searchMaterial')}
                                 value={materialSearch}
                                 onChange={(e) => setMaterialSearch(e.target.value)}
-                                className="w-full pl-4 pr-10 p-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                className="w-full pl-4 pr-10 p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                             />
                         </div>
                         
                         {materialSearch && filteredMaterials.length > 0 && (
-                            <div className="mt-2 bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div className="mt-2 bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-lg shadow-lg max-h-40 sm:max-h-48 overflow-y-auto">
                                 {filteredMaterials.slice(0, 5).map(item => (
                                     <button
                                         key={item.id}
                                         onClick={() => handleAddItem(item)}
-                                        className="w-full text-right px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex justify-between items-center"
+                                        className="w-full text-right px-3 sm:px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex justify-between items-center"
                                     >
-                                        <span className="text-slate-800 dark:text-slate-200">{item.name}</span>
-                                        <span className="text-sm text-purple-600 dark:text-purple-400">
+                                        <span className="text-sm text-slate-800 dark:text-slate-200">{item.name}</span>
+                                        <span className="text-xs text-purple-600 dark:text-purple-400">
                                             {t('purchaseOrder.currentStock')}: {item.currentStock}
                                         </span>
                                     </button>
@@ -399,44 +399,48 @@ const CreatePurchaseOrderModal: React.FC<{
                     {/* Order Items */}
                     {orderItems.length > 0 && (
                         <div>
-                            <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400 mb-3">
+                            <h3 className="text-sm sm:text-lg font-semibold text-purple-700 dark:text-purple-400 mb-2 sm:mb-3">
                                 {t('purchaseOrder.orderItems')}
                             </h3>
                             <div className="space-y-2">
                                 {orderItems.map((item, index) => (
-                                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                                        <span className="text-slate-500 w-6">{index + 1}</span>
-                                        <span className="flex-1 text-slate-800 dark:text-slate-200 font-medium">{item.itemName}</span>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity}
-                                            onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value) || 1)}
-                                            className="w-20 p-2 border border-purple-200 dark:border-purple-600 rounded-lg text-center focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200"
-                                        />
-                                        <span className="text-purple-600 dark:text-purple-400 w-24 text-left">
-                                            {item.unitCost.toFixed(2)}
-                                        </span>
-                                        <span className="text-purple-700 dark:text-purple-300 font-bold w-28 text-left">
-                                            {item.totalCost.toFixed(2)}
-                                        </span>
-                                        <button
-                                            onClick={() => handleRemoveItem(index)}
-                                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                    <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <span className="text-slate-500 w-5 text-xs sm:text-sm">{index + 1}</span>
+                                            <span className="flex-1 text-sm text-slate-800 dark:text-slate-200 font-medium truncate">{item.itemName}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 sm:gap-3 justify-end">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={item.quantity}
+                                                onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value) || 1)}
+                                                className="w-14 sm:w-20 p-1.5 sm:p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg text-center focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200"
+                                            />
+                                            <span className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 w-16 sm:w-24 text-left">
+                                                {item.unitCost.toFixed(2)}
+                                            </span>
+                                            <span className="text-xs sm:text-sm text-purple-700 dark:text-purple-300 font-bold w-20 sm:w-28 text-left">
+                                                {item.totalCost.toFixed(2)}
+                                            </span>
+                                            <button
+                                                onClick={() => handleRemoveItem(index)}
+                                                className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex justify-between items-center">
-                                <span className="text-lg font-bold text-purple-700 dark:text-purple-400">
+                            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex justify-between items-center">
+                                <span className="text-sm sm:text-lg font-bold text-purple-700 dark:text-purple-400">
                                     {t('purchaseOrder.totalAmount')}
                                 </span>
-                                <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                                <span className="text-lg sm:text-2xl font-bold text-purple-700 dark:text-purple-300">
                                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' }).format(totalAmount)}
                                 </span>
                             </div>
@@ -445,52 +449,55 @@ const CreatePurchaseOrderModal: React.FC<{
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400 mb-1.5 sm:mb-2">
                             {t('purchaseOrder.notes')}
                         </label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder={t('purchaseOrder.notesPlaceholder')}
-                            className="w-full p-2 border border-purple-200 dark:border-purple-600 rounded-lg h-20 focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            className="w-full p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg h-16 sm:h-20 focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                         />
                     </div>
                 </main>
 
-                <footer className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                <footer className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 bg-gray-50 dark:bg-slate-800/50 rounded-b-lg sm:rounded-b-xl">
+                    <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                         {orderItems.length} {t('purchaseOrder.orderItems').toLowerCase()}
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                         <button
                             onClick={saveToDrafts}
                             disabled={!selectedSupplierId}
-                            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                             </svg>
-                            {t('purchaseOrder.saveDraft')}
+                            <span className="hidden sm:inline">{t('purchaseOrder.saveDraft')}</span>
+                            <span className="sm:hidden">{t('purchaseOrder.saveDraft')}</span>
                         </button>
                         <button
                             onClick={handlePrint}
                             disabled={orderItems.length === 0 || isPrinting || !selectedSupplierId}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1M8 12h8m-8 4h.01M5 12h.01M19 12h.01M5 16h.01M19 16h.01" />
                             </svg>
-                            {t('purchaseOrder.printOrder')}
+                            <span className="hidden sm:inline">{t('purchaseOrder.printOrder')}</span>
+                            <span className="sm:hidden">{t('common.print')}</span>
                         </button>
                         <button
                             onClick={handleSend}
                             disabled={orderItems.length === 0 || !selectedSupplierId}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                             </svg>
-                            {t('purchaseOrder.sendOrder')}
+                            <span className="hidden sm:inline">{t('purchaseOrder.sendOrder')}</span>
+                            <span className="sm:hidden">{t('purchaseOrder.sendOrder')}</span>
                         </button>
                     </div>
                 </footer>

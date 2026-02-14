@@ -1495,6 +1495,7 @@ export const useClinicData = (): ClinicData => {
             console.log('Successfully added supplier invoice:', newData);
             setSupplierInvoices((prev: SupplierInvoice[]) => [...prev, ...newData as SupplierInvoice[]]);
             addNotification('Supplier invoice added successfully', NotificationType.SUCCESS);
+            await fetchData();
             try {
                 const possibleUrl = (i as any).invoiceImageUrl;
                 if (possibleUrl) {

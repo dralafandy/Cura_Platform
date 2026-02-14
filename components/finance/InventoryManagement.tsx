@@ -21,6 +21,19 @@ const MinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
+// View Mode Icons
+const GridViewIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+);
+
+const ListViewIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+);
+
 // Inventory Item Card Component
 const InventoryItemCard: React.FC<{
     item: InventoryItem;
@@ -47,24 +60,24 @@ const InventoryItemCard: React.FC<{
             {/* Status indicator bar */}
             <div className={`h-1 rounded-t-xl ${stockColor} transition-all duration-300`} style={{ width: `${stockPercentage}%` }} />
             
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
                 {/* Header */}
-                <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
                     <div className="flex-1 min-w-0">
-                        <h3 className={`font-semibold text-base truncate ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+                        <h3 className={`font-semibold text-sm sm:text-base truncate ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
                             {item.name}
                         </h3>
                         <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} truncate mt-0.5`}>
                             {item.description || t('common.na')}
                         </p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0 ${status.class}`}>
+                    <span className={`text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex-shrink-0 ${status.class}`}>
                         {status.label}
                     </span>
                 </div>
                 
                 {/* Supplier info */}
-                <div className="flex items-center gap-1.5 mb-3">
+                <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
@@ -74,75 +87,76 @@ const InventoryItemCard: React.FC<{
                 </div>
                 
                 {/* Stock level with progress bar */}
-                <div className="mb-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                <div className="mb-2 sm:mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[10px] sm:text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {t('inventory.currentStock')}
                         </span>
-                        <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                        <span className={`text-xs sm:text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                             {item.currentStock}
                         </span>
                     </div>
-                    <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                    <div className={`h-1.5 sm:h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}>
                         <div 
                             className={`h-full rounded-full transition-all duration-500 ${stockColor}`}
                             style={{ width: `${stockPercentage}%` }}
                         />
                     </div>
                     {item.minStockLevel > 0 && (
-                        <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                        <p className={`text-[10px] sm:text-xs mt-0.5 sm:mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                             {t('inventory.minStockLevel')}: {item.minStockLevel}
                         </p>
                     )}
                 </div>
                 
-                {/* Footer with price and actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-dashed ${isDark ? 'border-slate-700' : 'border-slate-200'}">
-                    <div className="flex flex-col">
-                        <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                            {t('inventory.unitCost')}
-                        </span>
-                        <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                            {currencyFormatter.format(item.unitCost)}
+                {/* Footer with price and actions - Mobile optimized */}
+                <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 sm:pt-3 border-t border-dashed ${isDark ? 'border-slate-700' : 'border-slate-200'} gap-2`}>
+                    {/* Price and total value row for mobile */}
+                    <div className="flex items-center justify-between sm:flex-col sm:items-start">
+                        <div className="flex items-center gap-2">
+                            <span className={`text-[10px] sm:text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                {t('inventory.unitCost')}:
+                            </span>
+                            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                                {currencyFormatter.format(item.unitCost)}
+                            </span>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'} sm:hidden`}>
+                            {t('inventory.totalValue')}: {currencyFormatter.format(totalValue)}
                         </span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    {/* Action buttons - Mobile optimized */}
+                    <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
                         {/* Quick stock adjustment buttons */}
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
+                        <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
                             <button
                                 onClick={() => onQuickStockUpdate(item, -1)}
                                 disabled={item.currentStock <= 0}
-                                className={`p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 disabled:hover:bg-transparent text-slate-400 disabled:text-slate-600' : 'hover:bg-white hover:shadow-sm disabled:hover:bg-transparent text-slate-600 disabled:text-slate-300'} disabled:cursor-not-allowed`}
+                                className={`p-1 sm:p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 disabled:hover:bg-transparent text-slate-400 disabled:text-slate-600' : 'hover:bg-white hover:shadow-sm disabled:hover:bg-transparent text-slate-600 disabled:text-slate-300'} disabled:cursor-not-allowed`}
                                 title={t('inventory.decreaseStock')}
                             >
                                 <MinusIcon />
                             </button>
                             
-                            {/* Note for adding stock - recommend supplier invoice */}
                             <div className="relative group">
                                 <button
                                     onClick={() => onQuickStockUpdate(item, 1)}
-                                    className={`p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 bg-slate-700 text-white' : 'hover:bg-white hover:shadow-sm bg-white text-slate-700'} disabled:cursor-not-allowed`}
+                                    className={`p-1 sm:p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 bg-slate-700 text-white' : 'hover:bg-white hover:shadow-sm bg-white text-slate-700'} disabled:cursor-not-allowed`}
                                     title={t('inventory.increaseStock')}
                                 >
                                     <PlusIcon />
                                 </button>
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full mb-2 right-0 px-2 py-1 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                {/* Tooltip - Hidden on mobile */}
+                                <div className="hidden sm:block absolute bottom-full mb-2 right-0 px-2 py-1 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                                     {t('inventory.addItemNote')}
                                 </div>
                             </div>
                         </div>
                         
-                        {/* Small note below buttons */}
-                        <div className="text-[10px] text-amber-600 dark:text-amber-500 mt-1 text-center leading-tight">
-                            {t('inventory.addItemNote')}
-                        </div>
-                        
                         <button
                             onClick={onEdit}
-                            className={`p-2 rounded-lg transition-all ${isDark ? 'hover:bg-slate-700 text-purple-400 hover:text-purple-300' : 'hover:bg-purple-50 text-purple-600 hover:text-purple-700'}`}
+                            className={`p-1.5 sm:p-2 rounded-lg transition-all ${isDark ? 'hover:bg-slate-700 text-purple-400 hover:text-purple-300' : 'hover:bg-purple-50 text-purple-600 hover:text-purple-700'}`}
                             title={t('inventory.editItem')}
                         >
                             <EditIcon />
@@ -150,7 +164,7 @@ const InventoryItemCard: React.FC<{
                         {canDelete && (
                             <button
                                 onClick={onDelete}
-                                className={`p-2 rounded-lg transition-all ${isDark ? 'hover:bg-red-900/30 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-500 hover:text-red-600'}`}
+                                className={`p-1.5 sm:p-2 rounded-lg transition-all ${isDark ? 'hover:bg-red-900/30 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-500 hover:text-red-600'}`}
                                 title={t('inventory.deleteItem')}
                             >
                                 <TrashIcon />
@@ -159,12 +173,157 @@ const InventoryItemCard: React.FC<{
                     </div>
                 </div>
                 
-                {/* Total value badge */}
-                <div className="mt-2 flex justify-end">
+                {/* Total value badge - Desktop only */}
+                <div className="hidden sm:flex mt-2 justify-end">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
                         {t('inventory.totalValue')}: {currencyFormatter.format(totalValue)}
                     </span>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// Modern List View Row Component
+const InventoryItemRow: React.FC<{
+    item: InventoryItem;
+    supplier?: Supplier;
+    status: { label: string; class: string };
+    onEdit: () => void;
+    onDelete: () => void;
+    onQuickStockUpdate: (item: InventoryItem, adjustment: number) => void;
+    getStockPercentage: (item: InventoryItem) => number;
+    getStockColor: (item: InventoryItem) => string;
+    canEdit?: boolean;
+    canDelete?: boolean;
+}> = ({ item, supplier, status, onEdit, onDelete, onQuickStockUpdate, getStockPercentage, getStockColor, canEdit = true, canDelete = true }) => {
+    const { t, locale } = useI18n();
+    const { isDark } = useTheme();
+    const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
+    
+    const stockPercentage = getStockPercentage(item);
+    const stockColor = getStockColor(item);
+    const totalValue = item.currentStock * item.unitCost;
+
+    return (
+        <div className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b transition-all duration-200 hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700 hover:bg-slate-750' : 'bg-white border-slate-100 hover:bg-slate-50'}`}>
+            {/* Status indicator */}
+            <div className="hidden sm:flex flex-shrink-0">
+                <div className={`w-2 h-2 rounded-full ${stockColor.replace('bg-', 'bg-')} ${item.currentStock <= item.minStockLevel ? 'animate-pulse' : ''}`} />
+            </div>
+            
+            {/* Item Info */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <h3 className={`font-semibold text-sm sm:text-base truncate ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+                        {item.name}
+                    </h3>
+                    <span className={`text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0 ${status.class}`}>
+                        {status.label}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                    <span className={`text-xs truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {supplier?.name || t('inventory.supplierNotAvailable')}
+                    </span>
+                    {item.description && (
+                        <>
+                            <span className={`text-slate-400`}>•</span>
+                            <span className={`text-xs truncate max-w-[150px] sm:max-w-[200px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                {item.description}
+                            </span>
+                        </>
+                    )}
+                </div>
+            </div>
+            
+            {/* Stock Level - Desktop */}
+            <div className="hidden md:flex flex-col items-end min-w-[120px]">
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                        {item.currentStock}
+                    </span>
+                    <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        / {item.minStockLevel} min
+                    </span>
+                </div>
+                <div className={`w-24 h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                    <div 
+                        className={`h-full rounded-full transition-all duration-500 ${stockColor}`}
+                        style={{ width: `${stockPercentage}%` }}
+                    />
+                </div>
+            </div>
+            
+            {/* Stock Level - Mobile */}
+            <div className="flex md:hidden flex-col items-end min-w-[60px]">
+                <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {item.currentStock}
+                </span>
+                <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {t('inventory.inStock')}
+                </span>
+            </div>
+            
+            {/* Unit Cost */}
+            <div className="hidden lg:flex flex-col items-end min-w-[100px]">
+                <span className={`text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                    {currencyFormatter.format(item.unitCost)}
+                </span>
+                <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {t('inventory.unitCost')}
+                </span>
+            </div>
+            
+            {/* Total Value */}
+            <div className="hidden lg:flex flex-col items-end min-w-[100px]">
+                <span className={`text-sm font-bold ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
+                    {currencyFormatter.format(totalValue)}
+                </span>
+                <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {t('inventory.totalValue')}
+                </span>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                {/* Quick stock adjustment */}
+                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
+                    <button
+                        onClick={() => onQuickStockUpdate(item, -1)}
+                        disabled={item.currentStock <= 0}
+                        className={`p-1 sm:p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 disabled:hover:bg-transparent text-slate-400 disabled:text-slate-600' : 'hover:bg-white hover:shadow-sm disabled:hover:bg-transparent text-slate-600 disabled:text-slate-300'} disabled:cursor-not-allowed`}
+                        title={t('inventory.decreaseStock')}
+                    >
+                        <MinusIcon />
+                    </button>
+                    <button
+                        onClick={() => onQuickStockUpdate(item, 1)}
+                        className={`p-1 sm:p-1.5 rounded-md transition-all ${isDark ? 'hover:bg-slate-600 bg-slate-700 text-white' : 'hover:bg-white hover:shadow-sm bg-white text-slate-700'}`}
+                        title={t('inventory.increaseStock')}
+                    >
+                        <PlusIcon />
+                    </button>
+                </div>
+                
+                {canEdit && (
+                    <button
+                        onClick={onEdit}
+                        className={`p-1.5 sm:p-2 rounded-lg transition-all ${isDark ? 'hover:bg-slate-700 text-purple-400 hover:text-purple-300' : 'hover:bg-purple-50 text-purple-600 hover:text-purple-700'}`}
+                        title={t('inventory.editItem')}
+                    >
+                        <EditIcon />
+                    </button>
+                )}
+                {canDelete && (
+                    <button
+                        onClick={onDelete}
+                        className={`p-1.5 sm:p-2 rounded-lg transition-all ${isDark ? 'hover:bg-red-900/30 text-red-400 hover:text-red-300' : 'hover:bg-red-50 text-red-500 hover:text-red-600'}`}
+                        title={t('inventory.deleteItem')}
+                    >
+                        <TrashIcon />
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -209,51 +368,51 @@ const AddEditInventoryItemModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className={`${isDark ? 'bg-slate-800' : 'bg-white'} rounded-xl shadow-2xl w-full max-w-md`}>
-                <header className={`p-4 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'} flex justify-between items-center`}>
-                    <h2 className={`text-xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>{item ? t('inventory.editItem') : t('inventory.addNewItem')}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" aria-modal="true" role="dialog">
+            <div className={`${isDark ? 'bg-slate-800' : 'bg-white'} rounded-lg sm:rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] flex flex-col`}>
+                <header className={`p-3 sm:p-4 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'} flex justify-between items-center flex-shrink-0`}>
+                    <h2 className={`text-base sm:text-xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>{item ? t('inventory.editItem') : t('inventory.addNewItem')}</h2>
                     <button onClick={onClose} className={`p-1 rounded-full ${isDark ? 'hover:bg-slate-700 focus:ring-slate-600' : 'hover:bg-slate-200 focus:ring-slate-300'} transition-colors focus:outline-none focus:ring-2`} aria-label={t('common.closeForm')}>
                         <CloseIcon />
                     </button>
                 </header>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
                     <label htmlFor="item-name" className="sr-only">{t('inventory.itemName')}</label>
-                    <input id="item-name" name="name" value={formData.name} onChange={handleChange} placeholder={t('inventory.itemName')} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
+                    <input id="item-name" name="name" value={formData.name} onChange={handleChange} placeholder={t('inventory.itemName')} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
                     
                     <label htmlFor="item-description" className="sr-only">{t('inventory.description')}</label>
-                    <textarea id="item-description" name="description" value={formData.description} onChange={handleChange} placeholder={t('inventory.descriptionPlaceholder')} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full h-20 focus:ring-primary`} />
+                    <textarea id="item-description" name="description" value={formData.description} onChange={handleChange} placeholder={t('inventory.descriptionPlaceholder')} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full h-16 sm:h-20 focus:ring-primary`} />
                     
                     <div>
-                        <label htmlFor="item-supplier" className={`block text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.supplier')}</label>
-                        <select id="item-supplier" name="supplierId" value={formData.supplierId} onChange={handleChange} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required>
+                        <label htmlFor="item-supplier" className={`block text-xs sm:text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.supplier')}</label>
+                        <select id="item-supplier" name="supplierId" value={formData.supplierId} onChange={handleChange} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required>
                             <option value="">{t('inventory.selectSupplier')}</option>
                             {suppliers.filter(s => s.type === 'Material Supplier').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                            <label htmlFor="currentStock" className={`block text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.currentStock')}</label>
-                            <input id="currentStock" name="currentStock" type="number" value={formData.currentStock} onChange={handleChange} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
+                            <label htmlFor="currentStock" className={`block text-xs sm:text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.currentStock')}</label>
+                            <input id="currentStock" name="currentStock" type="number" value={formData.currentStock} onChange={handleChange} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
                         </div>
                         <div>
-                            <label htmlFor="unitCost" className={`block text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.unitCost')}</label>
-                            <input id="unitCost" name="unitCost" type="number" step="0.01" value={formData.unitCost} onChange={handleChange} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
+                            <label htmlFor="unitCost" className={`block text-xs sm:text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.unitCost')}</label>
+                            <input id="unitCost" name="unitCost" type="number" step="0.01" value={formData.unitCost} onChange={handleChange} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="minStockLevel" className={`block text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.minStockLevel')}</label>
-                        <input id="minStockLevel" name="minStockLevel" type="number" value={formData.minStockLevel} onChange={handleChange} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
+                        <label htmlFor="minStockLevel" className={`block text-xs sm:text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.minStockLevel')}</label>
+                        <input id="minStockLevel" name="minStockLevel" type="number" value={formData.minStockLevel} onChange={handleChange} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} required />
                     </div>
                     <div>
-                        <label htmlFor="expiryDate" className={`block text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.expiryDate')}</label>
-                        <input id="expiryDate" name="expiryDate" type="date" value={formData.expiryDate || ''} onChange={handleChange} className={`p-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} />
+                        <label htmlFor="expiryDate" className={`block text-xs sm:text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'} mb-1`}>{t('inventory.expiryDate')}</label>
+                        <input id="expiryDate" name="expiryDate" type="date" value={formData.expiryDate || ''} onChange={handleChange} className={`p-2 text-sm border ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:border-primary' : 'border-slate-300 focus:border-primary'} rounded-lg w-full focus:ring-primary`} />
                     </div>
 
-                    <footer className="pt-2 flex justify-end space-x-4">
-                        <button type="button" onClick={onClose} className={`px-4 py-2 ${isDark ? 'bg-slate-700 hover:bg-slate-600 focus:ring-slate-500 text-white' : 'bg-neutral-dark hover:bg-slate-300 focus:ring-slate-300'} rounded-lg focus:outline-none focus:ring-2`}>{t('common.cancel')}</button>
-                        <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light">{t('common.save')}</button>
+                    <footer className="pt-2 flex justify-end space-x-3 sm:space-x-4">
+                        <button type="button" onClick={onClose} className={`px-3 sm:px-4 py-2 text-sm ${isDark ? 'bg-slate-700 hover:bg-slate-600 focus:ring-slate-500 text-white' : 'bg-neutral-dark hover:bg-slate-300 focus:ring-slate-300'} rounded-lg focus:outline-none focus:ring-2`}>{t('common.cancel')}</button>
+                        <button type="submit" className="px-3 sm:px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light">{t('common.save')}</button>
                     </footer>
                 </form>
             </div>
@@ -288,6 +447,7 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
     const [showDrafts, setShowDrafts] = useState(false);
     const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
     const [draftsNeedRefresh, setDraftsNeedRefresh] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     // Load draft orders from localStorage and remove duplicates
     useEffect(() => {
@@ -508,64 +668,64 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-2 sm:p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Modern Header with Stats - Gold + Purple Theme */}
-                <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg p-6 mb-6">
+                <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
                     {/* Decorative gradient bar */}
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-purple-500 to-purple-700"></div>
                     
                     <div className="relative z-10">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-3">
                             <div>
-                                <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{t('inventory.inventoryItems')}</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('inventory.inventoryManagement')} - {totalItems} {t('inventory.items')}</p>
+                                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{t('inventory.inventoryItems')}</h3>
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">{t('inventory.inventoryManagement')} - {totalItems} {t('inventory.items')}</p>
                             </div>
                         </div>
                         
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/30 p-4 rounded-xl border border-purple-200 dark:border-purple-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Stats Cards - Mobile optimized */}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/30 p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-purple-200 dark:border-purple-700">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">{t('inventory.totalItems')}</p>
-                                        <p className="text-2xl font-bold text-purple-900 dark:text-purple-300">{totalItems}</p>
+                                        <p className="text-[10px] sm:text-xs text-purple-600 dark:text-purple-400 font-medium">{t('inventory.totalItems')}</p>
+                                        <p className="text-base sm:text-lg md:text-2xl font-bold text-purple-900 dark:text-purple-300">{totalItems}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/30 dark:to-amber-800/30 p-4 rounded-xl border border-amber-200 dark:border-amber-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/30 dark:to-amber-800/30 p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <line x1="12" y1="1" x2="12" y2="23" />
                                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t('inventory.totalValue')}</p>
-                                        <p className="text-2xl font-bold text-amber-900 dark:text-amber-300">{currencyFormatter.format(totalValue)}</p>
+                                        <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 font-medium">{t('inventory.totalValue')}</p>
+                                        <p className="text-xs sm:text-sm md:text-2xl font-bold text-amber-900 dark:text-amber-300">{currencyFormatter.format(totalValue)}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-900/30 dark:to-rose-800/30 p-4 rounded-xl border border-rose-200 dark:border-rose-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <div className="bg-gradient-to-br from-rose-50 to-rose-100/50 dark:from-rose-900/30 dark:to-rose-800/30 p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border border-rose-200 dark:border-rose-700">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                    <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-md">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                                             <line x1="12" y1="9" x2="12" y2="13" />
                                             <line x1="12" y1="17" x2="12.01" y2="17" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{t('inventory.lowStockItems')}</p>
-                                        <p className="text-2xl font-bold text-rose-900 dark:text-rose-300">{lowStockItems}</p>
+                                        <p className="text-[10px] sm:text-xs text-rose-600 dark:text-rose-400 font-medium">{t('inventory.lowStockItems')}</p>
+                                        <p className="text-base sm:text-lg md:text-2xl font-bold text-rose-900 dark:text-rose-300">{lowStockItems}</p>
                                     </div>
                                 </div>
                             </div>
@@ -575,33 +735,33 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                 
                 {/* Draft Orders Section */}
                 {draftOrders.length > 0 && (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-700 shadow-lg overflow-hidden">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-700 shadow-lg overflow-hidden mb-4 sm:mb-6">
                         <button
                             onClick={() => setShowDrafts(!showDrafts)}
-                            className="w-full px-6 py-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 flex justify-between items-center"
+                            className="w-full px-3 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 flex justify-between items-center"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                     </svg>
                                 </div>
                                 <div className="text-right">
-                                    <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                                    <h3 className="text-sm sm:text-lg font-bold text-amber-700 dark:text-amber-400">
                                         {t('purchaseOrder.draftOrders')}
                                     </h3>
-                                    <p className="text-sm text-amber-600 dark:text-amber-500">
+                                    <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-500">
                                         {draftOrders.length} {t('purchaseOrder.draftOrders').toLowerCase()}
                                     </p>
                                 </div>
                             </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 text-amber-600 dark:text-amber-400 transition-transform ${showDrafts ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 sm:h-6 sm:w-6 text-amber-600 dark:text-amber-400 transition-transform ${showDrafts ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
                         
                         {showDrafts && (
-                            <div className="p-4 space-y-3 bg-white dark:bg-slate-800">
+                            <div className="p-2 sm:p-4 space-y-2 sm:space-y-3 bg-white dark:bg-slate-800">
                                 {draftOrders
                                     .filter((order, index, self) => 
                                         index === self.findIndex((o) => o.id === order.id)
@@ -609,57 +769,59 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                                     .map((order) => {
                                     const supplier = suppliers.find(s => s.id === order.supplierId);
                                     return (
-                                        <div key={order.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700 gap-3">
+                                        <div key={order.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700 gap-2 sm:gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-amber-800 dark:text-amber-300 truncate">
+                                                <p className="font-bold text-sm sm:text-base text-amber-800 dark:text-amber-300 truncate">
                                                     {order.name || order.id.slice(-8).toUpperCase()}
                                                 </p>
-                                                <p className="text-sm text-amber-600 dark:text-amber-500">
+                                                <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-500">
                                                     {supplier?.name || t('common.unknownSupplier')} • {order.items.length} {t('purchaseOrder.orderItems').toLowerCase()}
                                                 </p>
-                                                <p className="text-xs text-amber-500 dark:text-amber-600">
+                                                <p className="text-[10px] sm:text-xs text-amber-500 dark:text-amber-600">
                                                     {new Date(order.orderDate).toLocaleDateString('ar-EG')}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                                            <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
+                                                <span className="text-sm sm:text-lg font-bold text-amber-700 dark:text-amber-400">
                                                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' }).format(order.totalAmount)}
                                                 </span>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingOrder(order);
-                                                        setIsPurchaseOrderModalOpen(true);
-                                                    }}
-                                                    className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg transition-colors"
-                                                    title={t('common.edit')}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (confirm(t('purchaseOrder.confirmDeleteDraft'))) {
-                                                            // Remove duplicates first, then filter
-                                                            const uniqueDrafts = draftOrders.filter((d: PurchaseOrder, index: number, self: PurchaseOrder[]) => 
-                                                                index === self.findIndex((o) => o.id === d.id)
-                                                            );
-                                                            const updatedDrafts = uniqueDrafts.filter((d: PurchaseOrder) => d.id !== order.id);
-                                                            localStorage.setItem('purchaseOrders_drafts', JSON.stringify(updatedDrafts));
-                                                            setDraftOrders(updatedDrafts);
-                                                            addNotification({
-                                                                message: t('purchaseOrder.draftDeleted'),
-                                                                type: NotificationType.SUCCESS
-                                                            });
-                                                        }
-                                                    }}
-                                                    className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
-                                                    title={t('purchaseOrder.deleteDraft')}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingOrder(order);
+                                                            setIsPurchaseOrderModalOpen(true);
+                                                        }}
+                                                        className="p-1.5 sm:p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg transition-colors"
+                                                        title={t('common.edit')}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm(t('purchaseOrder.confirmDeleteDraft'))) {
+                                                                // Remove duplicates first, then filter
+                                                                const uniqueDrafts = draftOrders.filter((d: PurchaseOrder, index: number, self: PurchaseOrder[]) => 
+                                                                    index === self.findIndex((o) => o.id === d.id)
+                                                                );
+                                                                const updatedDrafts = uniqueDrafts.filter((d: PurchaseOrder) => d.id !== order.id);
+                                                                localStorage.setItem('purchaseOrders_drafts', JSON.stringify(updatedDrafts));
+                                                                setDraftOrders(updatedDrafts);
+                                                                addNotification({
+                                                                    message: t('purchaseOrder.draftDeleted'),
+                                                                    type: NotificationType.SUCCESS
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="p-1.5 sm:p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                                                        title={t('purchaseOrder.deleteDraft')}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -670,12 +832,12 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                 )}
                 
                 {/* Controls Section */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 overflow-hidden">
-                    <div className="flex flex-col md:flex-row gap-4 p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4 sm:mb-6 overflow-hidden">
+                    <div className="flex flex-col gap-3 p-3 sm:p-4">
                         {/* Search */}
-                        <div className="flex-1 relative">
+                        <div className="relative">
                             <div className={`absolute top-1/2 transform -translate-y-1/2 text-slate-400 ${locale === 'ar' ? 'left-3' : 'right-3'}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
@@ -684,75 +846,103 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                                 placeholder={t('inventory.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 ${locale === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
+                                className={`w-full py-2.5 sm:py-3 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 ${locale === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
                             />
                         </div>
                         
-                        {/* Action Buttons Group */}
+                        {/* Action Buttons Group - Mobile optimized */}
                         <div className="flex flex-wrap gap-2 items-center">
                             {canAddInventory && (
                                 <button
                                     onClick={() => { setEditingItem(undefined); setIsAddModalOpen(true); }}
-                                    className="flex items-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shadow-sm"
+                                    className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shadow-sm"
                                 >
                                     <AddIcon />
-                                    <span className="text-sm font-medium">{t('inventory.addItem')}</span>
+                                    <span className="font-medium">{t('inventory.addItem')}</span>
                                 </button>
                             )}
                             
-                            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                            {/* View Mode Toggle */}
+                            <div className={`flex items-center rounded-lg p-1 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`p-1.5 sm:p-2 rounded-md transition-all ${viewMode === 'grid' 
+                                        ? isDark ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-purple-600 shadow-sm' 
+                                        : isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'}`}
+                                    title={t('inventory.gridView') || 'Grid View'}
+                                >
+                                    <GridViewIcon />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-1.5 sm:p-2 rounded-md transition-all ${viewMode === 'list' 
+                                        ? isDark ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-purple-600 shadow-sm' 
+                                        : isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'}`}
+                                    title={t('inventory.listView') || 'List View'}
+                                >
+                                    <ListViewIcon />
+                                </button>
+                            </div>
                             
-                            <button
-                                onClick={() => setIsPurchaseOrderModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
-                                title={t('inventory.manualOrder')}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            </button>
+                            <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-600 mx-1"></div>
                             
-                            <button
-                                onClick={() => setIsLowStockModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-sm"
-                                title={t('inventory.lowStockPurchaseOrder')}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                            </button>
-                            
-                            <button
-                                onClick={handleAddPresetMaterials}
-                                disabled={isAddingPreset}
-                                className="flex items-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-lg transition-colors shadow-sm disabled:cursor-not-allowed"
-                            >
-                                <DatabaseIcon />
-                                <span className="text-sm font-medium">{isAddingPreset ? t('inventory.addingPresetMaterials') : t('inventory.addPresetMaterials')}</span>
-                            </button>
+                            {/* Quick action buttons - Icon only on mobile */}
+                            <div className="flex gap-1.5 sm:gap-2">
+                                <button
+                                    onClick={() => setIsPurchaseOrderModalOpen(true)}
+                                    className="flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
+                                    title={t('inventory.manualOrder')}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span className="hidden sm:inline">{t('inventory.manualOrder')}</span>
+                                </button>
+                                
+                                <button
+                                    onClick={() => setIsLowStockModalOpen(true)}
+                                    className="flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-sm"
+                                    title={t('inventory.lowStockPurchaseOrder')}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <span className="hidden sm:inline">{t('inventory.lowStockPurchaseOrder')}</span>
+                                </button>
+                                
+                                <button
+                                    onClick={handleAddPresetMaterials}
+                                    disabled={isAddingPreset}
+                                    className="flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-lg transition-colors shadow-sm disabled:cursor-not-allowed"
+                                    title={t('inventory.addPresetMaterials')}
+                                >
+                                    <DatabaseIcon />
+                                    <span className="hidden sm:inline font-medium">{isAddingPreset ? t('inventory.addingPresetMaterials') : t('inventory.addPresetMaterials')}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             
             {/* Inventory Items Grid */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
                 {sortedAndFilteredItems.length === 0 ? (
-                    <div className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-12 text-center shadow-sm`}>
-                        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 p-6 sm:p-12 text-center shadow-sm`}>
+                        <div className="w-14 h-14 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 sm:h-10 sm:w-10 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                             </svg>
                         </div>
-                        <h3 className={`text-lg font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'} mb-2`}>
+                        <h3 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'} mb-1 sm:mb-2`}>
                             {searchTerm || selectedCategory !== 'all' ? t('inventory.noItemsFound') : t('inventory.noItemsAdded')}
                         </h3>
-                        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'} mb-4`}>
+                        <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'} mb-3 sm:mb-4`}>
                             {searchTerm || selectedCategory !== 'all' ? t('inventory.tryDifferentSearch') : t('inventory.startAddingItems')}
                         </p>
                         {(!searchTerm && selectedCategory === 'all') && canAddInventory && (
                             <button
                                 onClick={() => { setEditingItem(undefined); setIsAddModalOpen(true); }}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg sm:rounded-xl hover:from-purple-700 hover:to-purple-800 font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                             >
                                 <AddIcon /> {t('inventory.addFirstItem')}
                             </button>
@@ -761,74 +951,118 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                 ) : (
                     <>
                         {/* Results count */}
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex justify-between items-center text-xs sm:text-sm">
                             <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                 {t('inventory.showingResults', { count: sortedAndFilteredItems.length, total: filteredItems.length })}
                             </p>
                         </div>
                     
-                        {selectedCategory === 'all' ? (
-                            // Show all items in enhanced cards
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {sortedAndFilteredItems.map(item => (
-                                    <InventoryItemCard
-                                        key={item.id}
-                                        item={item}
-                                        supplier={suppliers.find(s => s.id === item.supplierId)}
-                                        status={getStatus(item)}
-                                        onEdit={() => { setEditingItem(item); setIsAddModalOpen(true); }}
-                                        onDelete={() => handleDeleteItem(item)}
-                                        onQuickStockUpdate={handleQuickStockUpdate}
-                                        getStockPercentage={getStockPercentage}
-                                        getStockColor={getStockColor}
-                                        canEdit={canEditInventory}
-                                        canDelete={canDeleteInventory}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            // Show items grouped by category
-                            <div className="space-y-6">
-                                {categories.map(category => {
-                                    const categoryItems = sortedAndFilteredItems.filter(item => {
-                                        const presetMaterials = getMaterialsByCategory(category);
-                                        return presetMaterials.some(mat => mat.name.toLowerCase() === item.name.toLowerCase());
-                                    });
+                        {viewMode === 'grid' ? (
+                            // Grid View
+                            selectedCategory === 'all' ? (
+                                // Show all items in enhanced cards - Mobile optimized grid
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                    {sortedAndFilteredItems.map(item => (
+                                        <InventoryItemCard
+                                            key={item.id}
+                                            item={item}
+                                            supplier={suppliers.find(s => s.id === item.supplierId)}
+                                            status={getStatus(item)}
+                                            onEdit={() => { setEditingItem(item); setIsAddModalOpen(true); }}
+                                            onDelete={() => handleDeleteItem(item)}
+                                            onQuickStockUpdate={handleQuickStockUpdate}
+                                            getStockPercentage={getStockPercentage}
+                                            getStockColor={getStockColor}
+                                            canEdit={canEditInventory}
+                                            canDelete={canDeleteInventory}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                // Show items grouped by category
+                                <div className="space-y-4 sm:space-y-6">
+                                    {categories.map(category => {
+                                        const categoryItems = sortedAndFilteredItems.filter(item => {
+                                            const presetMaterials = getMaterialsByCategory(category);
+                                            return presetMaterials.some(mat => mat.name.toLowerCase() === item.name.toLowerCase());
+                                        });
 
-                                    if (categoryItems.length === 0) return null;
+                                        if (categoryItems.length === 0) return null;
 
-                                    return (
-                                        <div key={category} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                                            <div className={`px-4 py-3 ${isDark ? 'bg-slate-700/50' : 'bg-slate-50'} border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-                                                <h4 className={`text-lg font-semibold ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>
-                                                    <span className="inline-flex items-center gap-2">
-                                                        <span>{t(`inventory.category.${category}`) || category}</span>
-                                                        <span className={`text-sm font-normal px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-600 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
-                                                            {categoryItems.length}
+                                        return (
+                                            <div key={category} className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                                                <div className={`px-3 sm:px-4 py-2.5 sm:py-3 ${isDark ? 'bg-slate-700/50' : 'bg-slate-50'} border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+                                                    <h4 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>
+                                                        <span className="inline-flex items-center gap-2">
+                                                            <span>{t(`inventory.category.${category}`) || category}</span>
+                                                            <span className={`text-xs sm:text-sm font-normal px-1.5 sm:px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-600 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
+                                                                {categoryItems.length}
+                                                            </span>
                                                         </span>
-                                                    </span>
-                                                </h4>
+                                                    </h4>
+                                                </div>
+                                                <div className="p-2 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                                    {categoryItems.map(item => (
+                                                        <InventoryItemCard
+                                                            key={item.id}
+                                                            item={item}
+                                                            supplier={suppliers.find(s => s.id === item.supplierId)}
+                                                            status={getStatus(item)}
+                                                            onEdit={() => { setEditingItem(item); setIsAddModalOpen(true); }}
+                                                            onDelete={() => handleDeleteItem(item)}
+                                                            onQuickStockUpdate={handleQuickStockUpdate}
+                                                            getStockPercentage={getStockPercentage}
+                                                            getStockColor={getStockColor}
+                                                            canEdit={canEditInventory}
+                                                            canDelete={canDeleteInventory}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                {categoryItems.map(item => (
-                                                    <InventoryItemCard
-                                                        key={item.id}
-                                                        item={item}
-                                                        supplier={suppliers.find(s => s.id === item.supplierId)}
-                                                        status={getStatus(item)}
-                                                        onEdit={() => { setEditingItem(item); setIsAddModalOpen(true); }}
-                                                        onDelete={() => handleDeleteItem(item)}
-                                                        onQuickStockUpdate={handleQuickStockUpdate}
-                                                        getStockPercentage={getStockPercentage}
-                                                        getStockColor={getStockColor}
-                                                        canEdit={canEditInventory}
-                                                        canDelete={canDeleteInventory}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
+                            )
+                        ) : (
+                            // Modern List View
+                            <div className={`rounded-xl border overflow-hidden shadow-sm ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                                {/* List Header - Desktop */}
+                                <div className={`hidden md:grid md:grid-cols-[1fr_120px_100px_100px_auto] lg:grid-cols-[1fr_120px_100px_100px_auto] items-center gap-4 px-4 py-3 ${isDark ? 'bg-slate-700/50 border-b border-slate-700' : 'bg-slate-50 border-b border-slate-200'}`}>
+                                    <div className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {t('inventory.itemDetails') || 'Item Details'}
+                                    </div>
+                                    <div className={`text-xs font-semibold uppercase tracking-wider text-right ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {t('inventory.stockLevel') || 'Stock Level'}
+                                    </div>
+                                    <div className={`hidden lg:block text-xs font-semibold uppercase tracking-wider text-right ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {t('inventory.unitCost') || 'Unit Cost'}
+                                    </div>
+                                    <div className={`hidden lg:block text-xs font-semibold uppercase tracking-wider text-right ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {t('inventory.totalValue') || 'Total Value'}
+                                    </div>
+                                    <div className={`text-xs font-semibold uppercase tracking-wider text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {t('inventory.actions') || 'Actions'}
+                                    </div>
+                                </div>
+                                
+                                {/* List Items */}
+                                <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                                    {sortedAndFilteredItems.map(item => (
+                                        <InventoryItemRow
+                                            key={item.id}
+                                            item={item}
+                                            supplier={suppliers.find(s => s.id === item.supplierId)}
+                                            status={getStatus(item)}
+                                            onEdit={() => { setEditingItem(item); setIsAddModalOpen(true); }}
+                                            onDelete={() => handleDeleteItem(item)}
+                                            onQuickStockUpdate={handleQuickStockUpdate}
+                                            getStockPercentage={getStockPercentage}
+                                            getStockColor={getStockColor}
+                                            canEdit={canEditInventory}
+                                            canDelete={canDeleteInventory}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </>
