@@ -338,15 +338,15 @@ const FinancialCard: React.FC<{
   };
 
   return (
-    <div className={`bg-gradient-to-br ${variantStyles[variant]} p-4 rounded-xl border`}>
+    <div className={`bg-gradient-to-br ${variantStyles[variant]} p-3 md:p-4 rounded-xl border`}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm">{title}</p>
+        <p className="text-xs md:text-sm">{title}</p>
         <div className={`p-1.5 rounded-lg ${iconBgStyles[variant]}`}>
           {icon}
         </div>
       </div>
-      <p className={`text-2xl font-bold ${valueColorStyles[variant]}`}>{value}</p>
-      {subtitle && <p className="text-sm mt-1 text-slate-500 dark:text-slate-400">{subtitle}</p>}
+      <p className="text-xl md:text-2xl font-bold ${valueColorStyles[variant]}">{value}</p>
+      {subtitle && <p className="text-xs md:text-sm mt-1 text-slate-500 dark:text-slate-400">{subtitle}</p>}
     </div>
   );
 };
@@ -628,58 +628,59 @@ const DoctorDetailsPage: React.FC<{
 
         {/* Header Section */}
         <header 
-          className="relative p-8 rounded-2xl border border-purple-200/50 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 via-white to-amber-50 dark:from-purple-900/30 dark:via-slate-800 dark:to-amber-900/20 shadow-xl mb-6"
+          className="relative p-4 md:p-8 rounded-2xl border border-purple-200/50 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 via-white to-amber-50 dark:from-purple-900/30 dark:via-slate-800 dark:to-amber-900/20 shadow-xl mb-4 md:mb-6"
           role="banner"
         >
           {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-200/30 to-amber-200/30 rounded-full blur-3xl" aria-hidden="true" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-amber-200/30 to-purple-200/30 rounded-full blur-3xl" aria-hidden="true" />
+          <div className="absolute top-0 right-0 w-24 md:w-40 h-24 md:h-40 bg-gradient-to-br from-purple-200/30 to-amber-200/30 rounded-full blur-2xl md:blur-3xl" aria-hidden="true" />
+          <div className="absolute bottom-0 left-0 w-20 md:w-32 h-20 md:h-32 bg-gradient-to-tr from-amber-200/30 to-purple-200/30 rounded-full blur-2xl md:blur-3xl" aria-hidden="true" />
 
-          <div className="relative flex items-center gap-6">
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-6">
             {/* Doctor Avatar */}
             <div 
-              className={`w-24 h-24 rounded-2xl ${doctor.color} flex items-center justify-center text-white text-4xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700`}
+              className="w-16 h-16 md:w-24 md:h-24 rounded-xl md:rounded-2xl ${doctor.color} flex items-center justify-center text-white text-2xl md:text-4xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700 flex-shrink-0"
               aria-label={`${doctor.name} avatar`}
             >
               {doctor.name.charAt(0)}
             </div>
             
             {/* Doctor Info */}
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-slate-800 dark:text-white">{doctor.name}</h1>
-              <p className="text-lg text-purple-600 dark:text-purple-400 flex items-center gap-2 mt-2">
-                <BriefcaseIcon className="h-5 w-5" />
-                {doctor.specialty}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-4xl font-bold text-slate-800 dark:text-white">{doctor.name}</h1>
+              <p className="text-base md:text-lg text-purple-600 dark:text-purple-400 flex items-center gap-2 mt-1 md:mt-2">
+                <BriefcaseIcon className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="truncate">{doctor.specialty}</span>
               </p>
-              <div className="flex items-center gap-6 mt-3">
-                <span className="text-base text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-2 md:3">
+                <span className="text-sm md:text-base text-slate-500 dark:text-slate-400">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{doctorTreatmentRecords.length}</span> {t('doctorDetails.treatments')}
                 </span>
-                <span className="text-base text-slate-500 dark:text-slate-400">
+                <span className="text-sm md:text-base text-slate-500 dark:text-slate-400">
                   <span className="font-semibold text-blue-600 dark:text-blue-400">{quickStats.upcomingAppointments}</span> {t('doctorDetails.upcomingAppointments')}
                 </span>
               </div>
             </div>
             
             {/* Edit and Report Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
               {!isEditing && (
                 <>
                   <button
                     onClick={() => setIsReportOpen(true)}
-                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 text-base font-semibold shadow-lg shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
+                    className="flex-1 sm:flex-none items-center justify-center gap-2 px-3 md:px-5 py-2 md:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 text-sm md:text-base font-semibold shadow-lg shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
                     aria-label={t('doctorDetails.viewReport') || 'View Detailed Report'}
                   >
                     <ChartIcon className="h-4 w-4" />
-                    <span>{t('doctorDetailedReport.title') || 'Detailed Report'}</span>
+                    <span className="hidden sm:inline">{t('doctorDetailedReport.title') || 'Detailed Report'}</span>
+                    <span className="sm:hidden">{t('doctorDetailedReport.title') || 'Report'}</span>
                   </button>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 text-base font-semibold shadow-lg shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200"
+                    className="flex-1 sm:flex-none items-center justify-center gap-2 px-3 md:px-5 py-2 md:py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 text-sm md:text-base font-semibold shadow-lg shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200"
                     aria-label={t('common.edit')}
                   >
                     <EditIcon className="h-4 w-4" />
-                    <span>{t('common.edit')}</span>
+                    <span className="hidden sm:inline">{t('common.edit')}</span>
                   </button>
                 </>
               )}
@@ -689,16 +690,16 @@ const DoctorDetailsPage: React.FC<{
 
         {/* Tab Navigation */}
         <nav 
-          className="border-b border-purple-100 dark:border-purple-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm flex-shrink-0 rounded-2xl mb-6"
+          className="border-b border-purple-100 dark:border-purple-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm flex-shrink-0 rounded-2xl mb-4 md:mb-6"
           role="navigation"
           aria-label="Doctor details tabs"
         >
-          <ul className="flex gap-1 p-2 overflow-x-auto" role="tablist">
+          <ul className="flex gap-1 p-1.5 md:p-2 overflow-x-auto" role="tablist">
             {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
               <li key={key} className="flex-1 min-w-0">
                 <button
                   onClick={() => setActiveTab(key as DoctorDetailTab)}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  className={`w-full flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-medium transition-all duration-300 ${
                     activeTab === key
                       ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30'
                       : 'text-slate-500 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400'
@@ -707,27 +708,28 @@ const DoctorDetailsPage: React.FC<{
                   aria-selected={activeTab === key}
                   aria-controls={`panel-${key}`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="hidden sm:inline">{t(label)}</span>
+                  <Icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                  <span className="hidden sm:inline truncate">{t(label)}</span>
+                  <span className="sm:hidden">{key === 'details' ? 'Info' : key === 'treatments' ? 'Trt' : key === 'financials' ? 'Fin' : 'Sch'}</span>
                 </button>
               </li>
             ))}
           </ul>
         </nav>
 
-        <main className="space-y-6" role="main">
+        <main className="space-y-4 md:space-y-6" role="main">
           {/* Recent Activity Section - Collapsible */}
           {!isEditing && (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700 overflow-hidden">
               <button
                 onClick={() => setIsRecentActivityOpen(!isRecentActivityOpen)}
-                className="w-full flex items-center justify-between p-6 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                className="w-full flex items-center justify-between p-3 md:p-6 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 aria-expanded={isRecentActivityOpen}
                 aria-controls="recent-activity-panel"
               >
                 <div className="flex items-center gap-2">
-                  <ClockIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                  <ClockIcon className="h-4 w-4 md:h-5 md:w-5 text-purple-600 dark:text-purple-400" />
+                  <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400">
                     {t('doctorDetails.recentActivity') || 'Recent Activity'}
                   </h3>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -740,7 +742,7 @@ const DoctorDetailsPage: React.FC<{
               </button>
               
               {isRecentActivityOpen && (
-                <div id="recent-activity-panel" className="p-6 pt-0 space-y-3" role="region" aria-label="Recent appointments">
+                <div id="recent-activity-panel" className="p-3 md:p-6 pt-0 space-y-3" role="region" aria-label="Recent appointments">
                   {doctorAppointments.length > 0 ? (
                     doctorAppointments.slice(0, 5).map(apt => (
                       <RecentActivityItem
@@ -764,10 +766,10 @@ const DoctorDetailsPage: React.FC<{
           {/* Tab Content */}
           <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'details' && (
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 {isEditing ? (
                   /* Edit Form */
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700 space-y-4">
+                  <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700 space-y-4">
                     <div className="space-y-3">
                       <label 
                         htmlFor="edit-doctor-name" 
@@ -828,7 +830,7 @@ const DoctorDetailsPage: React.FC<{
                         ))}
                       </div>
                     </div>
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                       <button 
                         type="button" 
                         onClick={handleCancelEdit}
@@ -848,28 +850,30 @@ const DoctorDetailsPage: React.FC<{
                 ) : (
                   <>
                     {/* Specialty Card */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                    <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                          <BriefcaseIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                          <BriefcaseIcon className="h-4 w-4 md:h-5 md:w-5 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400">
                           {t('doctorDetails.specialty')}
                         </h3>
                       </div>
-                      <p className="text-slate-700 dark:text-slate-300 text-lg">{doctor.specialty}</p>
+                      <p className="text-base md:text-lg text-slate-700 dark:text-slate-300">{doctor.specialty}</p>
                     </div>
 
                     {/* Appointments Card */}
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                          <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                            <CalendarIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400">
+                            {t('doctorDetails.appointmentSchedule')}
+                          </h3>
                         </div>
-                        <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                          {t('doctorDetails.appointmentSchedule')}
-                        </h3>
-                        <span className="ml-auto bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-sm px-3 py-1 rounded-full">
+                        <span className="sm:ml-auto bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-sm px-3 py-1 rounded-full">
                           {doctorAppointments.length} {t('doctorDetails.appointments')}
                         </span>
                       </div>
@@ -901,14 +905,14 @@ const DoctorDetailsPage: React.FC<{
             )}
 
             {activeTab === 'treatments' && (
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+              <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                      <ChartIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      <ChartIcon className="h-4 w-4 md:h-5 md:w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400">
                         {t('doctorDetails.treatmentsPerformed')}
                       </h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -932,7 +936,7 @@ const DoctorDetailsPage: React.FC<{
                     </select>
                   </div>
                 </div>
-                <div className="max-h-96 overflow-y-auto space-y-2">
+                <div className="max-h-80 md:max-h-96 overflow-y-auto space-y-2">
                   {filteredTreatments.length > 0 ? (
                     <ul className="space-y-3">
                       {filteredTreatments.map((tr, index) => (
@@ -958,14 +962,14 @@ const DoctorDetailsPage: React.FC<{
             )}
 
             {activeTab === 'financials' && (
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 {/* Financial Summary Cards */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
-                  <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400 mb-4 flex items-center gap-2">
-                    <DollarSignIcon className="h-5 w-5" />
+                <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                  <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400 mb-3 md:4 flex items-center gap-2">
+                    <DollarSignIcon className="h-4 w-4 md:h-5 md:w-5" />
                     {t('doctorDetails.financialSummary')}
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                     <FinancialCard
                       title={t('doctorDetails.totalEarnings')}
                       value={currencyFormatter.format(financialSummary.totalEarnings)}
@@ -1003,12 +1007,12 @@ const DoctorDetailsPage: React.FC<{
                 </div>
 
                 {/* Transactions */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
-                  <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400 mb-4 flex items-center gap-2">
-                    <PaymentIcon className="h-5 w-5" />
+                <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                  <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400 mb-3 md:4 flex items-center gap-2">
+                    <PaymentIcon className="h-4 w-4 md:h-5 md:w-5" />
                     {t('doctorDetails.transactions')}
                   </h3>
-                  <div className="max-h-80 overflow-y-auto space-y-3">
+                  <div className="max-h-64 md:max-h-80 overflow-y-auto space-y-3">
                     {doctorPaymentsList.length === 0 && doctorTreatmentRecords.length === 0 ? (
                       <EmptyState
                         icon={<PaymentIcon className="h-6 w-6 text-purple-600" />}
@@ -1047,13 +1051,13 @@ const DoctorDetailsPage: React.FC<{
             )}
 
             {activeTab === 'schedule' && (
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
-                <div className="flex items-center gap-3 mb-6">
+              <div className="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-lg border border-purple-100 dark:border-purple-700">
+                <div className="flex items-center gap-3 mb-4 md:mb-6">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                    <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <CalendarIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                    <h3 className="text-base md:text-lg font-semibold text-purple-700 dark:text-purple-400">
                       {t('doctorDetails.appointmentSchedule')}
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -1061,7 +1065,7 @@ const DoctorDetailsPage: React.FC<{
                     </p>
                   </div>
                 </div>
-                <div className="max-h-96 overflow-y-auto space-y-3">
+                <div className="max-h-80 md:max-h-96 overflow-y-auto space-y-3">
                   {doctorAppointments.length > 0 ? (
                     <ul className="space-y-3">
                       {doctorAppointments.map(apt => (

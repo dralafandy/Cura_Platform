@@ -227,7 +227,7 @@ const SectionCard: React.FC<{
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
       <div 
-        className="flex items-center justify-between p-3 md:p-5 border-b border-slate-100 dark:border-slate-700 cursor-pointer md:cursor-default"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 md:p-5 border-b border-slate-100 dark:border-slate-700 cursor-pointer md:cursor-default"
         onClick={() => setMobileCollapsed(!mobileCollapsed)}
       >
         <div className="flex items-center gap-2 md:gap-3">
@@ -236,10 +236,10 @@ const SectionCard: React.FC<{
           </div>
           <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-white">{title}</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
           {action}
           <button 
-            className="md:hidden p-1 text-slate-400"
+            className="md:hidden p-1 text-slate-400 self-center"
             onClick={(e) => {
               e.stopPropagation();
               setMobileCollapsed(!mobileCollapsed);
@@ -281,7 +281,7 @@ const SearchInput: React.FC<{
   onChange: (value: string) => void;
   placeholder?: string;
 }> = ({ value, onChange, placeholder = 'Search...' }) => (
-  <div className="relative w-full">
+  <div className="relative w-full max-w-xs">
     <SearchIcon className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
     <input
       type="text"
@@ -674,7 +674,7 @@ const DoctorDetailedReport: React.FC<{
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-full bg-slate-50 dark:bg-slate-900">
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 md:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="h-8 w-8 bg-white/20 rounded animate-pulse" />
@@ -689,7 +689,7 @@ const DoctorDetailedReport: React.FC<{
 
   if (!doctor) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-6">
+      <div className="min-h-full bg-slate-50 dark:bg-slate-900 p-4 md:p-6">
         <div className="max-w-7xl mx-auto text-center py-12">
           <p className="text-slate-500">Doctor not found</p>
         </div>
@@ -698,7 +698,7 @@ const DoctorDetailedReport: React.FC<{
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900" ref={reportRef}>
+    <div className="min-h-full bg-slate-50 dark:bg-slate-900" ref={reportRef}>
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white print:bg-white print:text-black sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 py-3 md:p-6">
@@ -730,7 +730,7 @@ const DoctorDetailedReport: React.FC<{
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-2 md:px-4 lg:px-6 space-y-3 md:space-y-6">
+      <div className="max-w-7xl mx-auto px-2 md:px-4 lg:px-6 py-3 md:py-6 space-y-3 md:space-y-6">
         {/* Date Range Filter */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden">
           <h2 className="text-base md:text-lg font-semibold text-slate-800 dark:text-white">
@@ -942,7 +942,7 @@ const DoctorDetailedReport: React.FC<{
           title={t('doctorDetailedReport.treatmentRecords') || 'Treatment Records'}
           icon={<ChartIcon className="h-5 w-5" />}
           action={
-            <div className="w-64 print:hidden">
+            <div className="w-full sm:max-w-64 print:hidden">
               <SearchInput
                 value={treatmentSearch}
                 onChange={setTreatmentSearch}
@@ -961,7 +961,7 @@ const DoctorDetailedReport: React.FC<{
                   return (
                     <ListItem key={tr.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors" onClick={() => toggleExpanded('treatment', tr.id)}>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                           <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
                             {treatment?.name?.charAt(0) || 'T'}
                           </div>
@@ -1023,7 +1023,7 @@ const DoctorDetailedReport: React.FC<{
           title={t('doctorDetailedReport.paymentHistory') || 'Payment History'}
           icon={<DollarSignIcon className="h-5 w-5" />}
           action={
-            <div className="w-64 print:hidden">
+            <div className="w-full sm:max-w-64 print:hidden">
               <SearchInput
                 value={paymentSearch}
                 onChange={setPaymentSearch}
@@ -1070,7 +1070,7 @@ const DoctorDetailedReport: React.FC<{
           title={t('doctorDetailedReport.appointments') || 'Appointments'}
           icon={<CalendarIcon className="h-5 w-5" />}
           action={
-            <div className="w-64 print:hidden">
+            <div className="w-full sm:max-w-64 print:hidden">
               <SearchInput
                 value={appointmentSearch}
                 onChange={setAppointmentSearch}
@@ -1079,13 +1079,13 @@ const DoctorDetailedReport: React.FC<{
             </div>
           }
         >
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-center">
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{upcomingAppointments}</p>
+          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 md:p-4 rounded-xl text-center">
+              <p className="text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400">{upcomingAppointments}</p>
               <p className="text-sm text-blue-600 dark:text-blue-400">{t('doctorDetailedReport.upcoming') || 'Upcoming'}</p>
             </div>
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-center">
-              <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{completedAppointments}</p>
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 md:p-4 rounded-xl text-center">
+              <p className="text-2xl md:text-3xl font-bold text-emerald-600 dark:text-emerald-400">{completedAppointments}</p>
               <p className="text-sm text-emerald-600 dark:text-emerald-400">{t('doctorDetailedReport.completed') || 'Completed'}</p>
             </div>
           </div>
@@ -1098,25 +1098,25 @@ const DoctorDetailedReport: React.FC<{
                   const isUpcoming = apt.startTime > new Date();
                   return (
                     <ListItem key={apt.id}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold ${
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+                          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 ${
                             isUpcoming 
                               ? 'bg-gradient-to-br from-blue-400 to-blue-600' 
                               : 'bg-gradient-to-br from-slate-400 to-slate-600'
                           }`}>
                             {patient?.name?.charAt(0) || '?'}
                           </div>
-                          <div>
-                            <p className="font-medium text-slate-800 dark:text-white">
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-800 dark:text-white text-sm md:text-base truncate">
                               {patient?.name || 'Unknown Patient'}
                             </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">
                               {dateTimeFormatter.format(apt.startTime)}
                             </p>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                           (apt.status as string) === 'confirmed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                           (apt.status as string) === 'scheduled' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                           (apt.status as string) === 'completed' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
