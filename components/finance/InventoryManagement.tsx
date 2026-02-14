@@ -447,7 +447,7 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
     const [showDrafts, setShowDrafts] = useState(false);
     const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
     const [draftsNeedRefresh, setDraftsNeedRefresh] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
     // Load draft orders from localStorage and remove duplicates
     useEffect(() => {
