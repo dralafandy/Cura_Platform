@@ -1,0 +1,11 @@
+
+{
+  "name": "CuraSoft - نظام إدارة عيادة الأسنان",
+  "description": "A modern, responsive web application for managing a dental clinic named CuraSoft. It includes patient management, appointment scheduling, and an AI-powered patient summary feature.",
+  "display": "fullscreen",
+  "start_url": "/",
+  "scope": "/",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supplier Reports</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 10px; cursor: pointer; }
+        .card:hover { background: #f5f5f5; }
+        .active { background: #e3f2fd; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Mock the necessary components and functions
+        const mockTranslations = {
+            "reports.materialSupplierReport": "Material Supplier Report",
+            "reports.labSupplierReport": "Lab Supplier Report", 
+            "reports.supplierInvoiceReport": "Supplier Invoice Report",
+            "reports.materialsDescription": "Material supplier transactions and orders",
+            "reports.labsDescription": "Lab supplier transactions and lab cases",
+            "reports.invoicesDescription": "Supplier invoice history and payments"
+        };
+
+        const useI18n = () => ({
+            t: (key) => mockTranslations[key] || key
+        });
+
+        const ReportsDashboard = ({ onReportClick }) => {
+            const { t } = useI18n();
+            
+            const supplierReports = [
+                { id: 'materials', label: t('reports.materialSupplierReport'), description: t('reports.materialsDescription'), icon: '📦' },
+                { id: 'labs', label: t('reports.labSupplierReport'), description: t('reports.labsDescription'), icon: '🔬' },
+                { id: 'invoices', label: t('reports.supplierInvoiceReport'), description: t('reports.invoicesDescription'), icon: '📄' }
+            ];
+
+            return (
+                <div>
+                    <h2>Reports Dashboard</h2>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        {supplierReports.map(report => (
+                            <div
+                                key={report.id}
+                                onClick={() => onReportClick({ category: 'supplier', type: report.id })}
+                                className="card"
+                            >
+                                <div style={{ fontSize: '48px' }}>{report.icon}</div>
+                                <h3>{report.label}</h3>
+                                <p>{report.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const SupplierReports = ({ reportType }) => {
+            const { t } = useI18n();
+            console.log('SupplierReports rendered with reportType:', reportType);
+
+            const renderMaterialSupplierReport = () => {
+                console.log('renderMaterialSupplierReport called');
+                return (
+                    <div>
+                        <h3>Material Supplier Report Content</h3>
+                        <p>This is the material supplier report content.</p>
+                    </div>
+                );
+            };
+
+            const renderLabSupplierReport = () => {
+                console.log('renderLabSupplierReport called');
+                return (
+                    <div>
+                        <h3>Lab Supplier Report Content</h3>
+                        <p>This is the lab supplier report content.</p>
+                    </div>
+                );
+            };
+
+            const renderInvoiceHistoryReport = () => {
+                console.log('renderInvoiceHistoryReport called');
+                return (
+                    <div>
+                        <h3>Supplier Invoice Report Content</h3>
+                        <p>This is the supplier invoice report content.</p>
+                    </div>
+                );
+            };
+
+            const renderReportContent = () => {
+                console.log('renderReportContent called with reportType:', reportType);
+                
+                switch (reportType) {
+                    case 'materials':
+                        return renderMaterialSupplierReport();
+                    case 'labs':
+                        return renderLabSupplierReport();
+                    case 'invoices':
+                        return renderInvoiceHistoryReport();
+                    default:
+                        return <div>Select a report type</div>;
+                }
+            };
+
+            return (
+                <div style={{ padding: '20px' }}>
+                    <h2>{t(`reports.${reportType}Report`)}</h2>
+                    {renderReportContent()}
+                </div>
+            );
+        };
+
+        const ReportsPage = () => {
+            const [selectedReport, setSelectedReport] = React.useState(null);
+            const { t } = useI18n();
+
+            const handleBack = () => {
+                setSelectedReport(null);
+            };
+
+            if (selectedReport) {
+                console.log('Selected report:', selectedReport);
+                
+                const renderReport = () => {
+                    switch (selectedReport.category) {
+                        case 'supplier':
+                            console.log('Rendering SupplierReports with type:', selectedReport.type);
+                            return <SupplierReports reportType={selectedReport.type} />;
+                        default:
+                            return <ReportsDashboard onReportClick={setSelectedReport} />;
+                    }
+                };
+
+                return (
+                    <div>
+                        <button onClick={handleBack} style={{ marginBottom: '20px' }}>Back</button>
+                        {renderReport()}
+                    </div>
+                );
+            }
+
+            return <ReportsDashboard onReportClick={setSelectedReport} />;
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(
+            <ReportsPage />
+        );
+    </script>
+</body>
+</html>

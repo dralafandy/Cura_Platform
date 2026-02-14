@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="114x114" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="76x76" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="60x60" href="/logo.svg" />
+    <link rel="apple-touch-icon" sizes="57x57" href="/logo.svg" />
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CuraSoft" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>CuraSoft - نظام إدارة عيادة الأسنان</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      console.log('Tailwind CSS is being loaded from CDN. This is not recommended for production.')
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Cairo', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                DEFAULT: '#0ea5e9', // sky-500
+                light: '#38bdf8',   // sky-400
+                dark: '#0284c7',    // sky-600
+              },
+              secondary: '#10b981', // emerald-500
+              accent: '#f97316',   // orange-500
+              neutral: {
+                  light: '#f8fafc', // slate-50
+                  DEFAULT: '#f1f5f9', // slate-100
+                  dark: '#e2e8f0',   // slate-200
+              },
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @media print {
+        @page {
+          size: A4;
+          margin: 1.5cm;
+        }
+        html, body {
+          background-color: #fff !important;
+          color: #000 !important;
+        }
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.43.4"
+  }
+}
+</script>
+</head>
+  <body class="font-sans antialiased" style="margin: 0; padding: 0; height: 100vh; width: 100vw;">
+    <div id="root" style="height: 100%; width: 100%;"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

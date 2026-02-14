@@ -1,0 +1,708 @@
+{
+  "patients": [
+    {
+      "id": "sample-patient-1",
+      "name": "أحمد محمد علي",
+      "dob": "1990-05-15",
+      "gender": "Male",
+      "phone": "01012345678",
+      "email": "ahmed.mohamed@sharkia.com",
+      "address": "شارع الجلاء، الزقازيق، الشرقية، مصر",
+      "medicalHistory": "لا توجد أمراض مزمنة، فحص دوري منتظم",
+      "treatmentNotes": "مريض منتظم في الزيارات، يحتاج لتنظيف الأسنان كل 6 أشهر",
+      "lastVisit": "2024-01-15",
+      "allergies": "لا توجد حساسية معروفة",
+      "medications": "لا يتناول أدوية",
+      "insuranceProvider": "التأمين الصحي الشرقية",
+      "insurancePolicyNumber": "SHK123456",
+      "emergencyContactName": "فاطمة محمد",
+      "emergencyContactPhone": "01087654321",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "FILLING", "notes": "حشوة قديمة 2022"},
+        "UR3": {"status": "HEALTHY", "notes": ""},
+        "UR4": {"status": "HEALTHY", "notes": ""},
+        "UR5": {"status": "HEALTHY", "notes": ""},
+        "UR6": {"status": "HEALTHY", "notes": ""},
+        "UR7": {"status": "HEALTHY", "notes": ""},
+        "UR8": {"status": "HEALTHY", "notes": ""},
+        "UL1": {"status": "HEALTHY", "notes": ""},
+        "UL2": {"status": "HEALTHY", "notes": ""},
+        "UL3": {"status": "HEALTHY", "notes": ""},
+        "UL4": {"status": "HEALTHY", "notes": ""},
+        "UL5": {"status": "HEALTHY", "notes": ""},
+        "UL6": {"status": "HEALTHY", "notes": ""},
+        "UL7": {"status": "HEALTHY", "notes": ""},
+        "UL8": {"status": "HEALTHY", "notes": ""},
+        "LL1": {"status": "HEALTHY", "notes": ""},
+        "LL2": {"status": "HEALTHY", "notes": ""},
+        "LL3": {"status": "HEALTHY", "notes": ""},
+        "LL4": {"status": "HEALTHY", "notes": ""},
+        "LL5": {"status": "HEALTHY", "notes": ""},
+        "LL6": {"status": "HEALTHY", "notes": ""},
+        "LL7": {"status": "HEALTHY", "notes": ""},
+        "LL8": {"status": "HEALTHY", "notes": ""},
+        "LR1": {"status": "HEALTHY", "notes": ""},
+        "LR2": {"status": "HEALTHY", "notes": ""},
+        "LR3": {"status": "HEALTHY", "notes": ""},
+        "LR4": {"status": "HEALTHY", "notes": ""},
+        "LR5": {"status": "HEALTHY", "notes": ""},
+        "LR6": {"status": "HEALTHY", "notes": ""},
+        "LR7": {"status": "HEALTHY", "notes": ""},
+        "LR8": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": [
+        "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+IRjWjBqO6O2mhP//Z"
+      ]
+    },
+    {
+      "id": "sample-patient-2",
+      "name": "سارة أحمد حسن",
+      "dob": "1985-08-22",
+      "gender": "Female",
+      "phone": "01123456789",
+      "email": "sara.ahmed@sharkia.com",
+      "address": "مدينة العبور، الزقازيق، الشرقية، مصر",
+      "medicalHistory": "ضغط دم مرتفع، مرض السكري تحت السيطرة",
+      "treatmentNotes": "تحتاج لمتابعة دورية، تجنب العلاجات المؤلمة",
+      "lastVisit": "2024-01-10",
+      "allergies": "حساسية من البنسلين والمضادات الحيوية البيتالاكتامية",
+      "medications": "أملوديبين 5mg يومياً، ميتفورمين 500mg مرتين يومياً",
+      "insuranceProvider": "التأمين الصحي الشرقية",
+      "insurancePolicyNumber": "SHK789012",
+      "emergencyContactName": "محمد أحمد",
+      "emergencyContactPhone": "01134567890",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "HEALTHY", "notes": ""},
+        "UR3": {"status": "HEALTHY", "notes": ""},
+        "UR4": {"status": "HEALTHY", "notes": ""},
+        "UR5": {"status": "HEALTHY", "notes": ""},
+        "UR6": {"status": "HEALTHY", "notes": ""},
+        "UR7": {"status": "HEALTHY", "notes": ""},
+        "UR8": {"status": "HEALTHY", "notes": ""},
+        "UL1": {"status": "CAVITY", "notes": "تسوس متوسط يحتاج لحشوة"},
+        "UL2": {"status": "HEALTHY", "notes": ""},
+        "UL3": {"status": "HEALTHY", "notes": ""},
+        "UL4": {"status": "HEALTHY", "notes": ""},
+        "UL5": {"status": "HEALTHY", "notes": ""},
+        "UL6": {"status": "HEALTHY", "notes": ""},
+        "UL7": {"status": "HEALTHY", "notes": ""},
+        "UL8": {"status": "HEALTHY", "notes": ""},
+        "LL1": {"status": "HEALTHY", "notes": ""},
+        "LL2": {"status": "HEALTHY", "notes": ""},
+        "LL3": {"status": "HEALTHY", "notes": ""},
+        "LL4": {"status": "HEALTHY", "notes": ""},
+        "LL5": {"status": "HEALTHY", "notes": ""},
+        "LL6": {"status": "HEALTHY", "notes": ""},
+        "LL7": {"status": "HEALTHY", "notes": ""},
+        "LL8": {"status": "HEALTHY", "notes": ""},
+        "LR1": {"status": "HEALTHY", "notes": ""},
+        "LR2": {"status": "HEALTHY", "notes": ""},
+        "LR3": {"status": "HEALTHY", "notes": ""},
+        "LR4": {"status": "HEALTHY", "notes": ""},
+        "LR5": {"status": "HEALTHY", "notes": ""},
+        "LR6": {"status": "HEALTHY", "notes": ""},
+        "LR7": {"status": "HEALTHY", "notes": ""},
+        "LR8": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": []
+    },
+    {
+      "id": "sample-patient-3",
+      "name": "محمد عبدالله سالم",
+      "dob": "1978-03-10",
+      "gender": "Male",
+      "phone": "01234567890",
+      "email": "mohamed.salem@sharkia.com",
+      "address": "أبو كبير، الشرقية، مصر",
+      "medicalHistory": "قلب صناعي، يتناول مميعات دم",
+      "treatmentNotes": "تحتاج لتنسيق مع الطبيب المعالج قبل أي علاج جراحي",
+      "lastVisit": "2024-01-08",
+      "allergies": "لا توجد حساسية معروفة",
+      "medications": "وارفارين، أسبرين",
+      "insuranceProvider": "التأمين الصحي الحكومي",
+      "insurancePolicyNumber": "GOV123789",
+      "emergencyContactName": "فاطمة سالم",
+      "emergencyContactPhone": "01245678901",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "HEALTHY", "notes": ""},
+        "UR3": {"status": "HEALTHY", "notes": ""},
+        "UR4": {"status": "HEALTHY", "notes": ""},
+        "UR5": {"status": "HEALTHY", "notes": ""},
+        "UR6": {"status": "HEALTHY", "notes": ""},
+        "UR7": {"status": "HEALTHY", "notes": ""},
+        "UR8": {"status": "HEALTHY", "notes": ""},
+        "UL1": {"status": "HEALTHY", "notes": ""},
+        "UL2": {"status": "HEALTHY", "notes": ""},
+        "UL3": {"status": "HEALTHY", "notes": ""},
+        "UL4": {"status": "HEALTHY", "notes": ""},
+        "UL5": {"status": "HEALTHY", "notes": ""},
+        "UL6": {"status": "HEALTHY", "notes": ""},
+        "UL7": {"status": "HEALTHY", "notes": ""},
+        "UL8": {"status": "HEALTHY", "notes": ""},
+        "LL1": {"status": "HEALTHY", "notes": ""},
+        "LL2": {"status": "HEALTHY", "notes": ""},
+        "LL3": {"status": "HEALTHY", "notes": ""},
+        "LL4": {"status": "HEALTHY", "notes": ""},
+        "LL5": {"status": "HEALTHY", "notes": ""},
+        "LL6": {"status": "HEALTHY", "notes": ""},
+        "LL7": {"status": "HEALTHY", "notes": ""},
+        "LL8": {"status": "HEALTHY", "notes": ""},
+        "LR1": {"status": "MISSING", "notes": "سن مفقود منذ الطفولة"},
+        "LR2": {"status": "IMPLANT", "notes": "زراعة سن 2020"},
+        "LR3": {"status": "HEALTHY", "notes": ""},
+        "LR4": {"status": "HEALTHY", "notes": ""},
+        "LR5": {"status": "HEALTHY", "notes": ""},
+        "LR6": {"status": "HEALTHY", "notes": ""},
+        "LR7": {"status": "HEALTHY", "notes": ""},
+        "LR8": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": []
+    },
+    {
+      "id": "sample-patient-4",
+      "name": "فاطمة عمر رضوان",
+      "dob": "1995-11-30",
+      "gender": "Female",
+      "phone": "01098765432",
+      "email": "fatima.omar@sharkia.com",
+      "address": "فاقوس، الشرقية، مصر",
+      "medicalHistory": "حامل في الشهر الخامس",
+      "treatmentNotes": "تجنب الأشعة والأدوية الممنوعة للحوامل",
+      "lastVisit": "2024-01-12",
+      "allergies": "حساسية من المطاط اللاتكس",
+      "medications": "فيتامينات الحمل، كالسيوم",
+      "insuranceProvider": "تأمين حوامل الشرقية",
+      "insurancePolicyNumber": "PREG456123",
+      "emergencyContactName": "عمر رضوان",
+      "emergencyContactPhone": "01087654322",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": []
+    },
+    {
+      "id": "sample-patient-5",
+      "name": "علي حسن محمود",
+      "dob": "1982-07-18",
+      "gender": "Male",
+      "phone": "01234567891",
+      "email": "ali.hassan@sharkia.com",
+      "address": "ههيا، الشرقية، مصر",
+      "medicalHistory": "تدخين سابق، يحتاج لتنظيف شامل",
+      "treatmentNotes": "يحتاج لعلاج اللثة بسبب التدخين السابق",
+      "lastVisit": "2024-01-05",
+      "allergies": "لا توجد حساسية معروفة",
+      "medications": "لا يتناول أدوية",
+      "insuranceProvider": "التأمين الصحي الشرقية",
+      "insurancePolicyNumber": "SHK567890",
+      "emergencyContactName": "فاطمة حسن",
+      "emergencyContactPhone": "01234567892",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "HEALTHY", "notes": ""},
+        "UR3": {"status": "HEALTHY", "notes": ""},
+        "UR4": {"status": "HEALTHY", "notes": ""},
+        "UR5": {"status": "HEALTHY", "notes": ""},
+        "UR6": {"status": "HEALTHY", "notes": ""},
+        "UR7": {"status": "HEALTHY", "notes": ""},
+        "UR8": {"status": "HEALTHY", "notes": ""},
+        "UL1": {"status": "HEALTHY", "notes": ""},
+        "UL2": {"status": "HEALTHY", "notes": ""},
+        "UL3": {"status": "HEALTHY", "notes": ""},
+        "UL4": {"status": "HEALTHY", "notes": ""},
+        "UL5": {"status": "HEALTHY", "notes": ""},
+        "UL6": {"status": "HEALTHY", "notes": ""},
+        "UL7": {"status": "HEALTHY", "notes": ""},
+        "UL8": {"status": "HEALTHY", "notes": ""},
+        "LL1": {"status": "ROOT_CANAL", "notes": "علاج عصب 2023"},
+        "LL2": {"status": "CROWN", "notes": "تاج معدني 2023"},
+        "LL3": {"status": "HEALTHY", "notes": ""},
+        "LL4": {"status": "HEALTHY", "notes": ""},
+        "LL5": {"status": "HEALTHY", "notes": ""},
+        "LL6": {"status": "HEALTHY", "notes": ""},
+        "LL7": {"status": "HEALTHY", "notes": ""},
+        "LL8": {"status": "HEALTHY", "notes": ""},
+        "LR1": {"status": "HEALTHY", "notes": ""},
+        "LR2": {"status": "HEALTHY", "notes": ""},
+        "LR3": {"status": "HEALTHY", "notes": ""},
+        "LR4": {"status": "HEALTHY", "notes": ""},
+        "LR5": {"status": "HEALTHY", "notes": ""},
+        "LR6": {"status": "HEALTHY", "notes": ""},
+        "LR7": {"status": "HEALTHY", "notes": ""},
+        "LR8": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": []
+    },
+    {
+      "id": "sample-patient-6",
+      "name": "منى عبدالرحمن أحمد",
+      "dob": "1998-12-05",
+      "gender": "Female",
+      "phone": "01187654321",
+      "email": "mona.abdulrahman@sharkia.com",
+      "address": "ديرب نجم، الشرقية، مصر",
+      "medicalHistory": "لا توجد أمراض مزمنة",
+      "treatmentNotes": "مريضة شابة، تحتاج للوقاية من التسوس",
+      "lastVisit": "2024-01-18",
+      "allergies": "حساسية من المعادن",
+      "medications": "لا يتناول أدوية",
+      "insuranceProvider": "التأمين الصحي الشرقية",
+      "insurancePolicyNumber": "SHK345678",
+      "emergencyContactName": "عبدالرحمن أحمد",
+      "emergencyContactPhone": "01187654322",
+      "dentalChart": {
+        "UR1": {"status": "HEALTHY", "notes": ""},
+        "UR2": {"status": "HEALTHY", "notes": ""},
+        "UR3": {"status": "HEALTHY", "notes": ""},
+        "UR4": {"status": "HEALTHY", "notes": ""},
+        "UR5": {"status": "HEALTHY", "notes": ""},
+        "UR6": {"status": "HEALTHY", "notes": ""},
+        "UR7": {"status": "HEALTHY", "notes": ""},
+        "UR8": {"status": "HEALTHY", "notes": ""},
+        "UL1": {"status": "HEALTHY", "notes": ""},
+        "UL2": {"status": "HEALTHY", "notes": ""},
+        "UL3": {"status": "HEALTHY", "notes": ""},
+        "UL4": {"status": "HEALTHY", "notes": ""},
+        "UL5": {"status": "HEALTHY", "notes": ""},
+        "UL6": {"status": "HEALTHY", "notes": ""},
+        "UL7": {"status": "HEALTHY", "notes": ""},
+        "UL8": {"status": "HEALTHY", "notes": ""},
+        "LL1": {"status": "HEALTHY", "notes": ""},
+        "LL2": {"status": "HEALTHY", "notes": ""},
+        "LL3": {"status": "HEALTHY", "notes": ""},
+        "LL4": {"status": "HEALTHY", "notes": ""},
+        "LL5": {"status": "HEALTHY", "notes": ""},
+        "LL6": {"status": "HEALTHY", "notes": ""},
+        "LL7": {"status": "HEALTHY", "notes": ""},
+        "LL8": {"status": "HEALTHY", "notes": ""},
+        "LR1": {"status": "HEALTHY", "notes": ""},
+        "LR2": {"status": "HEALTHY", "notes": ""},
+        "LR3": {"status": "HEALTHY", "notes": ""},
+        "LR4": {"status": "HEALTHY", "notes": ""},
+        "LR5": {"status": "HEALTHY", "notes": ""},
+        "LR6": {"status": "HEALTHY", "notes": ""},
+        "LR7": {"status": "HEALTHY", "notes": ""},
+        "LR8": {"status": "HEALTHY", "notes": ""}
+      },
+      "images": []
+    }
+  ],
+  "dentists": [
+    {
+      "id": "sample-dentist-1",
+      "name": "د. محمد علي حسن",
+      "specialty": "طب أسنان عام",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "sample-dentist-2",
+      "name": "د. لينا سمير محمود",
+      "specialty": "تقويم الأسنان",
+      "color": "#EF4444"
+    },
+    {
+      "id": "sample-dentist-3",
+      "name": "د. أحمد عبدالرحمن سالم",
+      "specialty": "جراحة الفم والوجه",
+      "color": "#10B981"
+    },
+    {
+      "id": "sample-dentist-4",
+      "name": "د. سارة محمد علي",
+      "specialty": "أسنان الأطفال",
+      "color": "#F59E0B"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "sample-appointment-1",
+      "patientId": "sample-patient-1",
+      "dentistId": "sample-dentist-1",
+      "startTime": "2024-01-20T10:00:00.000Z",
+      "endTime": "2024-01-20T11:00:00.000Z",
+      "reason": "فحص دوري وتنظيف الأسنان",
+      "status": "SCHEDULED",
+      "reminderTime": "1_day_before",
+      "reminderSent": false
+    },
+    {
+      "id": "sample-appointment-2",
+      "patientId": "sample-patient-2",
+      "dentistId": "sample-dentist-1",
+      "startTime": "2024-01-22T14:00:00.000Z",
+      "endTime": "2024-01-22T15:30:00.000Z",
+      "reason": "حشوة تسوس في الضرس العلوي",
+      "status": "CONFIRMED",
+      "reminderTime": "2_hours_before",
+      "reminderSent": false
+    },
+    {
+      "id": "sample-appointment-3",
+      "patientId": "sample-patient-4",
+      "dentistId": "sample-dentist-4",
+      "startTime": "2024-01-25T09:00:00.000Z",
+      "endTime": "2024-01-25T10:00:00.000Z",
+      "reason": "فحص أسنان للحامل",
+      "status": "SCHEDULED",
+      "reminderTime": "1_day_before",
+      "reminderSent": false
+    },
+    {
+      "id": "sample-appointment-4",
+      "patientId": "sample-patient-5",
+      "dentistId": "sample-dentist-3",
+      "startTime": "2024-01-28T11:00:00.000Z",
+      "endTime": "2024-01-28T12:30:00.000Z",
+      "reason": "متابعة علاج اللثة",
+      "status": "CONFIRMED",
+      "reminderTime": "none",
+      "reminderSent": false
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sample-supplier-1",
+      "name": "شركة الأدوات الطبية الشرقية",
+      "contactPerson": "أحمد محمد سالم",
+      "phone": "0552345678",
+      "email": "ahmed@sharkia-medical.com",
+      "type": "Material Supplier"
+    },
+    {
+      "id": "sample-supplier-2",
+      "name": "معمل الأسنان المتقدم - الزقازيق",
+      "contactPerson": "د. سارة علي حسن",
+      "phone": "0553456789",
+      "email": "sara@sharkia-dental-lab.com",
+      "type": "Dental Lab"
+    },
+    {
+      "id": "sample-supplier-3",
+      "name": "مورد المعدات الطبية المركزي",
+      "contactPerson": "محمد عبدالله",
+      "phone": "0554567890",
+      "email": "mohamed@central-medical.com",
+      "type": "Material Supplier"
+    }
+  ],
+  "inventoryItems": [
+    {
+      "id": "sample-item-1",
+      "name": "مادة حشو ضوئي",
+      "description": "مادة حشو ضوئي للأسنان الأمامية - شركة 3M",
+      "supplierId": "sample-supplier-1",
+      "currentStock": 25,
+      "unitCost": 150,
+      "minStockLevel": 10,
+      "expiryDate": "2025-06-30"
+    },
+    {
+      "id": "sample-item-2",
+      "name": "قفازات طبية",
+      "description": "قفازات مطاطية معقمة حجم M - عبوة 100 قطعة",
+      "supplierId": "sample-supplier-1",
+      "currentStock": 100,
+      "unitCost": 5,
+      "minStockLevel": 50,
+      "expiryDate": "2025-12-31"
+    },
+    {
+      "id": "sample-item-3",
+      "name": "مادة مخدر موضعي",
+      "description": "ليداكايين 2% مع أدرينالين - أمبولات",
+      "supplierId": "sample-supplier-1",
+      "currentStock": 15,
+      "unitCost": 20,
+      "minStockLevel": 5,
+      "expiryDate": "2024-08-15"
+    },
+    {
+      "id": "sample-item-4",
+      "name": "فرشاة أسنان كهربائية",
+      "description": "فرشاة أسنان كهربائية للعناية باللثة",
+      "supplierId": "sample-supplier-3",
+      "currentStock": 30,
+      "unitCost": 80,
+      "minStockLevel": 15,
+      "expiryDate": "2026-01-31"
+    },
+    {
+      "id": "sample-item-5",
+      "name": "معجون أسنان طبي",
+      "description": "معجون أسنان طبي للأطفال - أنبوب 50 جرام",
+      "supplierId": "sample-supplier-3",
+      "currentStock": 50,
+      "unitCost": 15,
+      "minStockLevel": 20,
+      "expiryDate": "2025-09-30"
+    },
+    {
+      "id": "sample-item-6",
+      "name": "خيط تنظيف الأسنان",
+      "description": "خيط تنظيف الأسنان - علبة 50 متر",
+      "supplierId": "sample-supplier-3",
+      "currentStock": 40,
+      "unitCost": 25,
+      "minStockLevel": 15,
+      "expiryDate": "2026-03-31"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "sample-expense-1",
+      "date": "2024-01-05",
+      "description": "إيجار العيادة شهر يناير - الزقازيق",
+      "amount": 5000,
+      "category": "RENT",
+      "supplierId": null,
+      "supplierInvoiceId": null
+    },
+    {
+      "id": "sample-expense-2",
+      "date": "2024-01-10",
+      "description": "رواتب الموظفين شهر ديسمبر",
+      "amount": 8000,
+      "category": "SALARIES",
+      "supplierId": null,
+      "supplierInvoiceId": null
+    },
+    {
+      "id": "sample-expense-3",
+      "date": "2024-01-12",
+      "description": "فاتورة كهرباء ومياه شهر ديسمبر",
+      "amount": 1200,
+      "category": "UTILITIES",
+      "supplierId": null,
+      "supplierInvoiceId": null
+    },
+    {
+      "id": "sample-expense-4",
+      "date": "2024-01-08",
+      "description": "تسويق العيادة على وسائل التواصل الاجتماعي",
+      "amount": 1500,
+      "category": "MARKETING",
+      "supplierId": null,
+      "supplierInvoiceId": null
+    },
+    {
+      "id": "sample-expense-5",
+      "date": "2024-01-15",
+      "description": "مستلزمات مكتبية وطباعة",
+      "amount": 800,
+      "category": "SUPPLIES",
+      "supplierId": null,
+      "supplierInvoiceId": null
+    }
+  ],
+  "treatmentDefinitions": [
+    {
+      "id": "sample-treatment-1",
+      "name": "فحص دوري",
+      "description": "فحص شامل للأسنان وتنظيف",
+      "basePrice": 200,
+      "doctorPercentage": 0.7,
+      "clinicPercentage": 0.3
+    },
+    {
+      "id": "sample-treatment-2",
+      "name": "حشوة ضوئية",
+      "description": "حشوة ضوئية للأسنان الأمامية",
+      "basePrice": 400,
+      "doctorPercentage": 0.75,
+      "clinicPercentage": 0.25
+    },
+    {
+      "id": "sample-treatment-3",
+      "name": "خلع سن",
+      "description": "خلع سن بالغ",
+      "basePrice": 150,
+      "doctorPercentage": 0.8,
+      "clinicPercentage": 0.2
+    },
+    {
+      "id": "sample-treatment-4",
+      "name": "زراعة سن",
+      "description": "زراعة سن تيتانيوم مع التاج",
+      "basePrice": 8000,
+      "doctorPercentage": 0.6,
+      "clinicPercentage": 0.4
+    },
+    {
+      "id": "sample-treatment-5",
+      "name": "تقويم أسنان",
+      "description": "جهاز تقويم ثابت للأسنان",
+      "basePrice": 15000,
+      "doctorPercentage": 0.65,
+      "clinicPercentage": 0.35
+    },
+    {
+      "id": "sample-treatment-6",
+      "name": "علاج عصب",
+      "description": "علاج عصب السن",
+      "basePrice": 800,
+      "doctorPercentage": 0.7,
+      "clinicPercentage": 0.3
+    },
+    {
+      "id": "sample-treatment-7",
+      "name": "تلبيس تاج",
+      "description": "تلبيس تاج زركونيا",
+      "basePrice": 2000,
+      "doctorPercentage": 0.65,
+      "clinicPercentage": 0.35
+    },
+    {
+      "id": "sample-treatment-8",
+      "name": "تنظيف شامل",
+      "description": "تنظيف شامل للأسنان واللثة",
+      "basePrice": 300,
+      "doctorPercentage": 0.75,
+      "clinicPercentage": 0.25
+    }
+  ],
+  "treatmentRecords": [
+    {
+      "id": "sample-treatment-record-1",
+      "patientId": "sample-patient-1",
+      "dentistId": "sample-dentist-1",
+      "treatmentDate": "2024-01-15",
+      "treatmentDefinitionId": "sample-treatment-1",
+      "notes": "فحص دوري، الأسنان بحالة جيدة، تم تنظيف الأسنان",
+      "inventoryItemsUsed": [
+        {"inventoryItemId": "sample-item-2", "quantity": 2, "cost": 10}
+      ],
+      "totalTreatmentCost": 200,
+      "doctorShare": 140,
+      "clinicShare": 60
+    },
+    {
+      "id": "sample-treatment-record-2",
+      "patientId": "sample-patient-2",
+      "dentistId": "sample-dentist-1",
+      "treatmentDate": "2024-01-10",
+      "treatmentDefinitionId": "sample-treatment-2",
+      "notes": "حشوة ضوئية للضرس العلوي الأيسر",
+      "inventoryItemsUsed": [
+        {"inventoryItemId": "sample-item-1", "quantity": 1, "cost": 150},
+        {"inventoryItemId": "sample-item-3", "quantity": 1, "cost": 20}
+      ],
+      "totalTreatmentCost": 400,
+      "doctorShare": 300,
+      "clinicShare": 100
+    },
+    {
+      "id": "sample-treatment-record-3",
+      "patientId": "sample-patient-5",
+      "dentistId": "sample-dentist-3",
+      "treatmentDate": "2024-01-05",
+      "treatmentDefinitionId": "sample-treatment-6",
+      "notes": "علاج عصب للضرس السفلي الأيسر",
+      "inventoryItemsUsed": [
+        {"inventoryItemId": "sample-item-3", "quantity": 2, "cost": 40}
+      ],
+      "totalTreatmentCost": 800,
+      "doctorShare": 560,
+      "clinicShare": 240
+    }
+  ],
+  "payments": [
+    {
+      "id": "sample-payment-1",
+      "patientId": "sample-patient-1",
+      "date": "2024-01-15",
+      "amount": 200,
+      "method": "Cash",
+      "notes": "دفع فحص دوري"
+    },
+    {
+      "id": "sample-payment-2",
+      "patientId": "sample-patient-2",
+      "date": "2024-01-10",
+      "amount": 300,
+      "method": "Credit Card",
+      "notes": "دفع جزء من حشوة الأسنان"
+    },
+    {
+      "id": "sample-payment-3",
+      "patientId": "sample-patient-2",
+      "date": "2024-01-12",
+      "amount": 100,
+      "method": "Cash",
+      "notes": "دفع باقي حشوة الأسنان"
+    },
+    {
+      "id": "sample-payment-4",
+      "patientId": "sample-patient-5",
+      "date": "2024-01-05",
+      "amount": 800,
+      "method": "Bank Transfer",
+      "notes": "دفع علاج العصب"
+    }
+  ],
+  "labCases": [
+    {
+      "id": "sample-lab-case-1",
+      "patientId": "sample-patient-3",
+      "labId": "sample-supplier-2",
+      "caseType": "تاج زركونيا",
+      "sentDate": "2024-01-08",
+      "dueDate": "2024-01-22",
+      "returnDate": null,
+      "status": "SENT_TO_LAB",
+      "labCost": 1500,
+      "notes": "لون A2، شكل طبيعي"
+    },
+    {
+      "id": "sample-lab-case-2",
+      "patientId": "sample-patient-5",
+      "labId": "sample-supplier-2",
+      "caseType": "تاج معدني",
+      "sentDate": "2024-01-06",
+      "dueDate": "2024-01-20",
+      "returnDate": "2024-01-18",
+      "status": "RECEIVED_FROM_LAB",
+      "labCost": 800,
+      "notes": "لون مشابه للأسنان الطبيعية"
+    }
+  ],
+  "supplierInvoices": [
+    {
+      "id": "sample-invoice-1",
+      "supplierId": "sample-supplier-1",
+      "invoiceNumber": "INV-2024-001",
+      "invoiceDate": "2024-01-05",
+      "dueDate": "2024-02-05",
+      "amount": 2500,
+      "status": "UNPAID",
+      "items": [
+        {"description": "مادة حشو ضوئي", "amount": 1500},
+        {"description": "قفازات طبية", "amount": 500},
+        {"description": "مادة مخدر", "amount": 500}
+      ],
+      "invoiceImageUrl": null,
+      "payments": []
+    },
+    {
+      "id": "sample-invoice-2",
+      "supplierId": "sample-supplier-3",
+      "invoiceNumber": "INV-2024-002",
+      "invoiceDate": "2024-01-10",
+      "dueDate": "2024-02-10",
+      "amount": 3200,
+      "status": "PAID",
+      "items": [
+        {"description": "فرشاة أسنان كهربائية", "amount": 2400},
+        {"description": "معجون أسنان طبي", "amount": 400},
+        {"description": "خيط تنظيف الأسنان", "amount": 400}
+      ],
+      "invoiceImageUrl": null,
+      "payments": [
+        {"expenseId": "sample-expense-6", "amount": 3200, "date": "2024-01-12"}
+      ]
+    }
+  ]
+}
