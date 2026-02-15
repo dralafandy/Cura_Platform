@@ -162,6 +162,8 @@ export interface AuthState {
   isLoading: boolean;
   user: User | null;
   permissions: Permission[];
+  customPermissions: Permission[];
+  overrideMode: boolean;
   role: UserRole | null;
   token?: string;
 }

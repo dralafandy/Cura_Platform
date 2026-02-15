@@ -588,13 +588,16 @@ const DoctorDetailsPage: React.FC<{
 
   const handleDeletePayment = useCallback((paymentId: string) => {
     if (window.confirm(t('common.confirmDelete'))) {
+      if (!checkPermission(Permission.FINANCE_DISCOUNT_DELETE)) {
+        return;
+      }
       clinicData.deleteDoctorPayment(paymentId);
       addNotification({ 
         message: t('notifications.paymentDeleted'), 
         type: NotificationType.SUCCESS
       });
     }
-  }, [clinicData, addNotification, t]);
+  }, [clinicData, addNotification, t, checkPermission]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
@@ -1029,6 +1032,7 @@ const DoctorDetailsPage: React.FC<{
                             currencyFormatter={currencyFormatter}
                             onDelete={handleDeletePayment}
                             deleteLabel={t('common.delete')}
+                            canDelete={checkPermission(Permission.FINANCE_DISCOUNT_DELETE)}
                           />
                         ))}
 

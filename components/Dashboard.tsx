@@ -3,6 +3,7 @@ import { ClinicData } from '../hooks/useClinicData';
 import { AppointmentStatus, LabCaseStatus, View, Dentist, TreatmentRecord, ExpenseCategory, Appointment } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserPreferences } from '../contexts/UserPreferencesContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import NotificationBell from './NotificationBell';
 
@@ -74,6 +75,8 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, s
 const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View) => void }> = ({ clinicData, setCurrentView }) => {
     const { t, locale } = useI18n();
     const { isAdmin } = useAuth();
+    const { preferences } = useUserPreferences();
+    const { dashboard } = preferences;
     console.log('Dashboard component rendered with clinicData:', {
         patientsCount: clinicData.patients?.length || 0,
         appointmentsCount: clinicData.appointments?.length || 0,
@@ -518,7 +521,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
 
 
                 {/* 1. Data Visualization Dashboard - Only for Admin */}
-                {isAdmin && (
+                {isAdmin && dashboard.showQuickStats && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         {/* Today's Financial Overview */}
                         <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -570,7 +573,8 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                             </div>
                         </div>
 
-                        {/* Daily Trends */}
+                        {/* Daily Trends - Show when showRevenueChart is enabled */}
+                        {dashboard.showRevenueChart && (
                         <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-700">
                                 <div className="flex items-center justify-between">
@@ -626,10 +630,12 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                 </div>
                             </div>
                         </div>
+                        )}
                     </div>
                 )}
 
-                {/* 2. Upcoming Appointments Section */}
+                {/* 2. Upcoming Appointments Section - Show when showAppointmentsToday is enabled */}
+                {dashboard.showAppointmentsToday && (
                 <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-700">
                         <div className="flex items-center justify-between">
@@ -666,6 +672,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                         </div>
                     </div>
                 </div>
+                )}
 
                 {/* 2.3. Monthly Trends (moved below) - Only for Admin */}
                 {isAdmin && (
@@ -823,6 +830,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                     </div>
                                 </div>
 
+                                {dashboard.showLowStockAlerts && (
                                 <div>
                                     <div className="flex items-center mb-2 sm:mb-3">
                                         <div className="flex-shrink-0">{AlertIcon}</div>
@@ -846,6 +854,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                         )}
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -3,7 +3,7 @@ import { ClinicData } from '../../hooks/useClinicData';
 import { Expense, ExpenseCategory, Supplier, SupplierInvoice, SupplierInvoiceStatus, PaymentMethod } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
-import { useResponsive } from '../../hooks/useResponsive';
+import { usePageView, ViewMode } from '../../contexts/UserPreferencesContext';
 import InvoiceAttachmentUploader from './InvoiceAttachmentUploader';
 
 const AddIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
@@ -18,19 +18,6 @@ const DollarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 
 const TrendingUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
 const CountIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>;
 const AverageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
-
-// View Mode Icons
-const GridViewIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-);
-
-const ListViewIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-    </svg>
-);
 
 const getCategoryIcon = (category: ExpenseCategory) => {
     switch (category) {
@@ -64,93 +51,6 @@ const getCategoryColor = (category: ExpenseCategory) => {
         case ExpenseCategory.MISC: return 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-400';
         default: return 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-400';
     }
-};
-
-// Modern List View Row Component
-const ExpenseRow: React.FC<{
-    expense: Expense;
-    supplier: Supplier | null;
-    invoice: SupplierInvoice | null;
-    currencyFormatter: Intl.NumberFormat;
-    dateFormatter: Intl.DateTimeFormat;
-    onEdit: () => void;
-    onDelete: () => void;
-    t: (key: string) => string;
-}> = ({ expense, supplier, invoice, currencyFormatter, dateFormatter, onEdit, onDelete, t }) => {
-    return (
-        <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-            {/* Category Icon */}
-            <div className="flex-shrink-0">
-                <span className={`p-2 rounded-lg ${getCategoryColor(expense.category)}`}>
-                    {getCategoryIcon(expense.category)}
-                </span>
-            </div>
-            
-            {/* Description & Details */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">
-                        {expense.description}
-                    </h3>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${getCategoryColor(expense.category)} flex-shrink-0`}>
-                        {t(`expenseCategory.${expense.category}`)}
-                    </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    <span className="flex items-center gap-1">
-                        <CalendarIcon />
-                        {dateFormatter.format(new Date(expense.date))}
-                    </span>
-                    {supplier && (
-                        <span className="flex items-center gap-1">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            {supplier.name}
-                        </span>
-                    )}
-                    {expense.method && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getPaymentMethodColor(expense.method)}`}>
-                            {t(`paymentMethod.${expense.method}`)}
-                        </span>
-                    )}
-                </div>
-            </div>
-            
-            {/* Amount */}
-            <div className="flex flex-col items-end min-w-[100px]">
-                <span className="text-lg font-bold text-purple-700 dark:text-purple-400">
-                    {currencyFormatter.format(expense.amount)}
-                </span>
-                {expense.expenseReceiptImageUrl && (
-                    <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {t('expenses.receiptAttached')}
-                    </span>
-                )}
-            </div>
-            
-            {/* Actions */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                    onClick={onEdit}
-                    className="p-2 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                    aria-label="Edit expense"
-                >
-                    <EditIcon />
-                </button>
-                <button
-                    onClick={onDelete}
-                    className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                    aria-label="Delete expense"
-                >
-                    <DeleteIcon />
-                </button>
-            </div>
-        </div>
-    );
 };
 
 const AddEditExpenseModal: React.FC<{
@@ -359,7 +259,6 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [startDate, setStartDate] = useState(reportsFilters.startDate);
     const [endDate, setEndDate] = useState(reportsFilters.endDate);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     // Sync with reports filters when they change
     useEffect(() => {
@@ -441,7 +340,7 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                     
                     <div className="relative z-10">
                         {/* Header Title & Add Button */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">
                                     {t('expenses.clinicExpenses')}
@@ -452,15 +351,15 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                             </div>
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2.5 sm:px-5 rounded-xl hover:from-purple-700 hover:to-purple-800 flex items-center justify-center gap-2 font-medium transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-5 py-2.5 rounded-xl hover:from-purple-700 hover:to-purple-800 flex items-center gap-2 font-medium transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 <AddIcon />
                                 <span className="text-sm">{t('expenses.addExpense')}</span>
                             </button>
                         </div>
                         
-                        {/* Stats Cards - Fixed: changed from grid-cols-2 to grid-cols-1 sm:grid-cols-2 for better mobile */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {/* Total Amount */}
                             <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/30 p-3 rounded-xl border border-purple-200 dark:border-purple-700">
                                 <div className="flex items-center justify-between mb-2">
@@ -513,10 +412,10 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                 </div>
 
             {/* Controls */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-3 sm:p-6">
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <div className="flex flex-wrap gap-4 mb-4">
                     {/* Search */}
-                    <div className="flex-1 w-full sm:min-w-[200px]">
+                    <div className="flex-1 min-w-[200px]">
                         <div className="relative">
                             <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -531,11 +430,28 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                         </div>
                     </div>
 
+                    {/* Date Range Filter */}
+                    <div className="flex items-center gap-2 min-w-[260px]">
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
+                        />
+                        <span className="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{t('financialFilters.from')} - {t('financialFilters.to')}</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
+                        />
+                    </div>
+
                     {/* Category Filter */}
                     <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value as ExpenseCategory | 'ALL')}
-                        className="w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                        className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                     >
                         <option value="ALL">{t('expenses.allCategories')}</option>
                         {Object.values(ExpenseCategory).map(cat => (
@@ -548,7 +464,7 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'description')}
-                            className="flex-1 sm:flex-none px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                         >
                             <option value="date">{t('expenses.sortByDate')}</option>
                             <option value="amount">{t('expenses.sortByAmount')}</option>
@@ -571,47 +487,6 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                             </svg>
                         </button>
                     </div>
-
-                    {/* View Mode Toggle */}
-                    <div className={`flex items-center rounded-lg p-1 bg-slate-100 dark:bg-slate-700`}>
-                        <button
-                            onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-md transition-all ${viewMode === 'grid' 
-                                ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-white shadow-sm' 
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                            title="Grid View"
-                        >
-                            <GridViewIcon />
-                        </button>
-                        <button
-                            onClick={() => setViewMode('list')}
-                            className={`p-2 rounded-md transition-all ${viewMode === 'list' 
-                                ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-white shadow-sm' 
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                            title="List View"
-                        >
-                            <ListViewIcon />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Date Range Filter - Mobile optimized with vertical stack */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="flex-1 sm:flex-none sm:w-36 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
-                        />
-                        <span className="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap hidden sm:inline">{t('financialFilters.from')} - {t('financialFilters.to')}</span>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="flex-1 sm:flex-none sm:w-36 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
-                        />
-                    </div>
                 </div>
 
                 {/* Expenses Grid */}
@@ -632,126 +507,90 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                         </button>
                     </div>
                 ) : (
-                    <>
-                        {viewMode === 'grid' ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredAndSortedExpenses.map(e => {
-                                    const supplier = e.supplierId ? suppliers.find(s => s.id === e.supplierId) : null;
-                                    const invoice = e.supplierInvoiceId ? supplierInvoices.find(i => i.id === e.supplierInvoiceId) : null;
-                                    return (
-                                        <div key={e.id} className="bg-white dark:bg-slate-800 border border-purple-100 dark:border-purple-700 rounded-lg p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-600 transition-all duration-300">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`p-2 rounded-lg ${getCategoryColor(e.category)}`}>
-                                                        {getCategoryIcon(e.category)}
-                                                    </span>
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getCategoryColor(e.category)}`}>
-                                                        {t(`expenseCategory.${e.category}`)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={() => { setEditingExpense(e); setIsAddModalOpen(true); }}
-                                                        className="p-1 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                        aria-label={t('expenses.editExpenseAriaLabel', {description: e.description})}
-                                                    >
-                                                        <EditIcon />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteExpense(e)}
-                                                        className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
-                                                        aria-label={t('expenses.deleteExpenseAriaLabel', {description: e.description})}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{e.description}</h3>
-
-                                            <div className="space-y-2 mb-3">
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                    <CalendarIcon />
-                                                    <span>{dateFormatter.format(new Date(e.date))}</span>
-                                                </div>
-                                                {supplier && (
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                        </svg>
-                                                        <span>{supplier.name}</span>
-                                                        {invoice && <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('invoices.invoiceNumber')}: {invoice.invoiceNumber || invoice.id.slice(-4)}</span>}
-                                                    </div>
-                                                )}
-                                                {e.method && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${getPaymentMethodColor(e.method)}`}>
-                                                            {t(`paymentMethod.${e.method}`)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
-                                                <div className="flex items-center gap-2">
-                                                    <DollarIcon />
-                                                    <span className="text-lg font-bold text-purple-700 dark:text-purple-400">{currencyFormatter.format(e.amount)}</span>
-                                                </div>
-                                                {e.expenseReceiptImageUrl && (
-                                                    <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        {t('expenses.receiptAttached')}
-                                                    </div>
-                                                )}
-                                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredAndSortedExpenses.map(e => {
+                            const supplier = e.supplierId ? suppliers.find(s => s.id === e.supplierId) : null;
+                            const invoice = e.supplierInvoiceId ? supplierInvoices.find(i => i.id === e.supplierInvoiceId) : null;
+                            return (
+                                <div 
+                                    key={e.id} 
+                                    className={`bg-white dark:bg-slate-800 border border-purple-100 dark:border-purple-700 rounded-lg p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-600 transition-all duration-300 ${e.expenseReceiptImageUrl ? 'cursor-pointer' : ''}`}
+                                    onClick={() => {
+                                        if (e.expenseReceiptImageUrl) {
+                                            window.open(e.expenseReceiptImageUrl, '_blank');
+                                        }
+                                    }}
+                                >
+                                    <div className="flex items-start justify-between mb-3" onClick={(evt) => evt.stopPropagation()}>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`p-2 rounded-lg ${getCategoryColor(e.category)}`}>
+                                                {getCategoryIcon(e.category)}
+                                            </span>
+                                            <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getCategoryColor(e.category)}`}>
+                                                {t(`expenseCategory.${e.category}`)}
+                                            </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            // Modern List View
-                            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-                                {/* List Header - Desktop */}
-                                <div className="hidden md:grid md:grid-cols-[auto_1fr_100px_auto] items-center gap-4 px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                        Category
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => { setEditingExpense(e); setIsAddModalOpen(true); }}
+                                                className="p-1 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                aria-label={t('expenses.editExpenseAriaLabel', {description: e.description})}
+                                            >
+                                                <EditIcon />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteExpense(e)}
+                                                className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                                aria-label={t('expenses.deleteExpenseAriaLabel', {description: e.description})}
+                                            >
+                                                <DeleteIcon />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                        Details
+
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{e.description}</h3>
+
+                                    <div className="space-y-2 mb-3">
+                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                            <CalendarIcon />
+                                            <span>{dateFormatter.format(new Date(e.date))}</span>
+                                        </div>
+                                        {supplier && (
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                                <span>{supplier.name}</span>
+                                                {invoice && <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{t('invoices.invoiceNumber')}: {invoice.invoiceNumber || invoice.id.slice(-4)}</span>}
+                                            </div>
+                                        )}
+                                        {e.method && (
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xs px-2 py-1 rounded-full ${getPaymentMethodColor(e.method)}`}>
+                                                    {t(`paymentMethod.${e.method}`)}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-right text-slate-500 dark:text-slate-400">
-                                        Amount
-                                    </div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-center text-slate-500 dark:text-slate-400">
-                                        Actions
+
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
+                                        <div className="flex items-center gap-2">
+                                            <DollarIcon />
+                                            <span className="text-lg font-bold text-purple-700 dark:text-purple-400">{currencyFormatter.format(e.amount)}</span>
+                                        </div>
+                                        {e.expenseReceiptImageUrl && (
+                                            <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                {t('expenses.receiptAttached')}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                
-                                {/* List Items */}
-                                <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                                    {filteredAndSortedExpenses.map(e => {
-                                        const supplier = e.supplierId ? suppliers.find(s => s.id === e.supplierId) ?? null : null;
-                                        const invoice = e.supplierInvoiceId ? supplierInvoices.find(i => i.id === e.supplierInvoiceId) ?? null : null;
-                                        return (
-                                            <ExpenseRow
-                                                key={e.id}
-                                                expense={e}
-                                                supplier={supplier}
-                                                invoice={invoice}
-                                                currencyFormatter={currencyFormatter}
-                                                dateFormatter={dateFormatter}
-                                                onEdit={() => { setEditingExpense(e); setIsAddModalOpen(true); }}
-                                                onDelete={() => handleDeleteExpense(e)}
-                                                t={t}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
 

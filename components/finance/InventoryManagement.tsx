@@ -5,6 +5,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePageView, useUserPreferences } from '../../contexts/UserPreferencesContext';
 import { getAllMaterials, DentalMaterial, getMaterialCategories, getMaterialsByCategory } from '../../utils/dentalMaterials';
 import CreatePurchaseOrderModal from './CreatePurchaseOrderModal';
 import LowStockPurchaseOrderModal from './LowStockPurchaseOrderModal';
@@ -447,7 +448,8 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
     const [showDrafts, setShowDrafts] = useState(false);
     const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
     const [draftsNeedRefresh, setDraftsNeedRefresh] = useState(false);
-const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = usePageView('inventory');
+    const { preferences } = useUserPreferences();
 
     // Load draft orders from localStorage and remove duplicates
     useEffect(() => {

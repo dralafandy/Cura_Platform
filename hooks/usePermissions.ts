@@ -25,6 +25,7 @@ export const usePermissions = (userProfile: UserProfile | null) => {
         checkPermission: () => false,
         checkAnyPermission: () => false,
         checkAllPermissions: () => false,
+        checkCustomPermission: () => false,
         getAllPermissions: () => [],
         userRole: null,
         isAdmin: false,
@@ -73,6 +74,14 @@ export const usePermissions = (userProfile: UserProfile | null) => {
       return permissions.some(permission => checkPermission(permission));
     };
 
+    // Check if user has a custom permission ONLY (not from role)
+    // This ignores role-based permissions and only checks custom_permissions
+    const checkCustomPermission = (permission: Permission): boolean => {
+      // If admin, they have all permissions through role
+      // But we still want to check if it was explicitly granted in custom permissions
+      return customPermissions.includes(permission);
+    };
+
     // Check if user has all specified permissions
     const checkAllPermissions = (permissions: Permission[]): boolean => {
       return permissions.every(permission => checkPermission(permission));
@@ -87,6 +96,7 @@ export const usePermissions = (userProfile: UserProfile | null) => {
       checkPermission,
       checkAnyPermission,
       checkAllPermissions,
+      checkCustomPermission,
       getAllPermissions,
       userRole,
       isAdmin,

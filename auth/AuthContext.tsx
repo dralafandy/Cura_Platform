@@ -76,6 +76,7 @@ interface AuthContextType {
   hasAnyPermission: (permissions: Permission[]) => boolean;
   hasAllPermissions: (permissions: Permission[]) => boolean;
   hasRole: (role: UserRole) => boolean;
+  hasCustomPermission: (permission: Permission) => boolean;
   
   // Helpers
   isAdmin: boolean;
@@ -98,6 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
     user: null,
     permissions: [],
+    customPermissions: [],
+    overrideMode: false,
     role: null,
   });
 
@@ -141,6 +144,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   isLoading: false,
                   user: session.user,
                   permissions: freshPermissions,
+                  customPermissions: userData.custom_permissions || [],
+                  overrideMode: userData.override_permissions || false,
                   role: userData.role,
                   token: session.token,
                 });
@@ -157,6 +162,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             isLoading: false,
             user: session.user,
             permissions: session.permissions,
+            customPermissions: [],
+            overrideMode: false,
             role: session.user.role,
             token: session.token,
           });
@@ -217,6 +224,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading: false,
         user: user as User,
         permissions,
+        customPermissions: [],
+        overrideMode: false,
         role: user.role,
         token: sessionData.token,
       });
@@ -235,6 +244,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading: false,
         user: null,
         permissions: [],
+        customPermissions: [],
+        overrideMode: false,
         role: null,
       });
     } catch (error) {
@@ -262,6 +273,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return authState.role === role;
   }, [authState.role]);
 
+  // Check if user has a custom permission (not from role)
+  const hasCustomPermission = useCallback((permission: Permission): boolean => {
+    return authState.customPermissions.includes(permission);
+  }, [authState.customPermissions]);
+
   const isAdmin = authState.role === 'ADMIN';
 
   const value: AuthContextType = {
@@ -273,6 +289,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasAnyPermission,
     hasAllPermissions,
     hasRole,
+    hasCustomPermission,
     isAdmin,
     user: authState.user,
     isLoading: authState.isLoading,

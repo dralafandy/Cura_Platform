@@ -47,6 +47,7 @@ interface AuthContextType {
   hasPermission: (permission: Permission) => boolean;
   checkAnyPermission: (permissions: Permission[]) => boolean;
   checkAllPermissions: (permissions: Permission[]) => boolean;
+  checkCustomPermission: (permission: Permission) => boolean;
 }
 
 
@@ -490,6 +491,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasPermission: permissions.checkPermission,
     checkAnyPermission: permissions.checkAnyPermission,
     checkAllPermissions: permissions.checkAllPermissions,
+    checkCustomPermission: permissions.checkCustomPermission,
   }), [
     user,
     userProfile,

@@ -13,6 +13,7 @@ import MobileDrawer from './components/MobileDrawer';
 import { View, Appointment, LabCaseStatus, PatientDetailTab } from './types';
 import { useI18n } from './hooks/useI18n';
 import { useAuth } from './contexts/AuthContext';
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 
 import LoadingScreen from './components/LoadingScreen';
 import AccessDenied from './components/AccessDenied';
@@ -242,11 +243,13 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Main App component with RBAC provider wrapper
+// Main App component with RBAC and UserPreferences provider wrappers
 const App: React.FC = () => {
   return (
     <RBACProvider>
-      <AppContent />
+      <UserPreferencesProvider>
+        <AppContent />
+      </UserPreferencesProvider>
     </RBACProvider>
   );
 };

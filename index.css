@@ -8,6 +8,9 @@
 
 /* Modern Tech Color System - CSS Variables */
 :root {
+  /* Accessibility - Transition Duration (can be overridden by JS) */
+  --transition-duration: 200ms;
+
   /* Primary Colors (Cyan/Teal) */
   --color-primary: #06b6d4;
   --color-primary-dark: #0891b2;
@@ -1475,4 +1478,60 @@ input, textarea, select, button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* High Contrast Mode - Enabled via Settings */
+.high-contrast {
+  /* Increase contrast for text */
+  --contrast-bg: #ffffff;
+  --contrast-text: #000000;
+  --contrast-border: #000000;
+}
+
+.high-contrast body,
+.high-contrast .bg-white,
+.high-contrast .bg-gray-50,
+.high-contrast .bg-slate-50 {
+  background-color: #ffffff !important;
+}
+
+.high-contrast .text-gray-900,
+.high-contrast .text-gray-800,
+.high-contrast .text-gray-700,
+.high-contrast .text-slate-900,
+.high-contrast .text-slate-800,
+.high-contrast .text-slate-700,
+.high-contrast .dark .text-white,
+.high-contrast .dark .text-gray-100,
+.high-contrast .dark .text-gray-200 {
+  color: #000000 !important;
+}
+
+.high-contrast .border,
+.high-contrast .border-gray-200,
+.high-contrast .border-gray-300,
+.high-contrast .border-slate-200,
+.high-contrast .border-slate-300,
+.high-contrast .dark .border-gray-600,
+.high-contrast .dark .border-slate-600 {
+  border-color: #000000 !important;
+}
+
+.high-contrast .shadow-sm,
+.high-contrast .shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Increase focus outlines for accessibility */
+.high-contrast *:focus {
+  outline: 3px solid #000000 !important;
+  outline-offset: 2px !important;
+}
+
+.high-contrast button,
+.high-contrast a,
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  border-width: 2px !important;
 }

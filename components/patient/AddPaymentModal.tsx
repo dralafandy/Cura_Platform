@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Payment } from '../../types';
+import { Payment, Permission } from '../../types';
 import { ClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
 import { NotificationType } from '../../types';
 import { PaymentMethod } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import InvoiceAttachmentUploader from '../finance/InvoiceAttachmentUploader';
 
 // Icons
@@ -30,6 +31,7 @@ interface AddPaymentModalProps {
 const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData, onClose, onAdd }) => {
     const { t } = useI18n();
     const { addNotification } = useNotification();
+    const { checkPermission } = useAuth();
     const [formData, setFormData] = useState<Omit<Payment, 'id'> & { paymentReceiptImageUrl?: string }>({
         patientId,
         date: new Date().toISOString().split('T')[0],
@@ -74,6 +76,13 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Check permission
+        if (!checkPermission(Permission.FINANCE_PAYMENT_ADD)) {
+            addNotification(t('errors.noPermission') || 'You do not have permission to add payments', NotificationType.ERROR);
+            return;
+        }
+        
         if (formData.amount <= 0) {
             addNotification(t('addPaymentModal.alertPositiveAmount'), NotificationType.ERROR);
             return;

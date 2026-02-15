@@ -344,7 +344,7 @@ const SelectDropdown: React.FC<{
       <label className={`text-xs font-semibold uppercase tracking-wider mb-2 ${
         isDark ? 'text-slate-400' : 'text-slate-500'
       }`}>{label}</label>
-      <div className="relative">
+      <div className="relative overflow-visible">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 transition-all duration-200 ${
@@ -367,7 +367,7 @@ const SelectDropdown: React.FC<{
           </svg>
         </button>
         {isOpen && (
-          <div className={`absolute z-50 w-full mt-1 rounded-xl shadow-xl border overflow-hidden ${
+          <div className={`absolute z-[9999] w-full mt-1 rounded-xl shadow-2xl border overflow-visible ${
             isDark 
               ? 'bg-slate-800 border-slate-700' 
               : 'bg-white border-slate-200'
@@ -1664,11 +1664,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       </div>
 
       {/* Filters */}
-      <div className={`${
+      <div className={`relative z-40 ${
         isDark 
           ? 'bg-slate-800/80 border-slate-700/50' 
           : 'bg-white/90 border-slate-100/50'
-      } backdrop-blur-sm shadow-md`}>
+      } backdrop-blur-sm shadow-md overflow-visible`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-wrap items-end gap-4">
             <DateInput
@@ -1736,7 +1736,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
           isDark 
             ? 'bg-slate-800/80 border-slate-700/50' 
             : 'bg-white/90 border-slate-100/50'
-        } backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border mb-8`}>
+        } backdrop-blur-sm rounded-2xl shadow-xl overflow-visible border mb-8`}>
           <div className={`border-b ${isDark ? 'border-slate-700/50' : 'border-slate-100/50'}`}>
             <nav className="flex flex-wrap overflow-x-auto">
               {categoryTabs.map((cat) => (

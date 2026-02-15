@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { DoctorPayment } from '../../types';
+import { DoctorPayment, Permission, NotificationType } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
-import { NotificationType } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import { useClinicData } from '../../hooks/useClinicData';
 
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>;
@@ -17,6 +17,7 @@ interface AddDoctorPaymentModalProps {
 const AddDoctorPaymentModal: React.FC<AddDoctorPaymentModalProps> = ({ dentistId, onClose, onAdd, doctorPayments }) => {
     const { t } = useI18n();
     const { addNotification } = useNotification();
+    const { checkPermission } = useAuth();
     const { dentists, treatmentRecords } = useClinicData();
     const [formData, setFormData] = useState<Omit<DoctorPayment, 'id'>>({
         dentistId,
@@ -32,6 +33,12 @@ const AddDoctorPaymentModal: React.FC<AddDoctorPaymentModalProps> = ({ dentistId
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Check permission
+        if (!checkPermission(Permission.FINANCE_PAYMENT_ADD)) {
+            addNotification(t('common.accessDenied'), NotificationType.ERROR);
+            return;
+        }
 
         // Validate required fields
         if (!formData.date || !formData.amount) {

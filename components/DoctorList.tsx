@@ -3,6 +3,7 @@ import { ClinicData } from '../hooks/useClinicData';
 import { Dentist, Appointment, TreatmentRecord, DoctorDetailTab, DoctorPayment } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useNotification } from '../contexts/NotificationContext';
+import { usePageView, useUserPreferences } from '../contexts/UserPreferencesContext';
 import AddDoctorPaymentModal from './finance/AddDoctorPaymentModal';
 import PrintableDoctorDetailedReport from './finance/PrintableDoctorDetailedReport';
 
@@ -963,7 +964,8 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
     const [sortBy, setSortBy] = useState<'name' | 'balance' | 'treatments'>('treatments');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [showFilters, setShowFilters] = useState(false);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [viewMode, setViewMode] = usePageView('doctors');
+    const { preferences } = useUserPreferences();
 
     const handlePrint = (doctor: Dentist) => {
         setSelectedDoctorId(doctor.id);

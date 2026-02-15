@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Payment, TreatmentRecord } from '../../types';
+import { Payment, TreatmentRecord, Permission, NotificationType } from '../../types';
 import { ClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
-import { NotificationType } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 // Icons as simple SVG components
@@ -49,8 +49,8 @@ interface AddDiscountModalProps {
 const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicData, onClose, onAdd, onUpdateTreatmentRecord }) => {
 
     const { t, locale } = useI18n();
-
     const { addNotification } = useNotification();
+    const { checkPermission } = useAuth();
     const [isAnimating, setIsAnimating] = useState(false);
     const [formData, setFormData] = useState({
         notes: '',
@@ -112,6 +112,12 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Check permission
+        if (!checkPermission(Permission.FINANCE_DISCOUNT_ADD)) {
+            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
+            return;
+        }
+
         // Get the selected treatment
         const selectedTreatment = clinicData.treatmentRecords.find(tr => tr.id === selectedTreatmentRecordId);
         if (!selectedTreatment) {
@@ -138,8 +144,10 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
             return;
         }
 
-        // Simple hardcoded password for discount approval
-        if (approvalPassword !== '123') {
+        // Get the configured discount password from settings
+        const configuredPassword = localStorage.getItem('curasoft_discount_password') || '123';
+        
+        if (approvalPassword !== configuredPassword) {
             addNotification({ message: t('addDiscountModal.passwordIncorrect'), type: NotificationType.ERROR });
             return;
         }
