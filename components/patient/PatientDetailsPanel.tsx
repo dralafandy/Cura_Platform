@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ClinicData } from '../../hooks/useClinicData';
-import { Patient, DentalChartData, Payment, NotificationType, PatientDetailTab, TreatmentRecord, ToothStatus, Prescription, PrescriptionItem, Dentist, PatientAttachment, Permission } from '../../types';
+import { Patient, DentalChartData, Payment, NotificationType, PatientDetailTab, TreatmentRecord, ToothStatus, Prescription, PrescriptionItem, Dentist, PatientAttachment } from '../../types';
 import DentalChart from '../DentalChartRedesigned';
 import TreatmentRecordList from './TreatmentRecordList';
 import AddTreatmentRecordModal from './AddTreatmentRecordModal';
@@ -83,7 +83,7 @@ export const PatientDetailsPanel: React.FC<{
     clinicData: ClinicData;
     initialTab?: PatientDetailTab;
 }> = ({ patient, onBack, onEdit, clinicData, initialTab = 'details' }) => {
-    const { user, checkPermission } = useAuth();
+    const { user } = useAuth();
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
     const { updatePatient, addTreatmentRecord, addPayment, updatePayment, deletePayment, payments, treatmentRecords, prescriptions, prescriptionItems, addPrescription, updatePrescription, deletePrescription, addPrescriptionItem, updatePrescriptionItem, deletePrescriptionItem, attachments, addAttachment, updateAttachment, deleteAttachment } = clinicData;
@@ -159,59 +159,39 @@ export const PatientDetailsPanel: React.FC<{
     }, [addTreatmentRecord, patient, updatePatient, addNotification, t, clinicData.treatmentDefinitions]);
 
     const handleAddPayment = useCallback((payment: Omit<Payment, 'id'>) => {
-        if (!checkPermission(Permission.FINANCE_PAYMENT_ADD)) {
-            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
-            return;
-        }
         addPayment(payment);
         setIsAddPaymentModalOpen(false);
         addNotification({ message: t('notifications.paymentAdded'), type: NotificationType.SUCCESS });
 
-    }, [addPayment, addNotification, t, checkPermission]);
+    }, [addPayment, addNotification, t]);
 
     const handleEditPayment = useCallback((payment: Payment) => {
-        if (!checkPermission(Permission.FINANCE_DISCOUNT_EDIT)) {
-            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
-            return;
-        }
         setSelectedPayment(payment);
         setIsEditPaymentModalOpen(true);
-    }, [checkPermission, addNotification, t]);
+    }, []);
 
     const handleUpdatePayment = useCallback((payment: Payment) => {
-        if (!checkPermission(Permission.FINANCE_DISCOUNT_EDIT)) {
-            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
-            return;
-        }
         updatePayment(payment);
         setIsEditPaymentModalOpen(false);
         setSelectedPayment(null);
         addNotification({ message: t('notifications.paymentUpdated'), type: NotificationType.SUCCESS });
 
-    }, [updatePayment, addNotification, t, checkPermission]);
+    }, [updatePayment, addNotification, t]);
 
     const handleDeletePayment = useCallback((payment: Payment) => {
-        if (!checkPermission(Permission.FINANCE_DISCOUNT_DELETE)) {
-            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
-            return;
-        }
         setSelectedPayment(payment);
         setIsDeletePaymentModalOpen(true);
-    }, [checkPermission, addNotification, t]);
+    }, []);
 
     const handleConfirmDeletePayment = useCallback(() => {
             if (selectedPayment) {
-                if (!checkPermission(Permission.FINANCE_DISCOUNT_DELETE)) {
-                    addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
-                    return;
-                }
                 deletePayment(selectedPayment.id);
                 setIsDeletePaymentModalOpen(false);
                 setSelectedPayment(null);
         addNotification({ message: t('notifications.paymentDeleted'), type: NotificationType.SUCCESS });
 
             }
-        }, [selectedPayment, deletePayment, addNotification, t, checkPermission]);
+        }, [selectedPayment, deletePayment, addNotification, t]);
     
         const handleDeleteTreatmentRecord = useCallback((recordId: string) => {
             clinicData.deleteTreatmentRecord(recordId);
@@ -717,14 +697,12 @@ export const PatientDetailsPanel: React.FC<{
                                     <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{t('financials.actions')}</h3>
                                 </div>
                                 <div className="flex flex-wrap gap-3">
-                                    {checkPermission(Permission.FINANCE_PAYMENT_ADD) && (
-                                        <button
-                                            onClick={() => setIsAddPaymentModalOpen(true)}
-                                            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-medium"
-                                        >
-                                            <DollarSignIcon /> {t('financials.addPayment')}
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => setIsAddPaymentModalOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-medium"
+                                    >
+                                        <DollarSignIcon /> {t('financials.addPayment')}
+                                    </button>
                                     <button
                                         onClick={() => setIsAddDiscountModalOpen(true)}
                                         className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm font-medium"
@@ -771,24 +749,20 @@ export const PatientDetailsPanel: React.FC<{
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{currencyFormatter.format(payment.amount)}</span>
-                                                        {checkPermission(Permission.FINANCE_DISCOUNT_EDIT) && (
-                                                            <button
-                                                                onClick={() => handleEditPayment(payment)}
-                                                                className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all duration-200"
-                                                                title={t('common.edit')}
-                                                            >
-                                                                <EditIcon />
-                                                            </button>
-                                                        )}
-                                                        {checkPermission(Permission.FINANCE_DISCOUNT_DELETE) && (
-                                                            <button
-                                                                onClick={() => handleDeletePayment(payment)}
-                                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200"
-                                                                title={t('common.delete')}
-                                                            >
-                                                                <TrashIcon />
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            onClick={() => handleEditPayment(payment)}
+                                                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all duration-200"
+                                                            title={t('common.edit')}
+                                                        >
+                                                            <EditIcon />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePayment(payment)}
+                                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200"
+                                                            title={t('common.delete')}
+                                                        >
+                                                            <TrashIcon />
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ))}

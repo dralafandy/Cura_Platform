@@ -17,10 +17,26 @@ const LowStockPurchaseOrderModal: React.FC<LowStockPurchaseOrderModalProps> = ({
     const { addNotification } = useNotification();
     const { suppliers, inventoryItems } = clinicData;
 
-    // Filter low stock items
+    // Add state for search term
+    const [searchTerm, setSearchTerm] = useState<string>('');
+
+    // Filter low stock items with search capability
     const lowStockItems = useMemo(() => {
-        return inventoryItems.filter(item => item.currentStock <= item.minStockLevel);
-    }, [inventoryItems]);
+        let filtered = inventoryItems.filter(item => item.currentStock <= item.minStockLevel);
+        
+        // Apply search filter if search term exists
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(item => 
+                item.name.toLowerCase().includes(term) ||
+                item.code?.toLowerCase().includes(term) ||
+                item.category?.toLowerCase().includes(term) ||
+                item.barcode?.toLowerCase().includes(term)
+            );
+        }
+        
+        return filtered;
+    }, [inventoryItems, searchTerm]);
 
     // Group items by supplier
     const itemsBySupplier = useMemo(() => {
@@ -198,6 +214,7 @@ const LowStockPurchaseOrderModal: React.FC<LowStockPurchaseOrderModalProps> = ({
         sum + items.reduce((itemSum, item) => itemSum + item.totalCost, 0), 0
     );
 
+    // Update the header section to include search input
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4" aria-modal="true" role="dialog">
             <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
@@ -216,7 +233,9 @@ const LowStockPurchaseOrderModal: React.FC<LowStockPurchaseOrderModalProps> = ({
                             </svg>
                         </button>
                     </div>
-                    <div className="flex flex-col gap-1.5 sm:gap-2">
+                    
+                    {/* Search and Order Name Inputs */}
+                    <div className="flex flex-col gap-1.5 sm:gap-2 mb-2">
                         <label className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400">
                             {t('purchaseOrder.orderName')} {t('purchaseOrder.optional')}
                         </label>
@@ -225,6 +244,17 @@ const LowStockPurchaseOrderModal: React.FC<LowStockPurchaseOrderModalProps> = ({
                             value={purchaseOrderName}
                             onChange={(e) => setPurchaseOrderName(e.target.value)}
                             placeholder={t('purchaseOrder.orderNamePlaceholder')}
+                            className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-500 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 mb-2"
+                        />
+                        
+                        <label className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-400">
+                            {t('common.search')}
+                        </label>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={t('inventory.searchLowStockItems')}
                             className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-500 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                         />
                     </div>
