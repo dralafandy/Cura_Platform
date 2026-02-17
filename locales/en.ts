@@ -1,4 +1,11 @@
-export const enTranslations = {
+﻿export const enTranslations = {
+  "addAppointmentModal.addAnother": "Add Another Appointment",
+  "addAppointmentModal.availableDoctors": "Available Doctors:",
+  "addAppointmentModal.otherAvailableDoctors": "Other available doctors:",
+  "addAppointmentModal.bookWithDoctor": "Book with {doctor}",
+  "addAppointmentModal.booked": "Booked",
+  "addAppointmentModal.partial": "Partial",
+  "addAppointmentModal.available": "Available",
   "appName": "CuraSoft",
   "loadingScreen.loadingData": "Loading data",
   "loadingScreen.pleaseWait": "Please wait, loading clinic data",
@@ -24,6 +31,7 @@ export const enTranslations = {
   "common.userMenu": "User Menu",
   "common.items": "items",
   "common.sendWhatsApp": "Send WhatsApp",
+  "common.call": "Call",
   "common.print": "Print",
   "common.fullReport": "Full Report",
   "common.saved": "Saved",
@@ -171,8 +179,8 @@ export const enTranslations = {
   "dashboard.outstandingPayments": "Outstanding Payments",
   "dashboard.scheduledToday": "Scheduled Today",
   "dashboard.activePatients": "Active Patients",
-  "dashboard.viewAll": "View All →",
-  "dashboard.viewDetails": "View Details →",
+  "dashboard.viewAll": "View All â†’",
+  "dashboard.viewDetails": "View Details â†’",
   "dashboard.monthlyTrends": "Monthly Trends",
   "dashboard.activityTimeline": "Activity Timeline",
   "dashboard.noRecentActivity": "No recent activity",
@@ -356,6 +364,9 @@ export const enTranslations = {
   "scheduler.searchAppointments": "Search appointments...",
   "scheduler.changeStatus": "Change Status",
   "scheduler.sendReminder": "Send Reminder",
+  "scheduler.appointmentList": "Appointments List",
+  "scheduler.showSchedule": "Show Schedule",
+  "scheduler.selectedDayList": "Selected Day List",
   "scheduler.reasonForVisit": "Reason for Visit",
   "scheduler.allAppointments": "All Appointments",
   "scheduler.total": "Total",
@@ -1761,12 +1772,12 @@ export const enTranslations = {
   "inventory.of": "of",
   "inventory.total": "total",
 
-  "purchaseOrder.createOrder": "Create Purchase Order (طلبية)",
+  "purchaseOrder.createOrder": "Create Purchase Order (Ø·Ù„Ø¨ÙŠØ©)",
   "purchaseOrder.editDraft": "Edit Draft",
   "purchaseOrder.orderName": "Order Name",
   "purchaseOrder.optional": "(optional)",
   "purchaseOrder.orderNamePlaceholder": "Enter a name to identify the draft...",
-  "purchaseOrder.orderTitle": "Purchase Order (طلبية)",
+  "purchaseOrder.orderTitle": "Purchase Order (Ø·Ù„Ø¨ÙŠØ©)",
   "purchaseOrder.selectSupplier": "Select Supplier",
   "purchaseOrder.orderDate": "Order Date",
   "purchaseOrder.addMaterial": "Add Material",
@@ -1938,3 +1949,5 @@ export const enTranslations = {
 
   "common.and": "and"
 };
+
+
