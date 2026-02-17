@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, userProfile } = useAuth();
   
   // Use new RBAC system for permission checking
   const { hasPermission, isReady } = useRBAC();
@@ -129,8 +129,13 @@ const AppContent: React.FC = () => {
 
       case 'doctor-details':
         if (!hasPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
-        if (!selectedDoctorId) return <div className="text-center py-8">Doctor not found.</div>;
-        return <DoctorDetailsPage clinicData={clinicData} doctorId={selectedDoctorId} onBack={() => setCurrentView('doctors')} />;
+        const resolvedDoctorId =
+          selectedDoctorId ||
+          userProfile?.dentist_id ||
+          clinicData.dentists.find(d => d.name.trim().toLowerCase() === (userProfile?.username || '').trim().toLowerCase())?.id ||
+          null;
+        if (!resolvedDoctorId) return <div className="text-center py-8">Doctor not found.</div>;
+        return <DoctorDetailsPage clinicData={clinicData} doctorId={resolvedDoctorId} onBack={() => setCurrentView('doctors')} />;
 
       case 'settings':
         return hasPermission(Permission.SETTINGS_VIEW) ? (
@@ -152,7 +157,7 @@ const AppContent: React.FC = () => {
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
     }
-  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission]);
+  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, userProfile]);
   
   const viewTitles: Record<View, string> = {
       dashboard: t('sidebar.dashboard'),

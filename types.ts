@@ -556,6 +556,7 @@ export interface UserProfile {
   user_id: string; // Supabase auth user id
   username: string;
   role: UserRole;
+  dentist_id?: string | null; // Linked dentist for doctor-specific dashboard and scope
   avatar_url?: string; // URL for user avatar image
   status: UserStatus; // User status
   last_login?: string; // Last login timestamp

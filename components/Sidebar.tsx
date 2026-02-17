@@ -205,7 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
 
   const getNavItems = () => {
     const baseItems = [
-      { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon, permission: null, adminOnly: true }, // Admin only
+      { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon, permission: null, adminOnly: false },
       { id: 'patients', label: t('sidebar.patients'), icon: PatientsIcon, permission: Permission.PATIENT_VIEW, adminOnly: false },
       { id: 'scheduler', label: t('sidebar.scheduler'), icon: SchedulerIcon, permission: Permission.APPOINTMENT_VIEW, adminOnly: false },
       { id: 'doctors', label: t('sidebar.doctors'), icon: DoctorsIcon, permission: Permission.DOCTOR_VIEW, adminOnly: false },

@@ -18,19 +18,18 @@
  * @component
  */
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Dentist, DoctorPayment } from '../types';
+import { Dentist } from '../types';
 import { useI18n } from '../hooks/useI18n';
+import DoctorPrintableReport from './reports/DoctorPrintableReport';
 import {
   CloseIcon,
   UserIcon,
-  BriefcaseIcon,
   CalendarIcon,
   ChartIcon,
   PaymentIcon,
   DollarSignIcon,
-  ClockIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   CheckCircleIcon,
@@ -367,6 +366,18 @@ const DateRangeFilter: React.FC<{
   );
 };
 
+const normalizeStartOfDay = (dateValue: string): Date => {
+  const date = new Date(dateValue);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const normalizeEndOfDay = (dateValue: string): Date => {
+  const date = new Date(dateValue);
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -385,6 +396,8 @@ const DoctorDetailedReport: React.FC<{
   
   // Filter states
   const [dateRange, setDateRange] = useState<DateRange>('month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   
   // Search states
   const [treatmentSearch, setTreatmentSearch] = useState('');
@@ -398,7 +411,7 @@ const DoctorDetailedReport: React.FC<{
 
   // Expanded item state for interactive details
   const [expandedItem, setExpandedItem] = useState<ExpandedItem | null>(null);
-  const [hoveredStat, setHoveredStat] = useState<number | null>(null);
+  const [showPrintableReport, setShowPrintableReport] = useState(false);
 
   // Toggle expanded item
   const toggleExpanded = (type: 'treatment' | 'payment' | 'appointment', id: string) => {
@@ -429,14 +442,19 @@ const DoctorDetailedReport: React.FC<{
     items: T[],
     dateField: 'treatmentDate' | 'date' | 'startTime'
   ): T[] => {
-    if (dateRange === 'all') return items;
-    
-    const startDate = getDateRangeStart(dateRange);
+    const hasCustomRange = Boolean(customStartDate || customEndDate);
+    const startDate = hasCustomRange
+      ? (customStartDate ? normalizeStartOfDay(customStartDate) : null)
+      : (dateRange === 'all' ? null : getDateRangeStart(dateRange));
+    const endDate = hasCustomRange && customEndDate ? normalizeEndOfDay(customEndDate) : null;
+
     return items.filter(item => {
       const itemDate = item[dateField];
       if (!itemDate) return false;
       const date = typeof itemDate === 'string' ? new Date(itemDate) : itemDate;
-      return date >= startDate;
+      if (startDate && date < startDate) return false;
+      if (endDate && date > endDate) return false;
+      return true;
     });
   };
 
@@ -450,7 +468,7 @@ const DoctorDetailedReport: React.FC<{
 
   const filteredAppointments = useMemo(() => 
     filterByDateRange(doctorAppointments, 'startTime'),
-    [doctorAppointments, dateRange]
+    [doctorAppointments, dateRange, customStartDate, customEndDate]
   );
 
   const doctorTreatmentRecords = useMemo(() => 
@@ -462,7 +480,7 @@ const DoctorDetailedReport: React.FC<{
 
   const filteredTreatmentRecords = useMemo(() => 
     filterByDateRange(doctorTreatmentRecords, 'treatmentDate'),
-    [doctorTreatmentRecords, dateRange]
+    [doctorTreatmentRecords, dateRange, customStartDate, customEndDate]
   );
 
   const doctorPaymentsList = useMemo(() => 
@@ -474,7 +492,7 @@ const DoctorDetailedReport: React.FC<{
 
   const filteredPayments = useMemo(() => 
     filterByDateRange(doctorPaymentsList, 'date'),
-    [doctorPaymentsList, dateRange]
+    [doctorPaymentsList, dateRange, customStartDate, customEndDate]
   );
 
   // Search filtered data
@@ -538,6 +556,12 @@ const DoctorDetailedReport: React.FC<{
     setAppointmentPagination(prev => ({ ...prev, page: 1 }));
   }, [appointmentSearch]);
 
+  React.useEffect(() => {
+    setTreatmentPagination(prev => ({ ...prev, page: 1 }));
+    setPaymentPagination(prev => ({ ...prev, page: 1 }));
+    setAppointmentPagination(prev => ({ ...prev, page: 1 }));
+  }, [dateRange, customStartDate, customEndDate]);
+
   // Financial calculations - use filtered data (date range only, not search)
   const financialSummary = useMemo((): FinancialSummary => {
     const totalRevenue = filteredTreatmentRecords.reduce((sum, tr) => {
@@ -553,30 +577,47 @@ const DoctorDetailedReport: React.FC<{
 
   // Compare with previous period for trends - use original data for accurate comparison
   const previousPeriodStats = useMemo(() => {
-    const now = new Date();
     let prevStart: Date;
     let prevEnd: Date;
-    
-    switch (dateRange) {
-      case 'week':
-        prevEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        prevStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
-        break;
-      case 'month':
-        prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        prevStart = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
-        break;
-      case 'quarter':
-        prevEnd = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        prevStart = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-        break;
-      case 'year':
-        prevEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        prevStart = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
-        break;
-      default:
-        prevEnd = new Date(0);
-        prevStart = new Date(0);
+
+    if (customStartDate || customEndDate) {
+      if (!customStartDate || !customEndDate) {
+        return { prevEarnings: 0, prevTreatmentsCount: 0 };
+      }
+
+      const selectedStart = normalizeStartOfDay(customStartDate);
+      const selectedEnd = normalizeEndOfDay(customEndDate);
+
+      if (selectedEnd < selectedStart) {
+        return { prevEarnings: 0, prevTreatmentsCount: 0 };
+      }
+
+      const selectedDuration = selectedEnd.getTime() - selectedStart.getTime();
+      prevEnd = new Date(selectedStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - selectedDuration);
+    } else {
+      const now = new Date();
+      switch (dateRange) {
+        case 'week':
+          prevEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+          prevStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
+          break;
+        case 'month':
+          prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          prevStart = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
+          break;
+        case 'quarter':
+          prevEnd = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+          prevStart = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+          break;
+        case 'year':
+          prevEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+          prevStart = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+          break;
+        default:
+          prevEnd = new Date(0);
+          prevStart = new Date(0);
+      }
     }
     
     const prevTreatments = doctorTreatmentRecords.filter(tr => {
@@ -588,7 +629,7 @@ const DoctorDetailedReport: React.FC<{
     const prevTreatmentsCount = prevTreatments.length;
     
     return { prevEarnings, prevTreatmentsCount };
-  }, [doctorTreatmentRecords, dateRange]);
+  }, [doctorTreatmentRecords, dateRange, customStartDate, customEndDate]);
 
   const earningsTrend = useMemo(() => {
     if (previousPeriodStats.prevEarnings === 0) {
@@ -667,10 +708,23 @@ const DoctorDetailedReport: React.FC<{
     return patientIds.size;
   }, [filteredTreatmentRecords]);
 
-  // Print handler
-  const handlePrint = () => {
-    window.print();
-  };
+  const selectedDateRangeLabel = useMemo(() => {
+    if (customStartDate || customEndDate) {
+      const start = customStartDate ? dateFormatter.format(new Date(customStartDate)) : '...';
+      const end = customEndDate ? dateFormatter.format(new Date(customEndDate)) : '...';
+      return `${start} - ${end}`;
+    }
+
+    const labels: Record<DateRange, string> = {
+      week: t('doctorDetailedReport.last7Days') || 'Last 7 days',
+      month: t('doctorDetailedReport.last30Days') || 'Last 30 days',
+      quarter: t('doctorDetailedReport.last3Months') || 'Last 3 months',
+      year: t('doctorDetailedReport.lastYear') || 'Last year',
+      all: t('common.all') || 'All',
+    };
+
+    return labels[dateRange];
+  }, [customStartDate, customEndDate, dateRange, dateFormatter, t]);
 
   if (isLoading) {
     return (
@@ -700,7 +754,7 @@ const DoctorDetailedReport: React.FC<{
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900" ref={reportRef}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white print:bg-white print:text-black sticky top-0 z-50">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white sticky top-0 z-50 print:hidden">
         <div className="max-w-7xl mx-auto px-3 py-3 md:p-6">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -718,7 +772,7 @@ const DoctorDetailedReport: React.FC<{
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
-                onClick={handlePrint}
+                onClick={() => setShowPrintableReport(true)}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors print:hidden"
                 aria-label="Print report"
               >
@@ -730,14 +784,44 @@ const DoctorDetailedReport: React.FC<{
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-2 md:px-4 lg:px-6 py-3 md:py-6 space-y-3 md:space-y-6">
+      <div className="max-w-7xl mx-auto px-2 md:px-4 lg:px-6 py-3 md:py-6 space-y-3 md:space-y-6 print:hidden">
         {/* Date Range Filter */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden">
           <h2 className="text-base md:text-lg font-semibold text-slate-800 dark:text-white">
             {t('doctorDetailedReport.overview') || 'Overview'}
           </h2>
-          <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <div className="w-full sm:w-auto flex flex-col gap-2">
+            <div className="overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5">
+                <FilterIcon className="h-4 w-4 text-slate-400" />
+                <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  {t('common.from') || 'من'}
+                </span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 focus:outline-none"
+                  aria-label={t('common.fromDate') || 'From date'}
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5">
+                <FilterIcon className="h-4 w-4 text-slate-400" />
+                <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  {t('common.to') || 'إلى'}
+                </span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full bg-transparent text-xs md:text-sm text-slate-700 dark:text-slate-200 focus:outline-none"
+                  aria-label={t('common.toDate') || 'To date'}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1143,6 +1227,19 @@ const DoctorDetailedReport: React.FC<{
           )}
         </SectionCard>
       </div>
+
+      {showPrintableReport && (
+        <DoctorPrintableReport
+          doctor={doctor}
+          dateRangeLabel={selectedDateRangeLabel}
+          treatmentRecords={filteredTreatmentRecords}
+          payments={filteredPayments}
+          appointments={filteredAppointments}
+          patients={patients}
+          treatmentDefinitions={treatmentDefinitions}
+          onClose={() => setShowPrintableReport(false)}
+        />
+      )}
     </div>
   );
 };

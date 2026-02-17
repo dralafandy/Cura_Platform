@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
-import { UserProfile, UserRole, UserStatus, NotificationType, Permission } from '../types';
+import { UserProfile, UserRole, UserStatus, NotificationType, Permission, Dentist } from '../types';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -23,6 +23,7 @@ interface UserFormData {
   confirmPassword: string;
   role: UserRole;
   status: UserStatus;
+  dentist_id?: string | null;
 }
 
 interface FormErrors {
@@ -31,6 +32,7 @@ interface FormErrors {
   password?: string;
   newPassword?: string;
   confirmPassword?: string;
+  dentist_id?: string;
 }
 
 // Role badge colors map - single source of truth
@@ -66,6 +68,7 @@ const UserManagement: React.FC = () => {
   
   // State management
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [dentists, setDentists] = useState<Dentist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -96,6 +99,7 @@ const UserManagement: React.FC = () => {
     confirmPassword: '',
     role: UserRole.ADMIN,
     status: UserStatus.ACTIVE,
+    dentist_id: null,
   });
   
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -132,7 +136,7 @@ const UserManagement: React.FC = () => {
       // Build query with filters
       let query = supabase
         .from('user_profiles')
-        .select('id, username, role, status, created_at, updated_at, last_login, oauth_provider, oauth_email, custom_permissions, override_permissions', { count: 'exact' });
+        .select('id, user_id, username, role, status, dentist_id, created_at, updated_at, last_login, oauth_provider, oauth_email, custom_permissions, override_permissions', { count: 'exact' });
       
       // Apply search filter
       if (searchTerm) {
@@ -172,6 +176,23 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     fetchUsers(currentPage);
   }, [fetchUsers, currentPage]);
+
+  const fetchDentists = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('dentists')
+        .select('id, name, specialty, color')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setDentists((data || []) as Dentist[]);
+    } catch (error) {
+      handleError(error, 'Failed to fetch doctors');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDentists();
+  }, [fetchDentists]);
 
   // Validate form data
   const validateForm = useCallback((): boolean => {
@@ -279,6 +300,7 @@ const UserManagement: React.FC = () => {
           username: formData.username,
           role: formData.role,
           status: formData.status,
+          dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
           password_hash: hashedPassword,
         })
         .select()
@@ -308,13 +330,19 @@ const UserManagement: React.FC = () => {
       username: string;
       role: UserRole;
       status: UserStatus;
+      dentist_id: string | null;
       updated_at: string;
+    }
+
+    if (formData.role === UserRole.DOCTOR && !formData.dentist_id) {
+      errors.dentist_id = 'Please link this user to a doctor profile';
     }
     
     const updateData: UserProfileUpdate = {
       username: formData.username,
       role: formData.role,
       status: formData.status,
+      dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -385,6 +413,7 @@ const UserManagement: React.FC = () => {
       confirmPassword: '',
       role: userProfile.role,
       status: userProfile.status || UserStatus.ACTIVE,
+      dentist_id: userProfile.dentist_id || null,
     });
     setIsResettingPassword(false);
     setFormErrors({});
@@ -440,6 +469,7 @@ const UserManagement: React.FC = () => {
       confirmPassword: '',
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      dentist_id: null,
     });
     setIsResettingPassword(false);
     setFormErrors({});
@@ -461,6 +491,11 @@ const UserManagement: React.FC = () => {
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [users, searchTerm, roleFilter, statusFilter]);
+
+  const doctorNameById = useMemo(() => {
+    const entries = dentists.map(d => [d.id, d.name] as const);
+    return new Map(entries);
+  }, [dentists]);
 
   // Pagination - now uses server-side count
   const totalPages = Math.ceil(totalUsers / usersPerPage);
@@ -577,6 +612,7 @@ const UserManagement: React.FC = () => {
         .from('user_profiles')
         .update({ 
           role: newRole,
+          dentist_id: newRole === UserRole.DOCTOR ? undefined : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId);
@@ -871,6 +907,9 @@ const UserManagement: React.FC = () => {
                     Role
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Linked Doctor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -932,6 +971,11 @@ const UserManagement: React.FC = () => {
                         <option value={UserRole.ASSISTANT}>ASSISTANT</option>
                         <option value={UserRole.RECEPTIONIST}>RECEPTIONIST</option>
                       </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      {userProfile.role === UserRole.DOCTOR
+                        ? (userProfile.dentist_id ? (doctorNameById.get(userProfile.dentist_id) || 'Unknown Doctor') : 'Not Linked')
+                        : '-'}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1123,6 +1167,7 @@ const UserManagement: React.FC = () => {
                         setFormData({
                           ...formData,
                           role: newRole,
+                          dentist_id: newRole === UserRole.DOCTOR ? formData.dentist_id : null,
                           newPassword: '',
                           confirmPassword: ''
                         });
@@ -1137,6 +1182,34 @@ const UserManagement: React.FC = () => {
                       <option value={UserRole.RECEPTIONIST}>Receptionist</option>
                     </select>
                   </div>
+
+                  {formData.role === UserRole.DOCTOR && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Linked Doctor Profile *
+                      </label>
+                      <select
+                        value={formData.dentist_id || ''}
+                        onChange={(e) => setFormData({ ...formData, dentist_id: e.target.value || null })}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="">Select doctor profile</option>
+                        {dentists.map(doctor => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.name} {doctor.specialty ? `(${doctor.specialty})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        This link is required for doctor custom dashboard and doctor-specific data scope.
+                      </p>
+                      {formErrors.dentist_id && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.dentist_id}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Password Reset Section for Existing Users */}
                   {editingUser && (

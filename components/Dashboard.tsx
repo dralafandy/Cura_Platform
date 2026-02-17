@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import NotificationBell from './NotificationBell';
+import DoctorDashboard from './DoctorDashboard';
 
 
 interface StatCardProps {
@@ -74,7 +75,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, s
 
 const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View) => void }> = ({ clinicData, setCurrentView }) => {
     const { t, locale } = useI18n();
-    const { isAdmin } = useAuth();
+    const { isAdmin, userProfile } = useAuth();
     const { preferences } = useUserPreferences();
     const { dashboard } = preferences;
     console.log('Dashboard component rendered with clinicData:', {
@@ -94,6 +95,28 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
     });
 
     const { patients, appointments, treatmentRecords, inventoryItems, labCases, dentists, payments, expenses, supplierInvoices, doctorPayments, prescriptions, prescriptionItems } = clinicData;
+
+    const linkedDoctorId = useMemo(() => {
+        if (userProfile?.dentist_id) return userProfile.dentist_id;
+        if (userProfile?.role === 'DOCTOR') {
+            const matchedDoctor = dentists.find(d => d.name.trim().toLowerCase() === userProfile.username.trim().toLowerCase());
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [userProfile, dentists]);
+
+    if (userProfile?.role === 'DOCTOR') {
+        if (!linkedDoctorId) {
+            return (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-5">
+                    Your account is a doctor account, but it is not linked to a doctor profile yet.
+                    Please ask admin to link this user to a doctor from User Management.
+                </div>
+            );
+        }
+        return <DoctorDashboard clinicData={clinicData} doctorId={linkedDoctorId} setCurrentView={setCurrentView} />;
+    }
+
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
     const fullCurrencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
     const dateFormatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' });
