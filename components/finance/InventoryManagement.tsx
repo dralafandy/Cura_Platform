@@ -848,7 +848,7 @@ const InventoryManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData 
                                 placeholder={t('inventory.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full py-2.5 sm:py-3 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 ${locale === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
+                                className={`w-full py-2.5 sm:py-3 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 ${locale === 'ar' ? 'ps-10 pl-4' : 'ps-10 pl-4'}`}
                             />
                         </div>
                         

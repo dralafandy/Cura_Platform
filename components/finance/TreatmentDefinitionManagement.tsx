@@ -216,7 +216,7 @@ const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ c
                                 placeholder={t('treatments.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full pl-4 pr-10 py-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-purple-500' : 'border-purple-200 focus:border-purple-500'} rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200`}
+                                className={`w-full ps-10 pl-4 py-2 border ${isDark ? 'border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:border-purple-500' : 'border-purple-200 focus:border-purple-500'} rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200`}
                             />
                         </div>
                     </div>

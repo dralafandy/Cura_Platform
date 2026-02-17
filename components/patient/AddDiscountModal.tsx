@@ -227,7 +227,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                 id="treatmentRecord"
                                 value={selectedTreatmentRecordId}
                                 onChange={(e) => setSelectedTreatmentRecordId(e.target.value)}
-                                className={`w-full p-3 ${isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white transition-all duration-200 appearance-none cursor-pointer`}
+                                className={`w-full p-3 ${isRTL ? 'ps-10 pl-4' : 'ps-10 pl-4'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white transition-all duration-200 appearance-none cursor-pointer`}
                                 required
                             >
                                 <option value="" className="text-slate-500">{t('addDiscountModal.selectTreatmentPlaceholder')}</option>
@@ -338,7 +338,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                     step="0.01" 
                                     value={percentage} 
                                     onChange={handleChange} 
-                                    className={`w-full p-3 ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-10'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white text-lg font-semibold transition-all duration-200 placeholder-slate-400`}
+                                    className={`w-full p-3 ${isRTL ? 'ps-10 pl-4' : 'ps-10 pl-4'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white text-lg font-semibold transition-all duration-200 placeholder-slate-500`}
                                     placeholder="0"
                                     required 
                                     min="0.01" 

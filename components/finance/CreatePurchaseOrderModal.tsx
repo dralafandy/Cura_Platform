@@ -374,7 +374,7 @@ const CreatePurchaseOrderModal: React.FC<{
                                 placeholder={t('purchaseOrder.searchMaterial')}
                                 value={materialSearch}
                                 onChange={(e) => setMaterialSearch(e.target.value)}
-                                className="w-full pl-4 pr-10 p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                className="w-full ps-10 pl-4 p-2 text-sm border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                             />
                         </div>
                         

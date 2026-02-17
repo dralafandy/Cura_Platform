@@ -953,7 +953,7 @@ const AddDoctorModal: React.FC<{
 
 const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any) => void; setSelectedDoctorId: (id: string | null) => void }> = ({ clinicData, setCurrentView, setSelectedDoctorId }) => {
     const { dentists, addDoctor, updateDoctor, treatmentRecords, doctorPayments, appointments, patients } = clinicData;
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [doctorToPrint, setDoctorToPrint] = useState<Dentist | null>(null);
     const currencyFormatter = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
@@ -1140,7 +1140,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                 placeholder={t('common.search') || 'Search doctors...'}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pr-10 pl-4 py-3 bg-slate-50 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full ps-10 pl-4 py-3 bg-slate-50 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             />
                             {searchQuery && (
                                 <button
@@ -1179,7 +1179,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                     setSortBy(sort as 'name' | 'balance' | 'treatments');
                                     setSortOrder(order as 'asc' | 'desc');
                                 }}
-                                className="appearance-none pr-10 pl-4 py-3 bg-slate-100 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200 cursor-pointer"
+                                className="appearance-none ps-10 pl-4 py-3 bg-slate-100 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200 cursor-pointer"
                             >
                                 <option value="name-asc">{t('common.sortByNameAsc') || 'Name (A-Z)'}</option>
                                 <option value="name-desc">{t('common.sortByNameDesc') || 'Name (Z-A)'}</option>
@@ -1365,11 +1365,11 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon />
                                                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                        {nextAppointment ? `Next: ${new Intl.DateTimeFormat('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(nextAppointment.startTime)}` : 'No upcoming appointments'}
+                                                        {nextAppointment ? `${t('doctorDetails.next')}: ${new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(nextAppointment.startTime)}` : t('dashboard.noUpcomingAppointments')}
                                                     </span>
                                                 </div>
                                                 <span className="text-xs text-slate-400 dark:text-slate-500">
-                                                    {lastTreatment ? `Last: ${new Intl.DateTimeFormat('ar-EG', { month: 'short', day: 'numeric' }).format(new Date(lastTreatment.treatmentDate))}` : 'No recent treatments'}
+                                                    {lastTreatment ? `${t('doctorDetails.last')}: ${new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' }).format(new Date(lastTreatment.treatmentDate))}` : t('doctorDetails.noRecentTreatments')}
                                                 </span>
                                             </div>
                                         </div>
@@ -1382,7 +1382,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                                         <ArrowUpIcon />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400">رصيد مستحق</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">{t('financials.outstandingBalance')}</p>
                                                         <p className="font-bold text-rose-600 dark:text-rose-400">{currencyFormatter.format(stats.outstandingBalance)}</p>
                                                     </div>
                                                 </div>
@@ -1392,8 +1392,8 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                                         <CheckCircleIcon />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400">الحالة</p>
-                                                        <p className="font-bold text-emerald-600 dark:text-emerald-400">تم السداد بالكامل</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.status')}</p>
+                                                        <p className="font-bold text-emerald-600 dark:text-emerald-400">{t('financials.paidInFull')}</p>
                                                     </div>
                                                 </div>
                                             )}

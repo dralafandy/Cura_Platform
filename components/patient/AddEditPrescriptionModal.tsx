@@ -102,8 +102,8 @@ const InputField: React.FC<InputFieldProps> = ({
         w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
         focus:ring-2 focus:ring-primary/20 focus:border-primary
         transition-all duration-200 ease-in-out
-        placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200
-        ${icon ? 'pr-10' : ''}
+        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        ${icon ? 'ps-10' : ''}
     `;
 
     return (
@@ -421,7 +421,7 @@ const AddEditPrescriptionModal: React.FC<AddEditPrescriptionModalProps> = ({ pre
                                                     }}
                                                     onFocus={() => setShowMedicationDropdown(index)}
                                                     placeholder={t('prescriptionModal.medicationNamePlaceholder')}
-                                                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm sm:text-base pr-10"
+                                                    className="w-full px-3 sm:px-4 py-3 sm:py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-sm sm:text-base ps-10"
                                                     required
                                                 />
                                                 <button
@@ -459,7 +459,7 @@ const AddEditPrescriptionModal: React.FC<AddEditPrescriptionModalProps> = ({ pre
                                                             placeholder={t('prescriptionModal.searchMedication')}
                                                             value={medicationSearch}
                                                             onChange={(e) => setMedicationSearch(e.target.value)}
-                                                            className="w-full px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                                            className="w-full px-3 sm:px-4 py-3 text-xs sm:text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-700 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400"
                                                             autoFocus
                                                         />
                                                     </div>

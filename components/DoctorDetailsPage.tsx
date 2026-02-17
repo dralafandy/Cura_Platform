@@ -15,9 +15,10 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Dentist, DoctorDetailTab, DoctorPayment, Patient, TreatmentRecord, Appointment, TreatmentDefinition, NotificationType } from '../types';
+import { Dentist, DoctorDetailTab, DoctorPayment, Patient, TreatmentRecord, Appointment, TreatmentDefinition, NotificationType, Permission } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 import AddDoctorPaymentModal from './finance/AddDoctorPaymentModal';
 import DoctorDetailedReport from './DoctorDetailedReport';
 
@@ -445,6 +446,7 @@ const DoctorDetailsPage: React.FC<{
 }> = ({ clinicData, doctorId, onBack }) => {
   const { t, locale } = useI18n();
   const { addNotification } = useNotification();
+  const { checkPermission } = useAuth();
   const { appointments, patients, treatmentRecords, treatmentDefinitions, doctorPayments, dentists, updateDoctor } = clinicData;
 
   // Find the doctor
@@ -1032,7 +1034,6 @@ const DoctorDetailsPage: React.FC<{
                             currencyFormatter={currencyFormatter}
                             onDelete={handleDeletePayment}
                             deleteLabel={t('common.delete')}
-                            canDelete={checkPermission(Permission.FINANCE_DISCOUNT_DELETE)}
                           />
                         ))}
 
