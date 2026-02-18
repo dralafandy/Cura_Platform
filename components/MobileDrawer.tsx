@@ -176,7 +176,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
   
   // Navigation items for mobile drawer with permission requirements
   const navItems = [
-    { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon, permission: null, adminOnly: true }, // Admin only
+    { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon, permission: null, adminOnly: false },
     { id: 'patients', label: t('sidebar.patients'), icon: PatientsIcon, permission: Permission.PATIENT_VIEW, adminOnly: false },
     { id: 'scheduler', label: t('sidebar.scheduler'), icon: SchedulerIcon, permission: Permission.APPOINTMENT_VIEW, adminOnly: false },
     { id: 'doctors', label: t('sidebar.doctors'), icon: DoctorsIcon, permission: null, adminOnly: true }, // Admin only

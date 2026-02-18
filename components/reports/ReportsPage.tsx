@@ -32,8 +32,6 @@ import {
   ReferenceLine,
   ReferenceDot
 } from 'recharts';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 // Report Categories
@@ -811,29 +809,397 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
   }, [filteredPayments, filteredExpenses, filteredDoctorPayments, filteredSupplierInvoices, filteredTreatmentRecords, filteredAppointments, filteredLabCases, prevPayments, prevExpenses, prevTreatmentRecords, prevAppointments, patients, dentists, suppliers, treatmentDefinitions, inventoryItems, t]);
 
   // Export Functions
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(t('reports.title'), 14, 20);
-    doc.setFontSize(10);
-    doc.text(`${t('reports.dateRange')}: ${dateRange.startDate} - ${dateRange.endDate}`, 14, 30);
-    
-    autoTable(doc, {
-      startY: 40,
-      head: [[t('reports.metric'), t('reports.value')]],
-      body: [
-        [t('reports.totalRevenue'), formatCurrency(reportData.financial.totalRevenue)],
-        [t('reports.totalExpenses'), formatCurrency(reportData.financial.totalExpenses)],
-        [t('reports.netProfit'), formatCurrency(reportData.financial.netProfit)],
-        [t('reports.profitMargin'), formatPercentage(reportData.financial.profitMargin)],
-        [t('reports.totalPatients'), formatNumber(patients.length)],
-        [t('reports.activePatients'), formatNumber(reportData.patientStats.activePatients)],
-        [t('reports.newPatients'), formatNumber(reportData.patientStats.newPatients)],
-        [t('reports.retentionRate'), formatPercentage(reportData.patientStats.retentionRate)]
-      ]
-    });
-    
-    doc.save(`report-${activeCategory}-${new Date().toISOString().split('T')[0]}.pdf`);
+  const printDetailedReport = () => {
+    const isArabic = locale.toLowerCase().startsWith('ar');
+    const dir = isArabic ? 'rtl' : 'ltr';
+    const categoryLabels: Record<ReportCategory, string> = {
+      overview: t('reports.overview'),
+      financial: t('reports.financialReports'),
+      patient: t('reports.patientReports'),
+      doctor: t('reports.doctorReports'),
+      treatment: t('reports.treatmentReports'),
+      supplier: t('reports.supplierReports'),
+      appointment: t('reports.appointmentReports') || 'Appointments',
+      inventory: t('reports.inventoryReports') || 'Inventory',
+      analytics: t('reports.analytics') || 'Analytics'
+    };
+
+    const formatDateValue = (value: string) => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    };
+
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const createTableHtml = (title: string, headers: string[], rows: string[][]) => {
+      const headerCells = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
+      const bodyRows = rows.length > 0
+        ? rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${headers.length}" class="empty-row">${escapeHtml(isArabic ? 'لا توجد بيانات' : 'No data')}</td></tr>`;
+
+      return `
+        <section class="section">
+          <h2>${escapeHtml(title)}</h2>
+          <table>
+            <thead><tr>${headerCells}</tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+        </section>
+      `;
+    };
+
+    const summaryRows: string[][] = [
+      [t('reports.totalRevenue'), formatCurrency(reportData.financial.totalRevenue)],
+      [t('reports.totalExpenses'), formatCurrency(reportData.financial.totalExpenses)],
+      [t('reports.netProfit'), formatCurrency(reportData.financial.netProfit)],
+      [t('reports.profitMargin'), formatPercentage(reportData.financial.profitMargin)],
+      [t('reports.totalPatients'), formatNumber(patients.length)],
+      [t('reports.activePatients'), formatNumber(reportData.patientStats.activePatients)],
+      [t('reports.newPatients'), formatNumber(reportData.patientStats.newPatients)],
+      [t('reports.retentionRate'), formatPercentage(reportData.patientStats.retentionRate)],
+      [t('reports.totalAppointments'), formatNumber(reportData.appointment.stats.total)],
+      [t('reports.completionRate'), formatPercentage(reportData.appointment.completionRate)]
+    ];
+
+    const dailyRows = reportData.daily.map(day => [
+      formatDateValue(day.date),
+      formatCurrency(day.revenue),
+      formatCurrency(day.expenses),
+      formatCurrency(day.netProfit),
+      formatNumber(day.treatments),
+      formatNumber(day.appointments)
+    ]);
+
+    const topPatientsRows = reportData.patient
+      .filter(patient => patient.treatments > 0)
+      .slice(0, 20)
+      .map(patient => [
+        patient.name || '-',
+        patient.phone || '-',
+        formatNumber(patient.treatments),
+        formatCurrency(patient.totalSpent),
+        formatCurrency(patient.totalPaid),
+        patient.lastVisit ? formatDateValue(patient.lastVisit) : '-'
+      ]);
+
+    const doctorRows = reportData.doctor.slice(0, 20).map(doctor => [
+      doctor.name || '-',
+      doctor.specialty || '-',
+      formatNumber(doctor.treatments),
+      formatNumber(doctor.patients),
+      formatCurrency(doctor.totalRevenue),
+      formatCurrency(doctor.doctorRevenue),
+      formatPercentage(doctor.growth)
+    ]);
+
+    const treatmentRows = reportData.treatment.types.slice(0, 20).map(treatment => [
+      treatment.name || '-',
+      formatNumber(treatment.count),
+      formatCurrency(treatment.revenue),
+      formatCurrency(treatment.doctorRevenue),
+      formatCurrency(treatment.avgValue)
+    ]);
+
+    const supplierRows = reportData.supplier.slice(0, 20).map(supplier => [
+      supplier.name || '-',
+      supplier.type || '-',
+      formatNumber(supplier.totalInvoices),
+      formatCurrency(supplier.totalAmount),
+      formatCurrency(supplier.expensesAmount),
+      formatCurrency(supplier.unpaidAmount)
+    ]);
+
+    const lowStockRows = reportData.inventory.lowStock.slice(0, 30).map(item => [
+      item.name || '-',
+      formatNumber(item.currentStock),
+      formatNumber(item.minStockLevel || 10),
+      formatCurrency(item.unitCost),
+      formatCurrency(item.currentStock * item.unitCost)
+    ]);
+
+    const expiringRows = reportData.inventory.expiring.slice(0, 30).map(item => [
+      item.name || '-',
+      item.expiryDate ? formatDateValue(item.expiryDate) : '-',
+      formatNumber(item.currentStock),
+      formatCurrency(item.unitCost)
+    ]);
+
+    const kpiCards = [
+      { label: t('reports.totalRevenue'), value: formatCurrency(reportData.financial.totalRevenue), className: 'kpi revenue' },
+      { label: t('reports.netProfit'), value: formatCurrency(reportData.financial.netProfit), className: 'kpi profit' },
+      { label: t('reports.totalExpenses'), value: formatCurrency(reportData.financial.totalExpenses), className: 'kpi expense' },
+      { label: t('reports.totalAppointments'), value: formatNumber(reportData.appointment.stats.total), className: 'kpi appointments' }
+    ];
+
+    const kpiCardsHtml = kpiCards.map(card => `
+      <div class="${card.className}">
+        <span>${escapeHtml(card.label)}</span>
+        <strong>${escapeHtml(card.value)}</strong>
+      </div>
+    `).join('');
+
+    const reportHtml = `
+      <!doctype html>
+      <html lang="${isArabic ? 'ar' : 'en'}" dir="${dir}">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>${escapeHtml(t('reports.title'))}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+              margin: 0;
+              color: #0f172a;
+              background:
+                radial-gradient(circle at top right, #dbeafe 0%, transparent 40%),
+                radial-gradient(circle at bottom left, #e0e7ff 0%, transparent 30%),
+                #f8fafc;
+            }
+            .page {
+              max-width: 1280px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(130deg, #1d4ed8, #4338ca 55%, #7c3aed);
+              color: #fff;
+              border-radius: 16px;
+              padding: 18px;
+              margin-bottom: 16px;
+              box-shadow: 0 10px 30px rgba(37, 99, 235, 0.22);
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .header h1 { margin: 0; font-size: 24px; letter-spacing: 0.2px; }
+            .header p { margin: 8px 0 0; font-size: 13px; opacity: 0.95; }
+            .meta {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 10px;
+              margin-bottom: 14px;
+            }
+            .meta-card {
+              background: #fff;
+              border: 1px solid #dbeafe;
+              border-radius: 12px;
+              padding: 11px 13px;
+              font-size: 12px;
+              box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+            }
+            .kpi-grid {
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 10px;
+              margin-bottom: 14px;
+            }
+            .kpi {
+              border-radius: 12px;
+              padding: 10px 12px;
+              color: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+            }
+            .kpi span {
+              display: block;
+              font-size: 11px;
+              opacity: 0.95;
+              margin-bottom: 4px;
+            }
+            .kpi strong {
+              font-size: 16px;
+              line-height: 1.2;
+            }
+            .kpi.revenue { background: linear-gradient(135deg, #059669, #10b981); }
+            .kpi.profit { background: linear-gradient(135deg, #0284c7, #2563eb); }
+            .kpi.expense { background: linear-gradient(135deg, #dc2626, #f43f5e); }
+            .kpi.appointments { background: linear-gradient(135deg, #7c3aed, #9333ea); }
+            .section:nth-of-type(odd) {
+              border-left: 4px solid #3b82f6;
+            }
+            [dir="rtl"] .section:nth-of-type(odd) {
+              border-left: 1px solid #e2e8f0;
+              border-right: 4px solid #3b82f6;
+            }
+            .section {
+              background: #fff;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 12px 12px 10px;
+              margin-bottom: 12px;
+              box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+            }
+            .section h2 {
+              margin: 0 0 10px;
+              font-size: 14px;
+              color: #1e3a8a;
+              background: #eff6ff;
+              padding: 7px 10px;
+              border-radius: 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+              font-size: 11px;
+            }
+            th, td {
+              border: 1px solid #e2e8f0;
+              padding: 8px 8px;
+              vertical-align: top;
+              word-wrap: break-word;
+            }
+            th {
+              background: linear-gradient(180deg, #e2e8f0, #f1f5f9);
+              text-align: ${isArabic ? 'right' : 'left'};
+              font-weight: 700;
+              color: #0f172a;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            tbody tr:nth-child(even) { background: #f8fafc; }
+            tbody tr:hover { background: #eff6ff; }
+            .empty-row {
+              text-align: center;
+              color: #64748b;
+              padding: 12px;
+            }
+            .actions {
+              display: flex;
+              justify-content: ${isArabic ? 'flex-start' : 'flex-end'};
+              gap: 8px;
+              margin-top: 10px;
+            }
+            .btn {
+              border: 1px solid #cbd5e1;
+              border-radius: 8px;
+              padding: 8px 12px;
+              font-size: 12px;
+              background: #fff;
+              cursor: pointer;
+              transition: all 0.2s ease;
+            }
+            .btn:hover {
+              background: #eff6ff;
+              border-color: #93c5fd;
+            }
+            .footer {
+              color: #64748b;
+              font-size: 11px;
+              margin-top: 12px;
+              text-align: ${isArabic ? 'left' : 'right'};
+            }
+            @media print {
+              @page { size: A4 portrait; margin: 10mm; }
+              body { background: #fff; }
+              .page { max-width: 100%; padding: 0; }
+              .actions { display: none !important; }
+              .section { page-break-inside: avoid; }
+              thead { display: table-header-group; }
+              tr { page-break-inside: avoid; }
+              .meta, .kpi-grid { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <header class="header">
+              <h1>${escapeHtml(t('reports.title'))}</h1>
+              <p>${escapeHtml(`${t('reports.dateRange')}: ${formatDateValue(dateRange.startDate)} - ${formatDateValue(dateRange.endDate)}`)}</p>
+            </header>
+
+            <section class="meta">
+              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'نوع التقرير' : 'Report Type')}:</strong> ${escapeHtml(categoryLabels[activeCategory])}</div>
+              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'إجمالي الأيام' : 'Total Days')}:</strong> ${escapeHtml(String(reportData.daily.length))}</div>
+              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'تم الإنشاء' : 'Generated At')}:</strong> ${escapeHtml(new Date().toLocaleString(locale))}</div>
+            </section>
+            <section class="kpi-grid">${kpiCardsHtml}</section>
+
+            ${createTableHtml(
+              isArabic ? 'الملخص التنفيذي' : 'Executive Summary',
+              [t('reports.metric'), t('reports.value')],
+              summaryRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'الملخص اليومي المالي والتشغيلي' : 'Daily Financial & Operational Summary',
+              [isArabic ? 'التاريخ' : 'Date', t('reports.revenue'), t('reports.expenses'), t('reports.netProfit'), t('reports.treatments'), t('reports.totalAppointments')],
+              dailyRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'أفضل المرضى' : 'Top Patients',
+              [isArabic ? 'المريض' : 'Patient', isArabic ? 'الهاتف' : 'Phone', t('reports.treatments'), isArabic ? 'إجمالي التكلفة' : 'Total Cost', isArabic ? 'إجمالي المدفوع' : 'Total Paid', isArabic ? 'آخر زيارة' : 'Last Visit'],
+              topPatientsRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'أداء الأطباء' : 'Doctors Performance',
+              [isArabic ? 'الطبيب' : 'Doctor', isArabic ? 'التخصص' : 'Specialty', t('reports.treatments'), t('reports.totalPatients'), t('reports.totalRevenue'), t('reports.doctorShare'), t('reports.growth')],
+              doctorRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'تحليل العلاجات' : 'Treatments Analysis',
+              [isArabic ? 'العلاج' : 'Treatment', isArabic ? 'العدد' : 'Count', t('reports.totalRevenue'), t('reports.doctorShare'), t('reports.averageValue')],
+              treatmentRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'تحليل الموردين' : 'Suppliers Analysis',
+              [isArabic ? 'المورد' : 'Supplier', isArabic ? 'النوع' : 'Type', isArabic ? 'عدد الفواتير' : 'Invoices', isArabic ? 'إجمالي الفواتير' : 'Total Invoices', isArabic ? 'إجمالي المدفوع' : 'Total Paid', isArabic ? 'المتبقي' : 'Outstanding'],
+              supplierRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'الأصناف منخفضة المخزون' : 'Low Stock Items',
+              [isArabic ? 'الصنف' : 'Item', isArabic ? 'المخزون الحالي' : 'Current Stock', isArabic ? 'الحد الأدنى' : 'Min Stock', isArabic ? 'تكلفة الوحدة' : 'Unit Cost', isArabic ? 'القيمة الحالية' : 'Current Value'],
+              lowStockRows
+            )}
+
+            ${createTableHtml(
+              isArabic ? 'الأصناف قريبة الانتهاء' : 'Expiring Items',
+              [isArabic ? 'الصنف' : 'Item', isArabic ? 'تاريخ الانتهاء' : 'Expiry Date', isArabic ? 'المخزون' : 'Stock', isArabic ? 'تكلفة الوحدة' : 'Unit Cost'],
+              expiringRows
+            )}
+
+            <div class="footer">
+              ${escapeHtml(isArabic ? 'تم إنشاء هذا التقرير من نظام Curasoft' : 'This report was generated from Curasoft system')}
+            </div>
+
+            <div class="actions">
+              <button class="btn" onclick="window.print()">${escapeHtml(t('common.print'))}</button>
+              <button class="btn" onclick="window.close()">${escapeHtml(t('common.close'))}</button>
+            </div>
+          </div>
+          <script>
+            window.addEventListener('load', function () {
+              setTimeout(function () { window.print(); }, 250);
+            });
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=1400,height=900');
+    if (!printWindow) {
+      alert(isArabic ? 'تعذر فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة.' : 'Unable to open print window. Please allow popups.');
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
+    printWindow.document.title = `${t('reports.title')} - ${new Date().toISOString().split('T')[0]}`;
+    printWindow.focus();
   };
 
   const exportToExcel = () => {
@@ -1637,7 +2003,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={exportToPDF}
+                onClick={printDetailedReport}
                 className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 border shadow-lg hover:shadow-xl hover:scale-105 ${
                   isDark 
                     ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' 
@@ -1645,7 +2011,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
                 }`}
               >
                 <DownloadIcon />
-                <span className="font-medium">PDF</span>
+                <span className="font-medium">{t('common.print')} / PDF</span>
               </button>
               <button
                 onClick={exportToExcel}
