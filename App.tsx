@@ -30,6 +30,7 @@ import { PatientDetailsPanel } from './components/patient/PatientDetailsPanel';
 import TestPatientCards from './TestPatientCards';
 import ReportsPage from './components/reports/ReportsPage';
 import PublicBookingPage from './components/PublicBookingPage';
+import EmployeesManagement from './components/employees/EmployeesManagement';
 
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
@@ -91,6 +92,10 @@ const AppContent: React.FC = () => {
       case 'doctors':
         return hasPermission(Permission.PATIENT_VIEW) ? (
           <DoctorList clinicData={clinicData} setCurrentView={setCurrentView} setSelectedDoctorId={setSelectedDoctorId} />
+        ) : <AccessDenied />;
+      case 'employees':
+        return hasPermission(Permission.FINANCE_VIEW) ? (
+          <EmployeesManagement />
         ) : <AccessDenied />;
       case 'suppliers':
         return hasPermission(Permission.SUPPLIER_VIEW) ? (
@@ -164,6 +169,7 @@ const AppContent: React.FC = () => {
       patients: t('patientManagement.title'),
       scheduler: t('appointmentScheduler.title'),
       doctors: t('doctorManagement.title'),
+      employees: t('sidebar.employees'),
       suppliers: t('suppliersManagement.title'),
       inventory: t('inventoryManagement.title'),
       labCases: t('labCasesManagement.title'),

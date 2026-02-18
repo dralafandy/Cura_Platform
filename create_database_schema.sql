@@ -253,6 +253,52 @@ CREATE TABLE prescription_items (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Employees table
+DROP TABLE IF EXISTS employees CASCADE;
+CREATE TABLE employees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    full_name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    position_title TEXT,
+    base_salary NUMERIC(12,2) DEFAULT 0,
+    hire_date DATE,
+    status TEXT CHECK (status IN ('ACTIVE', 'INACTIVE')) DEFAULT 'ACTIVE',
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Employee Attendance table
+DROP TABLE IF EXISTS employee_attendance CASCADE;
+CREATE TABLE employee_attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    attendance_date DATE NOT NULL,
+    check_in_time TIME,
+    check_out_time TIME,
+    status TEXT CHECK (status IN ('PRESENT', 'ABSENT', 'LATE', 'LEAVE')) DEFAULT 'PRESENT',
+    notes TEXT,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (employee_id, attendance_date)
+);
+
+-- Employee Compensation table
+DROP TABLE IF EXISTS employee_compensations CASCADE;
+CREATE TABLE employee_compensations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    entry_date DATE NOT NULL,
+    entry_type TEXT CHECK (entry_type IN ('SALARY', 'BONUS', 'PENALTY', 'ADVANCE')) NOT NULL,
+    amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    notes TEXT,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Add foreign key constraint for expenses.supplier_invoice_id after supplier_invoices table is created
 ALTER TABLE expenses ADD CONSTRAINT fk_expenses_supplier_invoice
     FOREIGN KEY (supplier_invoice_id) REFERENCES supplier_invoices(id) ON DELETE SET NULL;
@@ -289,5 +335,11 @@ CREATE INDEX IF NOT EXISTS idx_prescriptions_patient_id ON prescriptions(patient
 CREATE INDEX IF NOT EXISTS idx_prescriptions_dentist_id ON prescriptions(dentist_id);
 CREATE INDEX IF NOT EXISTS idx_prescription_items_user_id ON prescription_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_prescription_items_prescription_id ON prescription_items(prescription_id);
-
+CREATE INDEX IF NOT EXISTS idx_employees_user_id ON employees(user_id);
+CREATE INDEX IF NOT EXISTS idx_employee_attendance_user_id ON employee_attendance(user_id);
+CREATE INDEX IF NOT EXISTS idx_employee_attendance_employee_id ON employee_attendance(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employee_attendance_date ON employee_attendance(attendance_date);
+CREATE INDEX IF NOT EXISTS idx_employee_compensations_user_id ON employee_compensations(user_id);
+CREATE INDEX IF NOT EXISTS idx_employee_compensations_employee_id ON employee_compensations(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employee_compensations_date ON employee_compensations(entry_date);
 

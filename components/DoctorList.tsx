@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Dentist, Appointment, TreatmentRecord, DoctorDetailTab, DoctorPayment } from '../types';
+import { Dentist, Appointment, TreatmentRecord, DoctorDetailTab, DoctorPayment, UserRole } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useNotification } from '../contexts/NotificationContext';
 import { usePageView, useUserPreferences } from '../contexts/UserPreferencesContext';
 import AddDoctorPaymentModal from './finance/AddDoctorPaymentModal';
 import PrintableDoctorDetailedReport from './finance/PrintableDoctorDetailedReport';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../supabaseClient';
 
 // Icons
 const CloseIcon = () => (
@@ -954,8 +956,11 @@ const AddDoctorModal: React.FC<{
 const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any) => void; setSelectedDoctorId: (id: string | null) => void }> = ({ clinicData, setCurrentView, setSelectedDoctorId }) => {
     const { dentists, addDoctor, updateDoctor, treatmentRecords, doctorPayments, appointments, patients } = clinicData;
     const { t, locale } = useI18n();
+    const { addNotification } = useNotification();
+    const { userProfile, user } = useAuth();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [doctorToPrint, setDoctorToPrint] = useState<Dentist | null>(null);
+    const [linkedDentistIds, setLinkedDentistIds] = useState<Set<string>>(new Set());
     const currencyFormatter = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
 
     // Search, Filter, and Sort State
@@ -966,6 +971,30 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
     const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = usePageView('doctors');
     const { preferences } = useUserPreferences();
+    const linkedDoctorId = useMemo(() => {
+        if (userProfile?.dentist_id) return userProfile.dentist_id;
+        if (userProfile?.role === UserRole.DOCTOR) {
+            const matchedDoctor = dentists.find(
+                d => d.name.trim().toLowerCase() === (userProfile.username || '').trim().toLowerCase()
+            );
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [userProfile, dentists]);
+
+    const scopedDentists = useMemo(() => {
+        if (userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return dentists;
+        return dentists.filter(d => d.id === linkedDoctorId);
+    }, [userProfile?.role, linkedDoctorId, dentists]);
+
+    const scopedPatients = useMemo(() => {
+        if (userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return patients;
+        const linkedPatientIds = new Set<string>([
+            ...appointments.filter(a => a.dentistId === linkedDoctorId).map(a => a.patientId),
+            ...treatmentRecords.filter(tr => tr.dentistId === linkedDoctorId).map(tr => tr.patientId),
+        ]);
+        return patients.filter(p => linkedPatientIds.has(p.id));
+    }, [userProfile?.role, linkedDoctorId, patients, appointments, treatmentRecords]);
 
     const handlePrint = (doctor: Dentist) => {
         setSelectedDoctorId(doctor.id);
@@ -993,12 +1022,12 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
 
     // Get unique specialties for filter
     const specialties = useMemo(() => {
-        return Array.from(new Set(dentists.map(d => d.specialty))).sort();
-    }, [dentists]);
+        return Array.from(new Set(scopedDentists.map(d => d.specialty))).sort();
+    }, [scopedDentists]);
 
     // Filter and sort doctors
     const filteredAndSortedDoctors = useMemo(() => {
-        let filtered = dentists.filter(doctor => {
+        let filtered = scopedDentists.filter(doctor => {
             const stats = getDoctorStats(doctor);
             const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                  doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1028,20 +1057,20 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
         });
 
         return filtered;
-    }, [dentists, searchQuery, filterStatus, sortBy, sortOrder, treatmentRecords, doctorPayments, appointments]);
+    }, [scopedDentists, searchQuery, filterStatus, sortBy, sortOrder, treatmentRecords, doctorPayments, appointments]);
 
     // Calculate stats
-    const totalDoctors = dentists.length;
-    const totalOutstanding = dentists.reduce((sum, doctor) => {
+    const totalDoctors = scopedDentists.length;
+    const totalOutstanding = scopedDentists.reduce((sum, doctor) => {
         const stats = getDoctorStats(doctor);
         return sum + stats.outstandingBalance;
     }, 0);
-    const doctorsWithBalance = dentists.filter(doctor => getDoctorStats(doctor).outstandingBalance > 0).length;
-    const activeToday = dentists.filter(doctor => {
+    const doctorsWithBalance = scopedDentists.filter(doctor => getDoctorStats(doctor).outstandingBalance > 0).length;
+    const activeToday = scopedDentists.filter(doctor => {
         const stats = getDoctorStats(doctor);
         return stats.upcomingAppointments > 0;
     }).length;
-    const thisMonthTreatments = dentists.reduce((sum, doctor) => {
+    const thisMonthTreatments = scopedDentists.reduce((sum, doctor) => {
         const stats = getDoctorStats(doctor);
         return sum + stats.thisMonthTreatments;
     }, 0);
@@ -1052,6 +1081,65 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
         setFilterStatus('all');
         setSortBy('treatments');
         setSortOrder('desc');
+    };
+
+    const loadLinkedEmployees = useCallback(async () => {
+        if (!user?.id || !supabase) return;
+        const { data, error } = await supabase
+            .from('employees')
+            .select('dentist_id')
+            .eq('user_id', user.id)
+            .not('dentist_id', 'is', null);
+
+        if (error) return;
+        const ids = new Set((data || []).map((r: any) => r.dentist_id).filter(Boolean));
+        setLinkedDentistIds(ids);
+    }, [user?.id]);
+
+    useEffect(() => {
+        loadLinkedEmployees();
+    }, [loadLinkedEmployees]);
+
+    const handleLinkDoctorAsEmployee = async (doctor: Dentist, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user?.id || !supabase) return;
+
+        if (linkedDentistIds.has(doctor.id)) {
+            addNotification({
+                message: locale === 'ar' ? 'هذا الطبيب مرتبط كموظف بالفعل.' : 'This doctor is already linked as an employee.',
+                type: 'warning' as any,
+            });
+            return;
+        }
+
+        const { error } = await supabase.from('employees').insert({
+            full_name: doctor.name,
+            position_title: doctor.specialty || (locale === 'ar' ? 'طبيب' : 'Doctor'),
+            base_salary: 0,
+            status: 'ACTIVE',
+            user_id: user.id,
+            dentist_id: doctor.id,
+        });
+
+        if (error) {
+            // Unique violation: already linked by dentist_id
+            if ((error as any).code === '23505') {
+                addNotification({
+                    message: locale === 'ar' ? 'الطبيب مرتبط كموظف بالفعل.' : 'Doctor is already linked as employee.',
+                    type: 'warning' as any,
+                });
+                await loadLinkedEmployees();
+                return;
+            }
+            addNotification({ message: error.message, type: 'error' as any });
+            return;
+        }
+
+        setLinkedDentistIds((prev) => new Set([...prev, doctor.id]));
+        addNotification({
+            message: locale === 'ar' ? 'تم ربط الطبيب كموظف بنجاح.' : 'Doctor linked as employee successfully.',
+            type: 'success' as any,
+        });
     };
 
     return (
@@ -1072,8 +1160,8 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                 <span className="text-slate-400 dark:text-slate-500">MANAGEMENT</span>
                             </h2>
                             <p className="text-slate-600 dark:text-slate-400">
-                                {t('doctorList.pageDescription')} <span className="font-semibold text-purple-600 dark:text-purple-400">{dentists.length}</span> {t('doctorList.doctorCount')}
-                                {filteredAndSortedDoctors.length !== dentists.length && (
+                                {t('doctorList.pageDescription')} <span className="font-semibold text-purple-600 dark:text-purple-400">{scopedDentists.length}</span> {t('doctorList.doctorCount')}
+                                {filteredAndSortedDoctors.length !== scopedDentists.length && (
                                     <span className="ml-2 text-sm text-slate-500">
                                         ({filteredAndSortedDoctors.length} {t('common.showing')})
                                     </span>
@@ -1122,7 +1210,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                         <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
                         <div className="relative z-10">
                             <p className="text-emerald-100 text-xs font-medium">{t('dashboard.patients') || 'المرضى'}</p>
-                            <p className="text-lg font-bold mt-1">{patients.length}</p>
+                            <p className="text-lg font-bold mt-1">{scopedPatients.length}</p>
                         </div>
                     </div>
                 </div>
@@ -1411,6 +1499,19 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                         <span className="hidden sm:inline">{t('doctorList.viewDetails')}</span>
                                     </button>
                                     <button
+                                        onClick={(e) => handleLinkDoctorAsEmployee(doctor, e)}
+                                        className={`px-2 md:px-4 py-1.5 md:py-2.5 rounded-lg md:rounded-xl font-medium text-xs md:text-sm transition-all duration-200 ${
+                                            linkedDentistIds.has(doctor.id)
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 cursor-default'
+                                                : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50'
+                                        }`}
+                                        title={locale === 'ar' ? 'ربط الطبيب كموظف' : 'Link doctor as employee'}
+                                    >
+                                        {linkedDentistIds.has(doctor.id)
+                                            ? (locale === 'ar' ? 'مرتبط كموظف' : 'Linked Employee')
+                                            : (locale === 'ar' ? 'ربط كموظف' : 'Link Employee')}
+                                    </button>
+                                    <button
                                         onClick={(e) => { e.stopPropagation(); }}
                                         className="px-2 md:px-4 py-1.5 md:py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg md:rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 font-medium text-xs md:text-sm transition-all duration-200"
                                         title="More options"
@@ -1424,7 +1525,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                 </div>
 
                 {/* No Results State */}
-                {filteredAndSortedDoctors.length === 0 && dentists.length > 0 && (
+                {filteredAndSortedDoctors.length === 0 && scopedDentists.length > 0 && (
                     <div className="bg-gradient-to-br from-purple-50 to-amber-50 dark:from-purple-900/20 dark:to-amber-900/10 p-12 rounded-2xl text-center border border-purple-100 dark:border-purple-700">
                         <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-700 rounded-full flex items-center justify-center shadow-lg">
                             <SearchIcon />
@@ -1442,7 +1543,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                 )}
 
                 {/* Empty State */}
-                {dentists.length === 0 && (
+                {scopedDentists.length === 0 && (
                     <div className="bg-gradient-to-br from-purple-50 to-amber-50 dark:from-purple-900/20 dark:to-amber-900/10 p-12 rounded-2xl text-center border border-purple-100 dark:border-purple-700">
                         <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-700 rounded-full flex items-center justify-center shadow-lg">
                             <StethoscopeIcon />
@@ -1460,7 +1561,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                 )}
 
                 {/* Load More Button */}
-                {filteredAndSortedDoctors.length > 0 && filteredAndSortedDoctors.length < dentists.length && (
+                {filteredAndSortedDoctors.length > 0 && filteredAndSortedDoctors.length < scopedDentists.length && (
                     <div className="text-center mt-6">
                         <button className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 font-semibold shadow-lg border border-purple-200 dark:border-purple-700 transition-all duration-200">
                             <span>{t('common.loadMore') || 'Load More'}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Patient, NotificationType, View, Permission } from '../types';
+import { Patient, NotificationType, View, Permission, UserRole } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
 import AddEditPatientModal from './patient/AddEditPatientModal';
 import { useI18n } from '../hooks/useI18n';
@@ -354,6 +354,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const { patients, addPatient, updatePatient, deletePatient, payments, treatmentRecords } = clinicData;
     const { addNotification } = useNotification();
     const { t, locale } = useI18n();
+    const { userProfile } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -363,6 +364,30 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const [timelineModalPatient, setTimelineModalPatient] = useState<Patient | null>(null);
     
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
+
+    const linkedDoctorId = useMemo(() => {
+        if (userProfile?.dentist_id) return userProfile.dentist_id;
+        if (userProfile?.role === UserRole.DOCTOR) {
+            const matchedDoctor = clinicData.dentists.find(
+                d => d.name.trim().toLowerCase() === (userProfile.username || '').trim().toLowerCase()
+            );
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [userProfile, clinicData.dentists]);
+
+    const scopedPatients = useMemo(() => {
+        if (userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return patients;
+        const linkedPatientIds = new Set<string>([
+            ...clinicData.appointments
+                .filter(a => a.dentistId === linkedDoctorId)
+                .map(a => a.patientId),
+            ...treatmentRecords
+                .filter(tr => tr.dentistId === linkedDoctorId)
+                .map(tr => tr.patientId),
+        ]);
+        return patients.filter(p => linkedPatientIds.has(p.id));
+    }, [userProfile?.role, linkedDoctorId, patients, clinicData.appointments, treatmentRecords]);
 
     const handleSavePatient = useCallback((patientData: Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'> | Patient) => {
         if ('id' in patientData && patientData.id) {
@@ -385,9 +410,9 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
 
     const filteredPatients = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        let filtered = patients;
+        let filtered = scopedPatients;
         if (term) {
-            filtered = patients.filter(p =>
+            filtered = scopedPatients.filter(p =>
                 (p.name && p.name.toLowerCase().includes(term)) ||
                 (p.phone && p.phone.includes(term)) ||
                 (p.email && p.email.toLowerCase().includes(term))
@@ -409,13 +434,19 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                 return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
             }
         });
-    }, [patients, searchTerm, sortBy, sortOrder, treatmentRecords, payments]);
+    }, [scopedPatients, searchTerm, sortBy, sortOrder, treatmentRecords, payments]);
 
-    const totalPatients = patients.length;
+    const totalPatients = scopedPatients.length;
     const totalOutstanding = useMemo(() => {
-        return treatmentRecords.reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0) -
-               payments.reduce((sum, p) => sum + p.amount, 0);
-    }, [treatmentRecords, payments]);
+        const scopedIds = new Set(scopedPatients.map(p => p.id));
+        const scopedTreatmentsTotal = treatmentRecords
+            .filter(tr => scopedIds.has(tr.patientId))
+            .reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0);
+        const scopedPaymentsTotal = payments
+            .filter(p => scopedIds.has(p.patientId))
+            .reduce((sum, p) => sum + p.amount, 0);
+        return scopedTreatmentsTotal - scopedPaymentsTotal;
+    }, [scopedPatients, treatmentRecords, payments]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
@@ -483,7 +514,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                                 <div>
                                     <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{t('patientList.patientsWithBalance')}</p>
                                     <p className="text-2xl font-bold text-rose-900 dark:text-rose-300">
-                                        {patients.filter(p => {
+                                        {scopedPatients.filter(p => {
                                             const balance = treatmentRecords.filter(tr => tr.patientId === p.id).reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0) -
                                                            payments.filter(pay => pay.patientId === p.id).reduce((sum, pay) => sum + pay.amount, 0);
                                             return balance > 0;

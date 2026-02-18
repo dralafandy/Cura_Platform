@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Appointment, AppointmentStatus, Patient, Dentist, Permission } from '../types';
+import { Appointment, AppointmentStatus, Patient, Dentist, Permission, UserRole } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -1955,7 +1955,7 @@ const toLocalDateString = (date: Date): string => {
 };
 
 const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
-    const { appointments, patients, dentists, addAppointment, updateAppointment, deleteAppointment } = clinicData;
+    const { appointments: allAppointments, patients: allPatients, dentists: allDentists, addAppointment, updateAppointment, deleteAppointment } = clinicData;
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
     const auth = useAuth();
@@ -1967,6 +1967,41 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
     const canAddAppointment = hasPermission(Permission.APPOINTMENT_CREATE);
     const canEditAppointment = hasPermission(Permission.APPOINTMENT_EDIT);
     const canDeleteAppointment = hasPermission(Permission.APPOINTMENT_DELETE);
+    const linkedDoctorId = useMemo(() => {
+        if (auth?.userProfile?.dentist_id) return auth.userProfile.dentist_id;
+        if (auth?.userProfile?.role === UserRole.DOCTOR) {
+            const matchedDoctor = allDentists.find(
+                d => d.name.trim().toLowerCase() === (auth.userProfile?.username || '').trim().toLowerCase()
+            );
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [auth?.userProfile, allDentists]);
+
+    const dentists = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allDentists;
+        return allDentists.filter(d => d.id === linkedDoctorId);
+    }, [auth?.userProfile?.role, linkedDoctorId, allDentists]);
+
+    const appointments = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allAppointments;
+        return allAppointments.filter(a => a.dentistId === linkedDoctorId);
+    }, [auth?.userProfile?.role, linkedDoctorId, allAppointments]);
+
+    const patients = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allPatients;
+        const linkedPatientIds = new Set<string>([
+            ...appointments.filter(a => a.dentistId === linkedDoctorId).map(a => a.patientId),
+            ...clinicData.treatmentRecords.filter(tr => tr.dentistId === linkedDoctorId).map(tr => tr.patientId),
+        ]);
+        return allPatients.filter(p => linkedPatientIds.has(p.id));
+    }, [auth?.userProfile?.role, linkedDoctorId, allPatients, appointments, clinicData.treatmentRecords]);
+
+    const scopedClinicData = useMemo(
+        () => ({ ...clinicData, patients, dentists, appointments }),
+        [clinicData, patients, dentists, appointments]
+    );
+
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [showSelectedDayList, setShowSelectedDayList] = useState(false);
@@ -2928,8 +2963,8 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                 </div>
             )}
 
-            {modalState.type === 'add' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={clinicData} initialDateTime={modalState.data.initialDateTime} initialDentistId={modalState.data.initialDentistId} initialDurationMinutes={modalState.data.initialDurationMinutes} />}
-            {modalState.type === 'edit' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={clinicData} appointmentToEdit={modalState.data} />}
+            {modalState.type === 'add' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={scopedClinicData} initialDateTime={modalState.data.initialDateTime} initialDentistId={modalState.data.initialDentistId} initialDurationMinutes={modalState.data.initialDurationMinutes} />}
+            {modalState.type === 'edit' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={scopedClinicData} appointmentToEdit={modalState.data} />}
             {modalState.type === 'details' && (
                 <AppointmentDetailsModal
                     appointment={modalState.data}

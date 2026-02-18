@@ -12,10 +12,12 @@ interface InputFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
+  autoComplete?: string;
   required?: boolean;
   error?: string;
   showPasswordToggle?: boolean;
   onTogglePassword?: () => void;
+  icon?: React.ReactNode;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -25,10 +27,12 @@ const InputField: React.FC<InputFieldProps> = ({
   value,
   onChange,
   placeholder,
+  autoComplete,
   required = false,
   error,
   showPasswordToggle = false,
   onTogglePassword,
+  icon,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -36,12 +40,17 @@ const InputField: React.FC<InputFieldProps> = ({
     <div className="space-y-2">
       <label 
         htmlFor={id} 
-        className="block text-sm font-medium text-slate-700 transition-colors"
+        className="block text-[13px] font-semibold tracking-wide text-slate-700 dark:text-slate-200 transition-colors"
       >
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="relative">
+        {icon && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+            {icon}
+          </span>
+        )}
         <input
           id={id}
           type={type}
@@ -49,18 +58,20 @@ const InputField: React.FC<InputFieldProps> = ({
           onChange={onChange}
           required={required}
           placeholder={placeholder}
+          autoComplete={autoComplete}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className={`
-            w-full px-4 py-3 bg-white border rounded-lg text-sm
-            placeholder-slate-400 transition-all duration-200
+            w-full py-3 bg-white dark:bg-slate-900/70 border rounded-xl text-sm text-slate-800 dark:text-slate-100
+            placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
+            ${icon ? 'pl-10' : 'px-4'}
             ${isFocused 
-              ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm' 
-              : 'border-slate-200 hover:border-slate-300'
+              ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-cyan-900/50 shadow-sm' 
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }
-            ${error ? 'border-red-300 ring-2 ring-red-100' : ''}
+            ${error ? 'border-red-300 ring-2 ring-red-100 dark:border-red-500/70 dark:ring-red-900/40' : ''}
             ${showPasswordToggle ? 'pr-12' : ''}
           `}
         />
@@ -68,7 +79,7 @@ const InputField: React.FC<InputFieldProps> = ({
           <button
             type="button"
             onClick={onTogglePassword}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             aria-label={type === 'password' ? 'Show password' : 'Hide password'}
           >
             {type === 'password' ? (
@@ -85,7 +96,7 @@ const InputField: React.FC<InputFieldProps> = ({
         )}
       </div>
       {error && (
-        <p id={`${id}-error`} className="text-sm text-red-600 flex items-center gap-1" role="alert">
+        <p id={`${id}-error`} className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
@@ -105,7 +116,7 @@ interface ErrorAlertProps {
 const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onDismiss }) => {
   return (
     <div 
-      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+      className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none"
       role="alert"
     >
       <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -149,8 +160,8 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, col
 
   return (
     <div 
-      className={`group relative bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-100 
-        shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2
+      className={`group relative bg-white/80 dark:bg-slate-900/65 backdrop-blur-sm rounded-2xl p-5 border border-slate-100 dark:border-slate-800 
+        shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none
         ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -164,14 +175,14 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, col
       </div>
       
       {/* Title */}
-      <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-transparent 
+      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-transparent 
         group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-slate-600 
         transition-all duration-300">
         {title}
       </h3>
       
       {/* Description */}
-      <p className="text-sm text-slate-500 leading-relaxed">
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
         {description}
       </p>
 
@@ -221,18 +232,18 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
       disabled={disabled || isLoading}
       className={`
         w-full inline-flex justify-center items-center px-4 py-3 
-        border border-slate-200 rounded-lg bg-white text-sm font-medium
+        border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900/70 text-sm font-medium text-slate-700 dark:text-slate-200
         transition-all duration-200
         ${disabled || isLoading 
           ? 'opacity-50 cursor-not-allowed' 
-          : 'hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
+          : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm'
         }
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-cyan-500 dark:focus:ring-offset-slate-900
       `}
       aria-label={`Sign in with ${provider}`}
     >
       {isLoading ? (
-        <svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
@@ -449,37 +460,38 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden bg-gradient-to-br from-slate-50 via-cyan-50 to-violet-50">
+    <div className="min-h-screen flex relative overflow-hidden bg-gradient-to-br from-slate-50 via-cyan-50 to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Animated Background Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-cyan-300/30 to-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" />
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-violet-300/30 to-violet-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000" />
-        <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-gradient-to-br from-teal-300/30 to-cyan-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-cyan-300/30 to-cyan-500/20 dark:from-cyan-700/30 dark:to-cyan-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob motion-reduce:animate-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-300/30 to-blue-500/20 dark:from-blue-700/30 dark:to-blue-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000 motion-reduce:animate-none" />
+        <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-gradient-to-br from-teal-300/30 to-cyan-400/20 dark:from-teal-700/30 dark:to-cyan-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000 motion-reduce:animate-none" />
       </div>
+      <div className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none bg-[linear-gradient(to_right,rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] bg-[size:34px_34px]" />
 
       {/* Left Side - Illustration (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative items-center justify-center p-12">
-        <div className={`relative z-10 max-w-2xl transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className={`relative z-10 max-w-2xl transition-all duration-1000 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           {/* Brand Title */}
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-slate-800 mb-2">
-              <span className="bg-gradient-to-r from-cyan-600 to-violet-600 bg-clip-text text-transparent">CuraSoft</span>
+            <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 mb-2">
+              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">CuraSoft</span>
             </h1>
-            <p className="text-xl text-slate-500 font-medium">Clinic Management System</p>
+            <p className="text-lg text-slate-600 dark:text-slate-300 font-semibold tracking-wide">Clinic Management System</p>
           </div>
 
           {/* Dental Illustration with Logo */}
           <div className="relative">
             <div className="w-72 h-72 mx-auto relative">
               {/* Main Circle with gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/30 via-violet-400/20 to-teal-400/30 rounded-full animate-pulse-slow shadow-2xl shadow-cyan-300/20" />
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/30 via-blue-400/20 to-teal-400/30 dark:from-cyan-700/25 dark:via-blue-700/20 dark:to-teal-700/25 rounded-full animate-pulse-slow motion-reduce:animate-none shadow-2xl shadow-cyan-300/20" />
               
               {/* Inner rotating ring */}
-              <div className="absolute inset-4 border-2 border-dashed border-cyan-300/40 rounded-full animate-spin" style={{ animationDuration: '30s' }} />
+              <div className="absolute inset-4 border-2 border-dashed border-cyan-300/40 dark:border-cyan-800/40 rounded-full animate-spin motion-reduce:animate-none" style={{ animationDuration: '30s' }} />
               
               {/* Logo in Center */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-36 h-36 bg-white/95 backdrop-blur-sm rounded-full p-6 shadow-2xl shadow-cyan-200/50 border-4 border-white/80 animate-float">
+                <div className="w-36 h-36 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm rounded-full p-6 shadow-2xl shadow-cyan-200/50 border-4 border-white/80 dark:border-slate-700/60 animate-float motion-reduce:animate-none">
                   <img 
                     src="/logo.svg" 
                     alt="CuraSoft Logo" 
@@ -489,21 +501,21 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Orbiting Elements */}
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '20s' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '20s' }}>
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-6 h-6 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full shadow-lg shadow-cyan-400/50 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
                   </svg>
                 </div>
               </div>
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '15s', animationDirection: 'reverse' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '15s', animationDirection: 'reverse' }}>
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-3 w-5 h-5 bg-gradient-to-br from-violet-400 to-violet-500 rounded-full shadow-lg shadow-violet-400/50 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '25s' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '25s' }}>
                 <div className="absolute top-1/2 right-0 translate-x-3 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-teal-400 to-teal-500 rounded-full shadow-lg shadow-teal-400/50 flex items-center justify-center">
                   <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -514,7 +526,7 @@ const LoginPage: React.FC = () => {
 
             {/* Text Content */}
             <div className="mt-10 text-center">
-              <p className="text-lg text-slate-600 max-w-md mx-auto leading-relaxed mb-8">
+              <p className="text-lg text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed mb-8">
                 Modern dental clinic management system designed for efficiency and patient care excellence.
               </p>
               
@@ -600,13 +612,17 @@ const LoginPage: React.FC = () => {
 
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative z-10">
-        <div className={`w-full max-w-md transition-all duration-700 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className={`w-full max-w-md transition-all duration-700 delay-300 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           {/* Login Card with Glass Morphism */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 border border-white/50 p-8 sm:p-10 space-y-6">
+          <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 border border-white/50 dark:border-slate-700/60 p-8 sm:p-10 space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800/60 bg-cyan-50 dark:bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+              <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse motion-reduce:animate-none" />
+              Secure Access
+            </div>
             
             {/* Header Section with Logo */}
             <div className="text-center space-y-3">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-200/50 animate-float p-3">
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-200/50 dark:shadow-cyan-950/50 animate-float motion-reduce:animate-none p-3">
                 <img 
                   src="/logo.svg" 
                   alt="CuraSoft Logo" 
@@ -614,10 +630,10 @@ const LoginPage: React.FC = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
                   Welcome Back
                 </h1>
-                <p className="text-slate-500 text-sm mt-1">
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
                   Sign in to your clinic account
                 </p>
               </div>
@@ -633,7 +649,7 @@ const LoginPage: React.FC = () => {
 
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className={`transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+              <div className={`transition-all duration-500 delay-100 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
                 <InputField
                   id="username"
                   label={t('auth.login.username') || 'Username'}
@@ -641,11 +657,17 @@ const LoginPage: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder={t('auth.login.usernamePlaceholder') || 'Enter your username'}
+                  autoComplete="username"
+                  icon={
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  }
                   required
                 />
               </div>
               
-              <div className={`transition-all duration-500 delay-200 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+              <div className={`transition-all duration-500 delay-200 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
                 <InputField
                   id="password"
                   label={t('auth.login.password') || 'Password'}
@@ -653,6 +675,12 @@ const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('auth.login.passwordPlaceholder') || 'Enter your password'}
+                  autoComplete="current-password"
+                  icon={
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2h-1V9a5 5 0 10-10 0v2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                  }
                   required
                   showPasswordToggle
                   onTogglePassword={() => setShowPassword(!showPassword)}
@@ -660,35 +688,35 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Remember Me & Forgot Password */}
-              <div className={`flex items-center justify-between transition-all duration-500 delay-300 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+              <div className={`flex items-center justify-between transition-all duration-500 delay-300 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
                 <label className="flex items-center space-x-2 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-0 transition-colors cursor-pointer"
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-0 dark:focus:ring-offset-slate-900 transition-colors cursor-pointer"
                   />
-                  <span className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">
+                  <span className="text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
                     {t('auth.login.rememberMe') || 'Remember me'}
                   </span>
                 </label>
                 <a 
                   href="#" 
-                  className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors hover:underline"
+                  className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors hover:underline"
                 >
                   {t('auth.login.forgotPassword') || 'Forgot password?'}
                 </a>
               </div>
 
-              <div className={`transition-all duration-500 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <div className={`transition-all duration-500 delay-400 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold rounded-lg shadow-lg shadow-cyan-200/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-cyan-200/50 dark:shadow-cyan-950/60 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-[0.99] motion-reduce:transition-none motion-reduce:transform-none"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -704,17 +732,17 @@ const LoginPage: React.FC = () => {
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
+                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white/90 text-slate-500 font-medium">
+                <span className="px-4 bg-white/90 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 font-medium">
                   {t('auth.oauth.or') || 'or continue with'}
                 </span>
               </div>
             </div>
 
             {/* OAuth Buttons */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <OAuthButton
                 provider="google"
                 onClick={handleGoogleLogin}
@@ -732,14 +760,14 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-4 border-t border-slate-100">
-              <p className="text-slate-500 text-xs">
+            <div className="text-center pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 {t('auth.login.agreement') || 'By signing in, you agree to our'}{' '}
-                <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+                <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                   {t('auth.login.terms') || 'Terms of Service'}
                 </a>
                 {' '}{t('common.and') || 'and'}{' '}
-                <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+                <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                   {t('auth.login.privacy') || 'Privacy Policy'}
                 </a>
               </p>
@@ -747,10 +775,15 @@ const LoginPage: React.FC = () => {
           </div>
 
           {/* Help Text */}
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Encrypted</div>
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Fast Access</div>
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Audit Ready</div>
+          </div>
           <div className="mt-6 text-center">
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {t('auth.login.needHelp') || 'Need help?'}{' '}
-              <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+              <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                 {t('auth.login.contactSupport') || 'Contact Support'}
               </a>
             </p>

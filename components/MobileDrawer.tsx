@@ -63,6 +63,15 @@ const DoctorsIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const EmployeesIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <path d="M20 8v6" />
+    <path d="M23 11h-6" />
+  </svg>
+);
+
 const SuppliersIcon = ({ isActive }: { isActive: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -171,6 +180,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     { id: 'patients', label: t('sidebar.patients'), icon: PatientsIcon, permission: Permission.PATIENT_VIEW, adminOnly: false },
     { id: 'scheduler', label: t('sidebar.scheduler'), icon: SchedulerIcon, permission: Permission.APPOINTMENT_VIEW, adminOnly: false },
     { id: 'doctors', label: t('sidebar.doctors'), icon: DoctorsIcon, permission: null, adminOnly: true }, // Admin only
+    { id: 'employees', label: t('sidebar.employees'), icon: EmployeesIcon, permission: Permission.FINANCE_VIEW, adminOnly: false },
     { id: 'suppliers', label: t('sidebar.suppliers'), icon: SuppliersIcon, permission: Permission.SUPPLIER_VIEW, adminOnly: false },
     { id: 'inventory', label: t('sidebar.inventory'), icon: InventoryIcon, permission: Permission.INVENTORY_VIEW, adminOnly: false },
     { id: 'labCases', label: t('sidebar.labCases'), icon: LabCaseIcon, permission: Permission.LAB_CASE_VIEW, adminOnly: false },
@@ -197,7 +207,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
   const groups = [
     {
       label: t('sidebar.group.records'),
-      items: filteredNavItems.filter(item => ['dashboard', 'patients', 'doctors', 'treatmentDefinitions', 'suppliers'].includes(item.id)),
+      items: filteredNavItems.filter(item => ['dashboard', 'patients', 'doctors', 'employees', 'treatmentDefinitions', 'suppliers'].includes(item.id)),
     },
     {
       label: t('sidebar.group.appointments'),
