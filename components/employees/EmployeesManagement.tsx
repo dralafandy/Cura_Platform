@@ -447,8 +447,8 @@ const EmployeesManagement: React.FC = () => {
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 md:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className={`text-2xl font-bold ${align}`}>{tr('إدارة الموظفين', 'Employees Management')}</h1>
-            <p className={`text-sm text-slate-500 dark:text-slate-400 ${align}`}>{tr('إدارة الحضور والانصراف والمرتبات والمكافآت والجزاءات.', 'Manage attendance, payroll, bonuses and penalties.')}</p>
+            <h1 className={`text-2xl font-bold ${align}`}>{tr('قائمة الموظفين', 'Employees List')}</h1>
+            <p className={`text-sm text-slate-500 dark:text-slate-400 ${align}`}>{tr('عرض وإدارة بيانات الموظفين والحضور والرواتب والمكافآت والجزاءات.', 'View and manage employee data, attendance, payroll, bonuses, and penalties.')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className={field} />

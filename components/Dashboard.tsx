@@ -534,7 +534,14 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                             </svg>
                                             <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full animate-pulse"></div>
                                         </div>
-                                        <span className="font-semibold text-xs sm:text-sm">{currencyFormatter.format(clinicProfitThisMonth)} <span className="text-white/80 font-normal">{t('dashboard.monthlyNetProfit') || 'صافي الربح الشهري'}</span></span>
+                                        <div className="flex flex-col leading-tight">
+                                            <span className="font-semibold text-xs sm:text-sm">
+                                                {currencyFormatter.format(netToday)} <span className="text-white/80 font-normal">{t('dashboard.dailyNetProfit') || 'صافي الربح اليومي'}</span>
+                                            </span>
+                                            <span className="font-semibold text-xs sm:text-sm">
+                                                {currencyFormatter.format(clinicProfitThisMonth)} <span className="text-white/80 font-normal">{t('dashboard.monthlyNetProfit') || 'صافي الربح الشهري'}</span>
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -542,6 +549,66 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                     </div>
                 </div>
 
+                {/* Helpful hints (quick summarized cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('scheduler')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 mb-2">
+                            {ClockIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.nextAppointment') || 'Next Appointment'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                            {nextAppointment
+                                ? new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(nextAppointment.startTime))
+                                : (t('dashboard.noUpcomingAppointments') || 'No upcoming appointments')}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            {nextAppointment ? (patients.find(p => p.id === nextAppointment.patientId)?.name || '') : (t('dashboard.schedule') || 'Schedule')}
+                        </p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('reports')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-rose-300 dark:hover:border-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
+                            {AlertIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.pendingPayments') || 'Pending Payments'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{overdueInvoices} {t('dashboard.overdue') || 'Overdue'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.viewDetails') || 'View details'}</p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('inventory')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                            {AlertIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.lowStockItems') || 'Low Stock Items'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{lowStockItems.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.atAGlance') || 'At a glance'}</p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('labCases')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-2">
+                            {CalendarIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.pendingLabCases') || 'Pending Lab Cases'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{pendingLabCases.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.atAGlance') || 'At a glance'}</p>
+                    </button>
+                </div>
 
                 {/* 1. Data Visualization Dashboard - Only for Admin */}
                 {isAdmin && dashboard.showQuickStats && (

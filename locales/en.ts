@@ -182,6 +182,8 @@
   "dashboard.todaysFinancials": "Daily Financials",
   "dashboard.monthlyMetrics": "Monthly Metrics",
   "dashboard.operationalMetrics": "Operational Metrics",
+  "dashboard.greeting.morning": "Good Morning",
+  "dashboard.greeting.evening": "Good Evening",
   "dashboard.todaysEarnings": "Today's Earnings",
   "dashboard.todaysExpensesSubtitle": "Today's Expenses",
   "dashboard.todaysNetProfit": "Today's Net Profit",
@@ -1998,5 +2000,3 @@
 
   "common.and": "and"
 };
-
-

@@ -164,6 +164,11 @@ const Header: React.FC<HeaderProps> = ({
       description: 'إدارة فريق الأطباء',
       icon: '👨‍⚕️'
     },
+    employees: {
+      title: locale === 'ar' ? 'قائمة الموظفين' : 'Employees List',
+      description: locale === 'ar' ? 'عرض وإدارة بيانات الموظفين' : 'View and manage employee records',
+      icon: '👥'
+    },
     reports: { 
       title: 'التقارير', 
       description: 'التقارير والإحصائيات',
@@ -342,39 +347,38 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      {/* Main Header - Enhanced Design */}
+      {/* Main Header - Unified Design */}
       <header 
-        className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
+        className={`sticky top-0 z-50 transition-all duration-300 ease-out ${
           isScrolled 
-            ? 'bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 border-b border-slate-200/50 dark:border-slate-700/50' 
-            : 'bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700'
+            ? 'bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-slate-700/70 shadow-lg shadow-slate-200/40 dark:shadow-slate-900/50' 
+            : 'bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-700'
         }`}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
-        <div className="px-4 py-3">
+        <div className="px-4 py-2.5">
           <div className="flex items-center justify-between">
             {/* Left: Logo & Mobile Menu */}
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 active:scale-95 transition-all duration-200 group"
+                className="md:hidden p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
                 aria-label="القائمة"
               >
                 <MenuIcon />
               </button>
               
               <div className="flex items-center gap-2.5 group cursor-pointer">
-                <div className="relative">
+                <div className="relative p-1.5 rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-100/80 dark:from-violet-900/40 dark:to-indigo-900/30 border border-violet-200/70 dark:border-violet-700/70">
                   <img 
                     src="/logo.svg" 
                     alt={t('appName')} 
-                    className="h-8 w-8 rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-105" 
+                    className="h-7 w-7 rounded-lg shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:scale-105" 
                   />
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 <div className="hidden sm:block">
-                  <span className="text-base font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+                  <span className="text-base font-bold bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
                     كيوراسوفت
                   </span>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">
@@ -384,15 +388,20 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Center: Spacer */}
-            <div className="flex-1 mx-6"></div>
+            {/* Center: Page Context */}
+            <div className="hidden lg:flex flex-1 mx-6">
+              <div className="w-full max-w-xl mx-auto px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-50/80 via-violet-50/90 to-fuchsia-50/80 dark:from-blue-900/20 dark:via-violet-900/25 dark:to-purple-900/20 border border-violet-200/70 dark:border-violet-700/60">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{currentPage.title || title || t('appName')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{currentPage.description || subtitle || ''}</p>
+              </div>
+            </div>
 
             {/* Right: Theme, Language, Notifications & User - Enhanced */}
             <div className="flex items-center gap-1 sm:gap-2">
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 active:scale-95 transition-all duration-200 group relative overflow-hidden"
+                className="p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group relative overflow-hidden border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
                 aria-label={isDark ? (locale === 'ar' ? 'الوضع الفاتح' : 'Light mode') : (locale === 'ar' ? 'الوضع الداكن' : 'Dark mode')}
               >
                 <div className="relative z-10">
@@ -402,14 +411,14 @@ const Header: React.FC<HeaderProps> = ({
                     <MoonIcon className="h-5 w-5 text-slate-600 group-hover:text-blue-500 group-hover:-rotate-12 transition-all duration-300" />
                   )}
                 </div>
-                <div className={`absolute inset-0 rounded-xl ${isDark ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/10' : 'bg-gradient-to-br from-blue-500/10 to-purple-500/10'} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                <div className={`absolute inset-0 rounded-xl ${isDark ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/10' : 'bg-gradient-to-br from-blue-500/10 to-violet-500/10'} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
               </button>
 
               {/* Language Switcher */}
               <div className="relative" ref={langMenuRef}>
                 <button
                   onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 active:scale-95 transition-all duration-200 group"
+                  className="p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
                   aria-label={locale === 'ar' ? 'تغيير اللغة' : 'Change language'}
                   aria-expanded={isLangMenuOpen}
                 >
@@ -417,7 +426,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 
                 {isLangMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-36 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute left-0 mt-2 w-36 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <button
                       onClick={() => {
                         setLocale('ar');
@@ -466,7 +475,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="group relative flex items-center w-full sm:w-auto p-3 rounded-xl bg-gradient-to-r from-purple-50 to-amber-50/30 dark:from-purple-900/30 dark:to-amber-900/20 border border-purple-100/50 dark:border-purple-800/50 hover:bg-gradient-to-r hover:from-purple-100 hover:to-amber-100/30 dark:hover:from-purple-800/40 dark:hover:to-amber-800/30 transition-all duration-200"
+                  className="group relative flex items-center w-full sm:w-auto p-2.5 rounded-2xl bg-gradient-to-r from-violet-100 to-fuchsia-50 dark:from-violet-900/35 dark:to-indigo-900/30 border border-violet-200/80 dark:border-violet-700/70 hover:from-violet-200 hover:to-fuchsia-100 dark:hover:from-violet-800/45 dark:hover:to-indigo-800/40 transition-all duration-200"
                   aria-label={locale === 'ar' ? 'قائمة المستخدم' : 'User menu'}
                   aria-expanded={isUserMenuOpen}
                 >
@@ -479,7 +488,7 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="ms-3 flex-1 min-w-0">
                     <div className="flex flex-col">
                       <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">{userProfile?.username || t('sidebar.drAdmin')}</p>
-                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">{userProfile?.role || (isAdmin ? 'Admin' : 'User')}</p>
+                      <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">{userProfile?.role || (isAdmin ? 'Admin' : 'User')}</p>
                     </div>
                   </div>
                   

@@ -184,6 +184,8 @@ export const arTranslations = {
   "dashboard.todaysFinancials": "الماليات اليومية",
   "dashboard.monthlyMetrics": "المقاييس الشهرية",
   "dashboard.operationalMetrics": "المقاييس التشغيلية",
+  "dashboard.greeting.morning": "صباح الخير",
+  "dashboard.greeting.evening": "مساء الخير",
   "dashboard.todaysEarnings": "أرباح اليوم",
   "dashboard.todaysExpensesSubtitle": "مصروفات اليوم",
   "dashboard.todaysNetProfit": "صافي الربح اليوم",
