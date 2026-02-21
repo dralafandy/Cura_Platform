@@ -261,7 +261,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const storedUser = loadSession();
     if (storedUser) {
       setUserProfile(storedUser);
-      setUser({ id: storedUser.user_id } as User);
+      // Legacy/local profiles may not have user_id; fall back to profile id.
+      const restoredUserId = storedUser.user_id || storedUser.id;
+      setUser(restoredUserId ? ({ id: restoredUserId } as User) : null);
       setIsLoading(false);
       return;
     }
