@@ -455,6 +455,10 @@ const DoctorDetailsPage: React.FC<{
     [dentists, doctorId]
   );
 
+  // DEBUG: Log doctor color for debugging
+  console.log('DoctorDetailsPage - Doctor:', doctor?.name, 'Color:', doctor?.color);
+  console.log('DoctorDetailsPage - All dentists colors:', dentists.map(d => ({ name: d.name, color: d.color })));
+
   // Formatters - memoized
   const dateTimeFormatter = useMemo(() => createDateTimeFormatter(locale), [locale]);
   const dateFormatter = useMemo(() => createDateFormatter(locale), [locale]);
@@ -643,7 +647,7 @@ const DoctorDetailsPage: React.FC<{
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-6">
             {/* Doctor Avatar */}
             <div 
-              className="w-16 h-16 md:w-24 md:h-24 rounded-xl md:rounded-2xl ${doctor.color} flex items-center justify-center text-white text-2xl md:text-4xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700 flex-shrink-0"
+              className={`w-16 h-16 md:w-24 md:h-24 rounded-xl md:rounded-2xl ${doctor.color || 'bg-gradient-to-br from-purple-400 to-purple-600'} flex items-center justify-center text-white text-2xl md:text-4xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700 flex-shrink-0`}
               aria-label={`${doctor.name} avatar`}
             >
               {doctor.name.charAt(0)}

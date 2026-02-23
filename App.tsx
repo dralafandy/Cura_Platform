@@ -32,6 +32,7 @@ import TestPatientCards from './TestPatientCards';
 import ReportsPage from './components/reports/ReportsPage';
 import PublicBookingPage from './components/PublicBookingPage';
 import EmployeesManagement from './components/employees/EmployeesManagement';
+import AboutPage from './components/AboutPage';
 
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
@@ -163,6 +164,8 @@ const AppContent: React.FC = () => {
         ) : <AccessDenied />;
       case 'publicBooking':
         return <PublicBookingPage />;
+      case 'about':
+        return <AboutPage />;
 
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
@@ -203,6 +206,7 @@ const AppContent: React.FC = () => {
       'insuranceUnified': t('sidebar.insuranceUnified'),
       'reports': 'Reports',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
+      'about': 'عن البرنامج',
       'pendingReservations': t('adminReservations.title') || 'Pending Reservations'
   }
 

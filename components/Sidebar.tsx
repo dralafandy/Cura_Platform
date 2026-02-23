@@ -115,6 +115,14 @@ const StatisticsIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const AboutIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+
 const SettingsIcon = ({ isActive }: { isActive: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -223,6 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'treatmentDefinitions', label: t('sidebar.treatmentDefinitions'), icon: TreatmentDefinitionsIcon, permission: Permission.TREATMENT_VIEW, adminOnly: false },
       { id: 'reports', label: t('sidebar.reports'), icon: StatisticsIcon, permission: Permission.REPORTS_VIEW, adminOnly: false },
       { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: Permission.SETTINGS_VIEW, adminOnly: false },
+      { id: 'about', label: 'عن البرنامج', icon: AboutIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
     ];
 
@@ -261,7 +270,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
     },
     {
       label: t('sidebar.group.settings'),
-      items: navItems.filter(item => ['settings', 'userManagement'].includes(item.id)),
+      items: navItems.filter(item => ['settings', 'userManagement', 'about'].includes(item.id)),
     },
   ];
 
