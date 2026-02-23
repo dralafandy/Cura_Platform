@@ -46,6 +46,73 @@ const getSupplierTypeIcon = (type: string) => {
     }
 };
 
+const SupplierFormSection: React.FC<{
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    className?: string;
+    isDark?: boolean;
+}> = ({ title, icon, children, className = '', isDark = false }) => (
+    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
+                {icon}
+            </div>
+            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
+        </div>
+        {children}
+    </div>
+);
+
+const SupplierInputField: React.FC<{
+    id: string;
+    name: string;
+    label: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    type?: string;
+    placeholder?: string;
+    required?: boolean;
+    icon?: React.ReactNode;
+    className?: string;
+}> = ({
+    id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = ''
+}) => {
+    const inputClasses = `
+        w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
+        focus:ring-2 focus:ring-primary/20 focus:border-primary
+        transition-all duration-200 ease-in-out
+        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        ${icon ? 'ps-10' : ''}
+    `;
+
+    return (
+        <div className={`relative ${className}`}>
+            <label htmlFor={id} className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                {label}
+                {required && <span className="text-red-500 mr-1">*</span>}
+            </label>
+            <div className="relative">
+                <input
+                    id={id}
+                    name={name}
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={inputClasses}
+                    required={required}
+                />
+                {icon && (
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                        {icon}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 const AddEditSupplierModal: React.FC<{
     supplier?: Supplier;
@@ -59,83 +126,14 @@ const AddEditSupplierModal: React.FC<{
     );
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave(formData);
         onClose();
-    };
-
-    // Form Section Component
-    const FormSection: React.FC<{
-        title: string;
-        icon: React.ReactNode;
-        children: React.ReactNode;
-        className?: string;
-        isDark?: boolean;
-    }> = ({ title, icon, children, className = '', isDark = false }) => (
-        <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
-                <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
-                    {icon}
-                </div>
-                <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
-            </div>
-            {children}
-        </div>
-    );
-
-    // Input Field Component
-    const InputField: React.FC<{
-        id: string;
-        name: string;
-        label: string;
-        value: string;
-        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-        type?: string;
-        placeholder?: string;
-        required?: boolean;
-        icon?: React.ReactNode;
-        className?: string;
-        isDark?: boolean;
-    }> = ({
-        id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = '', isDark = false
-    }) => {
-        const inputClasses = `
-            w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
-            focus:ring-2 focus:ring-primary/20 focus:border-primary
-            transition-all duration-200 ease-in-out
-            placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
-            ${icon ? 'ps-10' : ''}
-        `;
-
-        return (
-            <div className={`relative ${className}`}>
-                <label htmlFor={id} className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                    {label}
-                    {required && <span className="text-red-500 mr-1">*</span>}
-                </label>
-                <div className="relative">
-                    <input
-                        id={id}
-                        name={name}
-                        type={type}
-                        value={value}
-                        onChange={onChange}
-                        placeholder={placeholder}
-                        className={inputClasses}
-                        required={required}
-                    />
-                    {icon && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                            {icon}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -159,9 +157,9 @@ const AddEditSupplierModal: React.FC<{
                 {/* Form Content */}
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
                     <div className="space-y-5 animate-fadeIn">
-                        <FormSection title={t('suppliers.basicInfo')} icon={<PackageIcon />} isDark={isDark}>
+                        <SupplierFormSection title={t('suppliers.basicInfo')} icon={<PackageIcon />} isDark={isDark}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-name"
                                     name="name"
                                     label={t('suppliers.supplierName')}
@@ -170,9 +168,8 @@ const AddEditSupplierModal: React.FC<{
                                     placeholder={t('suppliers.supplierNamePlaceholder')}
                                     required
                                     icon={<PackageIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="contact-person"
                                     name="contact_person"
                                     label={t('suppliers.contactPerson')}
@@ -180,9 +177,8 @@ const AddEditSupplierModal: React.FC<{
                                     onChange={handleChange}
                                     placeholder={t('suppliers.contactPersonPlaceholder')}
                                     icon={<UserIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-phone"
                                     name="phone"
                                     label={t('suppliers.phone')}
@@ -191,9 +187,8 @@ const AddEditSupplierModal: React.FC<{
                                     type="tel"
                                     placeholder="01xxxxxxxxx"
                                     icon={<PhoneIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-email"
                                     name="email"
                                     label={t('suppliers.email')}
@@ -202,12 +197,11 @@ const AddEditSupplierModal: React.FC<{
                                     type="email"
                                     placeholder="example@email.com"
                                     icon={<EmailIcon />}
-                                    isDark={isDark}
                                 />
                             </div>
-                        </FormSection>
+                        </SupplierFormSection>
 
-                        <FormSection title={t('suppliers.supplierTypeLabel')} icon={<LabIcon />} isDark={isDark}>
+                        <SupplierFormSection title={t('suppliers.supplierTypeLabel')} icon={<LabIcon />} isDark={isDark}>
                             <div className="relative">
                                 <label htmlFor="type" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
                                     {t('suppliers.supplierType')}
@@ -235,7 +229,7 @@ const AddEditSupplierModal: React.FC<{
                                     </div>
                                 </div>
                             </div>
-                        </FormSection>
+                        </SupplierFormSection>
                     </div>
 
                     {/* Footer */}
