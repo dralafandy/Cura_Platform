@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Payment, Permission } from '../../types';
 import { ClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
@@ -7,6 +7,7 @@ import { NotificationType } from '../../types';
 import { PaymentMethod } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import InvoiceAttachmentUploader from '../finance/InvoiceAttachmentUploader';
+import { supabase } from '../../supabaseClient';
 
 // Icons
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
@@ -31,7 +32,7 @@ interface AddPaymentModalProps {
 const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData, onClose, onAdd }) => {
     const { t } = useI18n();
     const { addNotification } = useNotification();
-    const { checkPermission } = useAuth();
+    const { checkPermission, user } = useAuth();
     const [formData, setFormData] = useState<Omit<Payment, 'id'> & { paymentReceiptImageUrl?: string }>({
         patientId,
         date: new Date().toISOString().split('T')[0],
@@ -47,12 +48,54 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
         paymentReceiptImageUrl: '',
     });
 
+    // Insurance state
+    const [patientInsurance, setPatientInsurance] = useState<{
+        insurance_company_id: string;
+        insurance_company_name: string;
+        coverage_percentage: number;
+        policy_number?: string;
+    } | null>(null);
+    const [useInsurance, setUseInsurance] = useState(false);
+
+    // Load patient insurance info
+    useEffect(() => {
+        const loadPatientInsurance = async () => {
+            if (!supabase || !user?.id || !patientId) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('insurance_company_id, coverage_percentage, policy_number, insurance_companies(name)')
+                    .eq('patient_id', patientId)
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (data && !error) {
+                    setPatientInsurance({
+                        insurance_company_id: data.insurance_company_id,
+                        insurance_company_name: (data.insurance_companies as any)?.name || '',
+                        coverage_percentage: data.coverage_percentage || 0,
+                        policy_number: data.policy_number
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load patient insurance:', err);
+            }
+        };
+        void loadPatientInsurance();
+    }, [patientId, user?.id]);
+
     // Calculate financial summary - matching PatientDetailsPanel calculation
     const patientTreatmentRecords = clinicData.treatmentRecords.filter(tr => tr.patientId === patientId);
     const totalTreatmentCosts = patientTreatmentRecords.reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0);
     const totalPayments = clinicData.payments.filter(p => p.patientId === patientId).reduce((sum, p) => sum + p.amount, 0);
     const outstandingBalance = totalTreatmentCosts - totalPayments;
     const financialSummary = { totalTreatmentCosts, totalPayments, outstandingBalance };
+
+    // Calculate insurance coverage amount
+    const insuranceCoverageAmount = useInsurance && patientInsurance 
+        ? (formData.amount * patientInsurance.coverage_percentage / 100)
+        : 0;
+    const patientResponsibility = formData.amount - insuranceCoverageAmount;
 
     // Simple currency formatter
     const formatCurrency = (amount: number): string => {
@@ -74,21 +117,21 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
         // Check permission
         if (!checkPermission(Permission.FINANCE_PAYMENT_ADD)) {
-            addNotification(t('errors.noPermission') || 'You do not have permission to add payments', NotificationType.ERROR);
+            addNotification({ message: t('errors.noPermission') || 'You do not have permission to add payments', type: NotificationType.ERROR });
             return;
         }
         
         if (formData.amount <= 0) {
-            addNotification(t('addPaymentModal.alertPositiveAmount'), NotificationType.ERROR);
+            addNotification({ message: t('addPaymentModal.alertPositiveAmount'), type: NotificationType.ERROR });
             return;
         }
         if (!formData.treatmentRecordId) {
-            addNotification('Please select a treatment record', NotificationType.ERROR);
+            addNotification({ message: 'Please select a treatment record', type: NotificationType.ERROR });
             return;
         }
 
@@ -100,11 +143,11 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
 
         // Validate payment doesn't exceed outstanding balance
         if (outstandingBalance <= 0) {
-            addNotification('لا يوجد رصيد مستحق لهذا المريض', NotificationType.ERROR);
+            addNotification({ message: 'لا يوجد رصيد مستحق لهذا المريض', type: NotificationType.ERROR });
             return;
         }
         if (formData.amount > outstandingBalance) {
-            addNotification(`المبلغ المدخل يتجاوز الرصيد المستحق: ${outstandingBalance.toFixed(2)}`, NotificationType.ERROR);
+            addNotification({ message: `المبلغ المدخل يتجاوز الرصيد المستحق: ${outstandingBalance.toFixed(2)}`, type: NotificationType.ERROR });
             return;
         }
 
@@ -121,7 +164,31 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
             }
         }
 
+        // Add payment
         onAdd(formData);
+        
+        // Create insurance claim if using insurance
+        if (useInsurance && patientInsurance && insuranceCoverageAmount > 0 && supabase && user?.id) {
+            try {
+                await supabase
+                    .from('treatment_insurance_link')
+                    .insert({
+                        treatment_record_id: formData.treatmentRecordId,
+                        insurance_company_id: patientInsurance.insurance_company_id,
+                        claim_amount: insuranceCoverageAmount,
+                        claim_status: 'PENDING',
+                        claim_date: formData.date,
+                        user_id: user.id
+                    });
+                addNotification({ 
+                    message: `تم إنشاء مطالبة تأمين بقيمة ${formatCurrency(insuranceCoverageAmount)}`, 
+                    type: NotificationType.INFO 
+                });
+            } catch (err) {
+                console.error('Failed to create insurance claim:', err);
+            }
+        }
+        
         onClose();
     };
 
@@ -244,6 +311,57 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                 )}
                             </div>
                         </div>
+
+                        {/* Insurance Section */}
+                        {patientInsurance && (
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <span className="font-semibold text-blue-800 dark:text-blue-200">تأمين: {patientInsurance.insurance_company_name}</span>
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={useInsurance}
+                                            onChange={(e) => setUseInsurance(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm text-blue-700 dark:text-blue-300">استخدام التأمين</span>
+                                    </label>
+                                </div>
+                                
+                                {useInsurance && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-blue-600 dark:text-blue-400">نسبة التغطية:</span>
+                                            <span className="font-semibold text-blue-800 dark:text-blue-200">{patientInsurance.coverage_percentage}%</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-blue-600 dark:text-blue-400">رقم البوليصة:</span>
+                                            <span className="font-semibold text-blue-800 dark:text-blue-200">{patientInsurance.policy_number || '-'}</span>
+                                        </div>
+                                        <div className="border-t border-blue-200 dark:border-blue-700 pt-3 mt-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-white dark:bg-slate-800 p-3 rounded-lg">
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">تغطية التأمين</p>
+                                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(insuranceCoverageAmount)}</p>
+                                                </div>
+                                                <div className="bg-white dark:bg-slate-800 p-3 rounded-lg">
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">مسؤولية المريض</p>
+                                                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatCurrency(patientResponsibility)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                                            * سيتم إنشاء مطالبة تأمين تلقائياً بقيمة {formatCurrency(insuranceCoverageAmount)}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Payment Method Cards */}
                         <div className="space-y-3">

@@ -219,6 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'inventory', label: t('sidebar.inventory'), icon: InventoryIcon, permission: Permission.INVENTORY_VIEW, adminOnly: false },
       { id: 'labCases', label: t('sidebar.labCases'), icon: LabCaseIcon, permission: Permission.LAB_CASE_VIEW, adminOnly: false },
       { id: 'expenses', label: t('sidebar.expenses'), icon: ExpensesIcon, permission: Permission.FINANCE_EXPENSES_MANAGE, adminOnly: false },
+      { id: 'insuranceUnified', label: t('sidebar.insuranceUnified'), icon: StatisticsIcon, permission: Permission.FINANCE_ACCOUNTS_VIEW, adminOnly: false },
       { id: 'treatmentDefinitions', label: t('sidebar.treatmentDefinitions'), icon: TreatmentDefinitionsIcon, permission: Permission.TREATMENT_VIEW, adminOnly: false },
       { id: 'reports', label: t('sidebar.reports'), icon: StatisticsIcon, permission: Permission.REPORTS_VIEW, adminOnly: false },
       { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: Permission.SETTINGS_VIEW, adminOnly: false },
@@ -256,7 +257,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
     },
     {
       label: t('sidebar.group.finance'),
-      items: navItems.filter(item => ['expenses', 'reports'].includes(item.id)),
+      items: navItems.filter(item => ['expenses', 'insuranceUnified', 'reports'].includes(item.id)),
     },
     {
       label: t('sidebar.group.settings'),

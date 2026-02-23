@@ -25,6 +25,7 @@ import LabCaseManagement from './components/finance/LabCaseManagement';
 import ExpensesManagement from './components/finance/ExpensesManagement';
 import TreatmentDefinitionManagement from './components/finance/TreatmentDefinitionManagement';
 import AccountSelectionPage from './components/finance/AccountSelectionPage';
+import InsuranceManagementPage from './components/finance/InsuranceManagementPage';
 import Settings from './components/Settings';
 import { PatientDetailsPanel } from './components/patient/PatientDetailsPanel';
 import TestPatientCards from './TestPatientCards';
@@ -155,6 +156,10 @@ const AppContent: React.FC = () => {
       case 'reports':
         return hasPermission(Permission.REPORTS_VIEW) ? (
           <ReportsPage />
+        ) : <AccessDenied />;
+      case 'insuranceUnified':
+        return hasPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
+          <InsuranceManagementPage />
         ) : <AccessDenied />;
       case 'publicBooking':
         return <PublicBookingPage />;

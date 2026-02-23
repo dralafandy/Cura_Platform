@@ -109,6 +109,7 @@
   "sidebar.expenses": "Expenses",
   "sidebar.treatmentDefinitions": "Treatment Settings",
   "sidebar.doctorAccounts": "Doctor Accounts",
+  "sidebar.insuranceUnified": "Insurance Center",
   "sidebar.group.records": "Records",
   "sidebar.group.appointments": "Appointments",
   "sidebar.group.materialsLabs": "Materials & Labs",

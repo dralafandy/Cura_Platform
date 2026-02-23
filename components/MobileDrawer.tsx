@@ -181,6 +181,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     { id: 'inventory', label: t('sidebar.inventory'), icon: InventoryIcon, permission: Permission.INVENTORY_VIEW, adminOnly: false },
     { id: 'labCases', label: t('sidebar.labCases'), icon: LabCaseIcon, permission: Permission.LAB_CASE_VIEW, adminOnly: false },
     { id: 'expenses', label: t('sidebar.expenses'), icon: ExpensesIcon, permission: Permission.FINANCE_EXPENSES_MANAGE, adminOnly: false },
+    { id: 'insuranceUnified', label: t('sidebar.insuranceUnified'), icon: ReportsIcon, permission: Permission.FINANCE_ACCOUNTS_VIEW, adminOnly: false },
     { id: 'treatmentDefinitions', label: t('sidebar.treatmentDefinitions'), icon: TreatmentDefinitionsIcon, permission: Permission.TREATMENT_VIEW, adminOnly: false },
     { id: 'reports', label: t('sidebar.reports'), icon: ReportsIcon, permission: null, adminOnly: true }, // Admin only
     { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: null, adminOnly: true }, // Admin only
@@ -215,7 +216,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     },
     {
       label: t('sidebar.group.finance'),
-      items: filteredNavItems.filter(item => ['expenses', 'reports'].includes(item.id)),
+      items: filteredNavItems.filter(item => ['expenses', 'insuranceUnified', 'reports'].includes(item.id)),
     },
     {
       label: t('sidebar.group.settings'),
