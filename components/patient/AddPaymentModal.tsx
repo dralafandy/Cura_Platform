@@ -111,9 +111,10 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
         // Calculate shares based on the selected treatment record
         const treatmentRecord = clinicData.treatmentRecords.find(tr => tr.id === formData.treatmentRecordId);
         if (treatmentRecord) {
-            const treatmentDef = clinicData.treatmentDefinitions.find(td => td.id === treatmentRecord.treatmentDefinitionId);
-            if (treatmentDef) {
-                const doctorShare = formData.amount * treatmentDef.doctorPercentage;
+            const recordTotal = Number(treatmentRecord.doctorShare) + Number(treatmentRecord.clinicShare);
+            if (recordTotal > 0) {
+                const doctorRatio = Number(treatmentRecord.doctorShare) / recordTotal;
+                const doctorShare = formData.amount * doctorRatio;
                 const clinicShare = formData.amount - doctorShare;
                 formData.clinicShare = clinicShare;
                 formData.doctorShare = doctorShare;
@@ -309,7 +310,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                     <option value="">اختر سجل علاج</option>
                                     {clinicData.treatmentRecords.filter(tr => tr.patientId === patientId).map(tr => {
                                         const treatmentDef = clinicData.treatmentDefinitions.find(td => td.id === tr.treatmentDefinitionId);
-                                        const cost = treatmentDef ? treatmentDef.basePrice : 0;
+                                        const cost = Number(tr.doctorShare) + Number(tr.clinicShare);
                                         return (
                                             <option key={tr.id} value={tr.id}>
                                                 {treatmentDef?.name || 'علاج غير معروف'} - {new Date(tr.treatmentDate).toLocaleDateString('ar-EG')} ({formatCurrency(cost)})

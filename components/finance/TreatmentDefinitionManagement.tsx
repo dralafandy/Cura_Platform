@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ClinicData } from '../../hooks/useClinicData';
-import { TreatmentDefinition } from '../../types';
+import { Dentist, TreatmentDefinition, TreatmentDoctorPercentage } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,7 @@ const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w
 const StethoscopeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
 const DollarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg>;
 const PercentageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>;
+const UserPercentIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0112 20.055a12.083 12.083 0 01-6.16-9.477L12 14z" /></svg>;
 
 const AddEditTreatmentDefinitionModal: React.FC<{
     definition?: TreatmentDefinition;
@@ -111,13 +112,157 @@ const AddEditTreatmentDefinitionModal: React.FC<{
     );
 };
 
+const TreatmentDoctorPercentageModal: React.FC<{
+    definition: TreatmentDefinition;
+    dentists: Dentist[];
+    percentages: TreatmentDoctorPercentage[];
+    onClose: () => void;
+    onSave: (data: { treatmentDefinitionId: string; dentistId: string; doctorPercentage: number; clinicPercentage: number; }) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+}> = ({ definition, dentists, percentages, onClose, onSave, onDelete }) => {
+    const { isDark } = useTheme();
+    const [selectedDentistId, setSelectedDentistId] = useState('');
+    const [doctorPercentage, setDoctorPercentage] = useState(0.5);
+
+    const existingEntry = useMemo(() => (
+        percentages.find(item => item.dentistId === selectedDentistId)
+    ), [percentages, selectedDentistId]);
+
+    const percentageFormatter = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    const handleSelectDoctor = (dentistId: string) => {
+        setSelectedDentistId(dentistId);
+        const entry = percentages.find(item => item.dentistId === dentistId);
+        setDoctorPercentage(entry?.doctorPercentage ?? 0.5);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedDentistId) return;
+        if (doctorPercentage < 0 || doctorPercentage > 1) return;
+        await onSave({
+            treatmentDefinitionId: definition.id,
+            dentistId: selectedDentistId,
+            doctorPercentage,
+            clinicPercentage: 1 - doctorPercentage
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+            <div className={`${isDark ? 'bg-slate-800' : 'bg-white'} rounded-xl shadow-2xl w-full max-w-2xl`}>
+                <header className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-slate-700 bg-gradient-to-r from-purple-900/30 to-amber-900/20' : 'bg-gradient-to-r from-purple-50 to-amber-50'}`}>
+                    <div>
+                        <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">نسب الأطباء المخصصة</h2>
+                        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{definition.name}</p>
+                    </div>
+                    <button onClick={onClose} className={`p-1 rounded-full ${isDark ? 'hover:bg-slate-700 focus:ring-slate-600' : 'hover:bg-purple-100 focus:ring-purple-300'} transition-colors focus:outline-none focus:ring-2`}>
+                        <CloseIcon />
+                    </button>
+                </header>
+
+                <div className="p-6 space-y-5">
+                    <div className={`p-3 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-700/50 text-slate-300' : 'border-amber-200 bg-amber-50 text-amber-800'} text-sm`}>
+                        النسبة الافتراضية لهذا العلاج: الطبيب {percentageFormatter.format(definition.doctorPercentage)} - العيادة {percentageFormatter.format(definition.clinicPercentage)}
+                    </div>
+
+                    <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        <div className="md:col-span-1">
+                            <label className={`block text-sm mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>الطبيب</label>
+                            <select
+                                value={selectedDentistId}
+                                onChange={(e) => handleSelectDoctor(e.target.value)}
+                                className={`p-2 border rounded-lg w-full ${isDark ? 'border-slate-600 bg-slate-700 text-white' : 'border-purple-200'}`}
+                                required
+                            >
+                                <option value="">اختر الطبيب</option>
+                                {dentists.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className={`block text-sm mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>نسبة الطبيب</label>
+                            <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-purple-600'}`}>
+                                الطبيب {percentageFormatter.format(doctorPercentage)} - العيادة {percentageFormatter.format(1 - doctorPercentage)}
+                            </p>
+                            <input
+                                type="number"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={doctorPercentage}
+                                onChange={(e) => setDoctorPercentage(Math.min(1, Math.max(0, Number(e.target.value) || 0)))}
+                                className={`p-2 border rounded-lg w-full ${isDark ? 'border-slate-600 bg-slate-700 text-white' : 'border-purple-200'}`}
+                                required
+                            />
+                        </div>
+                        <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700">
+                            {existingEntry ? 'تحديث' : 'حفظ'}
+                        </button>
+                    </form>
+
+                    <div className={`${isDark ? 'border-slate-700' : 'border-purple-100'} border rounded-lg overflow-hidden`}>
+                        <table className="min-w-full text-sm">
+                            <thead className={`${isDark ? 'bg-slate-700 text-slate-300' : 'bg-purple-50 text-purple-700'}`}>
+                                <tr>
+                                    <th className="px-4 py-2 text-right">الطبيب</th>
+                                    <th className="px-4 py-2 text-right">نسبة الطبيب</th>
+                                    <th className="px-4 py-2 text-right">نسبة العيادة</th>
+                                    <th className="px-4 py-2 text-center">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody className={`${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                                {percentages.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className={`px-4 py-4 text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            لا توجد نسب مخصصة بعد
+                                        </td>
+                                    </tr>
+                                )}
+                                {percentages.map(item => {
+                                    const dentist = dentists.find(d => d.id === item.dentistId);
+                                    return (
+                                        <tr key={item.id} className={`${isDark ? 'border-slate-700' : 'border-purple-100'} border-t`}>
+                                            <td className={`px-4 py-2 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{dentist?.name || 'طبيب غير معروف'}</td>
+                                            <td className="px-4 py-2">{percentageFormatter.format(item.doctorPercentage)}</td>
+                                            <td className="px-4 py-2">{percentageFormatter.format(item.clinicPercentage)}</td>
+                                            <td className="px-4 py-2 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onDelete(item.id)}
+                                                    className={`px-2 py-1 text-xs rounded ${isDark ? 'bg-rose-900/40 text-rose-300 hover:bg-rose-900/60' : 'bg-rose-100 text-rose-700 hover:bg-rose-200'}`}
+                                                >
+                                                    حذف
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
-    const { treatmentDefinitions, addTreatmentDefinition, updateTreatmentDefinition, deleteTreatmentDefinition } = clinicData;
+    const {
+        treatmentDefinitions,
+        treatmentDoctorPercentages,
+        dentists,
+        addTreatmentDefinition,
+        updateTreatmentDefinition,
+        deleteTreatmentDefinition,
+        upsertTreatmentDoctorPercentage,
+        deleteTreatmentDoctorPercentage
+    } = clinicData;
     const { t, locale } = useI18n();
     const { isDark } = useTheme();
     const { isAdmin } = useAuth();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingDefinition, setEditingDefinition] = useState<TreatmentDefinition | undefined>(undefined);
+    const [percentageDefinition, setPercentageDefinition] = useState<TreatmentDefinition | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
@@ -137,6 +282,11 @@ const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ c
             deleteTreatmentDefinition(definition.id);
         }
     };
+
+    const selectedTreatmentCustomPercentages = useMemo(() => {
+        if (!percentageDefinition) return [];
+        return treatmentDoctorPercentages.filter(item => item.treatmentDefinitionId === percentageDefinition.id);
+    }, [percentageDefinition, treatmentDoctorPercentages]);
 
     const filteredTreatmentDefinitions = treatmentDefinitions.filter(td =>
         td.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -260,6 +410,14 @@ const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ c
                                         {isAdmin && (
                                             <div className="flex gap-2">
                                                 <button
+                                                    onClick={() => setPercentageDefinition(td)}
+                                                    className={`text-amber-600 hover:text-amber-700 px-2 py-1 rounded-lg ${isDark ? 'hover:bg-amber-900/30' : 'hover:bg-amber-100'} focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all duration-200 inline-flex items-center gap-1`}
+                                                    aria-label={`Manage custom doctor percentages for ${td.name}`}
+                                                >
+                                                    <UserPercentIcon />
+                                                    <span className="text-[10px] font-semibold">نسب الطبيب</span>
+                                                </button>
+                                                <button
                                                     onClick={() => { setEditingDefinition(td); setIsAddModalOpen(true); }}
                                                     className={`text-purple-600 hover:text-purple-700 p-2 rounded-lg ${isDark ? 'hover:bg-purple-900/30' : 'hover:bg-purple-100'} focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200`}
                                                     aria-label={t('treatments.editTreatmentAriaLabel', {name: td.name})}
@@ -323,6 +481,14 @@ const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ c
                                                 {isAdmin ? (
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
+                                                            onClick={() => setPercentageDefinition(td)}
+                                                            className={`text-amber-600 hover:text-amber-700 px-2 py-1 rounded-lg ${isDark ? 'hover:bg-amber-900/30' : 'hover:bg-amber-100'} focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all duration-200 inline-flex items-center gap-1`}
+                                                            aria-label={`Manage custom doctor percentages for ${td.name}`}
+                                                        >
+                                                            <UserPercentIcon />
+                                                            <span className="text-[10px] font-semibold">نسب الطبيب</span>
+                                                        </button>
+                                                        <button
                                                             onClick={() => { setEditingDefinition(td); setIsAddModalOpen(true); }}
                                                             className={`text-purple-600 hover:text-purple-700 p-2 rounded-lg ${isDark ? 'hover:bg-purple-900/30' : 'hover:bg-purple-100'} focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200`}
                                                             aria-label={t('treatments.editTreatmentAriaLabel', {name: td.name})}
@@ -355,6 +521,17 @@ const TreatmentDefinitionManagement: React.FC<{ clinicData: ClinicData }> = ({ c
                     definition={editingDefinition}
                     onClose={() => { setIsAddModalOpen(false); setEditingDefinition(undefined); }}
                     onSave={handleSaveDefinition}
+                />
+            )}
+
+            {isAdmin && percentageDefinition && (
+                <TreatmentDoctorPercentageModal
+                    definition={percentageDefinition}
+                    dentists={dentists}
+                    percentages={selectedTreatmentCustomPercentages}
+                    onClose={() => setPercentageDefinition(null)}
+                    onSave={upsertTreatmentDoctorPercentage}
+                    onDelete={deleteTreatmentDoctorPercentage}
                 />
             )}
             </div>

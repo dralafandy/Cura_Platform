@@ -123,6 +123,17 @@ export interface TreatmentDefinition { // Renamed from TreatmentCost to be more 
   clinicPercentage: number; // e.g., 0.40 for 40%
 }
 
+export interface TreatmentDoctorPercentage {
+  id: string;
+  treatmentDefinitionId: string;
+  dentistId: string;
+  doctorPercentage: number;
+  clinicPercentage: number;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TreatmentRecord { // A specific treatment performed on a patient
     id: string;
     patientId: string;

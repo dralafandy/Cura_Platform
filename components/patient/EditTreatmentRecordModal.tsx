@@ -34,11 +34,12 @@ const EditTreatmentRecordModal: React.FC<EditTreatmentRecordModalProps> = ({
         if (!treatmentDef) return { doctorShare: 0, clinicShare: 0 };
 
         const basePrice = customPrice;
-        const doctorShare = basePrice * treatmentDef.doctorPercentage;
-        const clinicShare = basePrice * treatmentDef.clinicPercentage;
+        const effectivePercentages = clinicData.getTreatmentPercentages(record.treatmentDefinitionId, record.dentistId);
+        const doctorShare = basePrice * effectivePercentages.doctorPercentage;
+        const clinicShare = basePrice * effectivePercentages.clinicPercentage;
 
         return { doctorShare, clinicShare };
-    }, [customPrice, treatmentDef]);
+    }, [customPrice, treatmentDef, clinicData, record.treatmentDefinitionId, record.dentistId]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

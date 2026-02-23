@@ -141,6 +141,25 @@ CREATE TABLE treatment_definitions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Doctor-specific treatment percentages
+DROP TABLE IF EXISTS treatment_doctor_percentages CASCADE;
+CREATE TABLE treatment_doctor_percentages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    treatment_definition_id UUID NOT NULL REFERENCES treatment_definitions(id) ON DELETE CASCADE,
+    dentist_id UUID NOT NULL REFERENCES dentists(id) ON DELETE CASCADE,
+    doctor_percentage NUMERIC(5,4) NOT NULL DEFAULT 0.50,
+    clinic_percentage NUMERIC(5,4) NOT NULL DEFAULT 0.50,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_treatment_doctor_percentages UNIQUE (treatment_definition_id, dentist_id, user_id),
+    CONSTRAINT chk_treatment_doctor_percentages_sum CHECK (
+        doctor_percentage >= 0 AND doctor_percentage <= 1 AND
+        clinic_percentage >= 0 AND clinic_percentage <= 1 AND
+        abs((doctor_percentage + clinic_percentage) - 1) < 0.0001
+    )
+);
+
 -- Treatment Records table
 DROP TABLE IF EXISTS treatment_records CASCADE;
 CREATE TABLE treatment_records (
@@ -318,6 +337,9 @@ CREATE INDEX IF NOT EXISTS idx_inventory_items_supplier_id ON inventory_items(su
 CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_supplier_id ON expenses(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_definitions_user_id ON treatment_definitions(user_id);
+CREATE INDEX IF NOT EXISTS idx_treatment_doctor_percentages_user_id ON treatment_doctor_percentages(user_id);
+CREATE INDEX IF NOT EXISTS idx_treatment_doctor_percentages_treatment_definition_id ON treatment_doctor_percentages(treatment_definition_id);
+CREATE INDEX IF NOT EXISTS idx_treatment_doctor_percentages_dentist_id ON treatment_doctor_percentages(dentist_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_records_user_id ON treatment_records(user_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_records_patient_id ON treatment_records(patient_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_records_dentist_id ON treatment_records(dentist_id);
@@ -342,4 +364,3 @@ CREATE INDEX IF NOT EXISTS idx_employee_attendance_date ON employee_attendance(a
 CREATE INDEX IF NOT EXISTS idx_employee_compensations_user_id ON employee_compensations(user_id);
 CREATE INDEX IF NOT EXISTS idx_employee_compensations_employee_id ON employee_compensations(employee_id);
 CREATE INDEX IF NOT EXISTS idx_employee_compensations_date ON employee_compensations(entry_date);
-
