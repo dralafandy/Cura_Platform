@@ -206,7 +206,7 @@ const InsuranceManagementPage: React.FC = () => {
 
   const del = async (table: string, id: string) => {
     if (!supabase) return;
-    if (!window.confirm('هل أنت متأكد من الحذف؟')) return;
+    if (!window.confirm(t('insurance.confirmDelete'))) return;
     const { error: deleteError } = await supabase.from(table).delete().eq('id', id);
     if (deleteError) { setError(deleteError.message); return; }
     await load();
@@ -312,7 +312,7 @@ const InsuranceManagementPage: React.FC = () => {
     // Open new window for printing
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
-      alert('يرجى السماح بفتح نافذة جديدة للطباعة');
+      alert(t('insurance.pleaseAllowPopup'));
       return;
     }
     
@@ -474,7 +474,7 @@ const InsuranceManagementPage: React.FC = () => {
     }
   }, [treatments, companies, patients, patientLinks]);
 
-  const title = t('sidebar.insuranceUnified') !== 'sidebar.insuranceUnified' ? t('sidebar.insuranceUnified') : 'نظام التأمينات الموحد';
+  const title = t('sidebar.insuranceUnified') !== 'sidebar.insuranceUnified' ? t('sidebar.insuranceUnified') : t('insurance_unified_page');
 
   // Generate HTML for print window
   const generatePrintWindowHTML = (data: any): string => {
@@ -805,12 +805,12 @@ const InsuranceManagementPage: React.FC = () => {
   };
 
   const tabConfig = [
-    { id: 'companies' as Tab, label: 'شركات التأمين', icon: <CompanyIcon /> },
-    { id: 'accounts' as Tab, label: 'الحسابات', icon: <AccountIcon /> },
-    { id: 'transactions' as Tab, label: 'المعاملات', icon: <TransactionIcon /> },
-    { id: 'patient_links' as Tab, label: 'تغطية المرضى', icon: <PatientIcon /> },
-    { id: 'treatment_links' as Tab, label: 'مطالبات العلاج', icon: <ClaimIcon /> },
-    { id: 'reports' as Tab, label: 'التقارير', icon: <ReportIcon /> },
+    { id: 'companies' as Tab, label: t('insurance.tabCompanies'), icon: <CompanyIcon /> },
+    { id: 'accounts' as Tab, label: t('insurance.tabAccounts'), icon: <AccountIcon /> },
+    { id: 'transactions' as Tab, label: t('insurance.tabTransactions'), icon: <TransactionIcon /> },
+    { id: 'patient_links' as Tab, label: t('insurance.tabPatientCoverage'), icon: <PatientIcon /> },
+    { id: 'treatment_links' as Tab, label: t('insurance.tabTreatmentClaims'), icon: <ClaimIcon /> },
+    { id: 'reports' as Tab, label: t('insurance.tabReports'), icon: <ReportIcon /> },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -824,13 +824,13 @@ const InsuranceManagementPage: React.FC = () => {
       'PAID': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     };
     const labels: Record<string, string> = {
-      'ACTIVE': 'نشط',
-      'INACTIVE': 'غير نشط',
-      'SUSPENDED': 'معلق',
-      'PENDING': 'قيد الانتظار',
-      'APPROVED': 'معتمد',
-      'REJECTED': 'مرفوض',
-      'PAID': 'مدفوع',
+      'ACTIVE': t('insurance.active'),
+      'INACTIVE': t('insurance.inactive'),
+      'SUSPENDED': t('insurance.suspended'),
+      'PENDING': t('insurance.pending'),
+      'APPROVED': t('insurance.approved'),
+      'REJECTED': t('insurance.rejected'),
+      'PAID': t('insurance.paid'),
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
@@ -846,7 +846,7 @@ const InsuranceManagementPage: React.FC = () => {
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{title}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة شاملة لشركات التأمين والحسابات والمطالبات</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('insurance.description')}</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -854,14 +854,14 @@ const InsuranceManagementPage: React.FC = () => {
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white flex items-center gap-2 hover:bg-emerald-700 transition-colors"
             >
               <PrintIcon />
-              طباعة تقرير
+              {t('insurance.printReport')}
             </button>
             <button 
               onClick={load} 
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white flex items-center gap-2 hover:bg-slate-800 transition-colors dark:bg-slate-100 dark:text-slate-900"
             >
               <RefreshIcon />
-              تحديث
+              {t('insurance.refresh')}
             </button>
           </div>
         </div>
@@ -869,23 +869,23 @@ const InsuranceManagementPage: React.FC = () => {
         {/* Stats Cards */}
         <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-lg bg-white/80 dark:bg-slate-800/80 p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">الشركات</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('insurance.companies')}</p>
             <p className="text-xl font-bold text-slate-800 dark:text-white">{stats.totalCompanies}</p>
           </div>
           <div className="rounded-lg bg-white/80 dark:bg-slate-800/80 p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">الحسابات النشطة</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('insurance.activeAccounts')}</p>
             <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activeAccounts}</p>
           </div>
           <div className="rounded-lg bg-white/80 dark:bg-slate-800/80 p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">المعاملات</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('insurance.transactions')}</p>
             <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.totalTransactions}</p>
           </div>
           <div className="rounded-lg bg-white/80 dark:bg-slate-800/80 p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">المرضى المؤمن لهم</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('insurance.insuredPatients')}</p>
             <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{stats.totalPatientLinks}</p>
           </div>
           <div className="rounded-lg bg-white/80 dark:bg-slate-800/80 p-3 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">المطالبات</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('insurance.claims')}</p>
             <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{stats.totalClaims}</p>
           </div>
         </div>
@@ -919,7 +919,7 @@ const InsuranceManagementPage: React.FC = () => {
       {loading && (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-slate-500 dark:text-slate-400">جاري التحميل...</p>
+          <p className="mt-4 text-slate-500 dark:text-slate-400">{t('insurance.loading')}</p>
         </div>
       )}
 
@@ -927,23 +927,23 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'companies' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{companyForm.id ? 'تعديل شركة' : 'إضافة شركة جديدة'}</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{companyForm.id ? t('insurance.editCompany') : t('insurance.addNewCompany')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                placeholder="اسم الشركة *" 
+                placeholder={t('insurance.companyName') + ' *'} 
                 value={companyForm.name || ''} 
                 onChange={e => setCompanyForm({ ...companyForm, name: e.target.value })} 
               />
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                placeholder="رقم الهاتف" 
+                placeholder={t('insurance.phone')} 
                 value={companyForm.phone || ''} 
                 onChange={e => setCompanyForm({ ...companyForm, phone: e.target.value })} 
               />
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" 
-                placeholder="البريد الإلكتروني" 
+                placeholder={t('insurance.email')} 
                 value={companyForm.email || ''} 
                 onChange={e => setCompanyForm({ ...companyForm, email: e.target.value })} 
               />
@@ -952,14 +952,14 @@ const InsuranceManagementPage: React.FC = () => {
                   onClick={saveCompany} 
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  {companyForm.id ? 'تحديث' : 'إضافة'}
+                  {companyForm.id ? t('insurance.update') : t('insurance.add')}
                 </button>
                 {companyForm.id && (
                   <button 
                     onClick={() => setCompanyForm({ name: '' })} 
                     className="rounded-lg bg-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300"
                   >
-                    إلغاء
+                    {t('insurance.cancel')}
                   </button>
                 )}
               </div>
@@ -970,11 +970,11 @@ const InsuranceManagementPage: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800">
                 <tr>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">اسم الشركة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الهاتف</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">البريد الإلكتروني</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">عدد الحسابات</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الإجراءات</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.companyName')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.phone')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.email')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.numberOfAccounts')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -987,7 +987,7 @@ const InsuranceManagementPage: React.FC = () => {
                       <td className="p-3 text-slate-600 dark:text-slate-400">{x.email || '-'}</td>
                       <td className="p-3">
                         <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-400">
-                          {companyAccounts.length} حساب
+                          {companyAccounts.length} {t('insurance.accounts')}
                         </span>
                       </td>
                       <td className="p-3 space-x-2 rtl:space-x-reverse">
@@ -995,13 +995,13 @@ const InsuranceManagementPage: React.FC = () => {
                           className="rounded-lg bg-amber-500 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-600 transition-colors" 
                           onClick={() => setCompanyForm(x)}
                         >
-                          تعديل
+                          {t('common.edit')}
                         </button>
                         <button 
                           className="rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-red-700 transition-colors" 
                           onClick={() => void del('insurance_companies', x.id)}
                         >
-                          حذف
+                          {t('common.delete')}
                         </button>
                       </td>
                     </tr>
@@ -1010,7 +1010,7 @@ const InsuranceManagementPage: React.FC = () => {
               </tbody>
             </table>
             {companies.length === 0 && (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">لا توجد شركات تأمين</div>
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('insurance.noCompanies')}</div>
             )}
           </div>
         </div>
@@ -1020,19 +1020,19 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'accounts' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{accountForm.id ? 'تعديل حساب' : 'إضافة حساب جديد'}</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{accountForm.id ? t('insurance.editAccount') : t('insurance.addNewAccount')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
               <select 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
                 value={accountForm.insurance_company_id || ''} 
                 onChange={e => setAccountForm({ ...accountForm, insurance_company_id: e.target.value })}
               >
-                <option value="">اختر الشركة *</option>
+                <option value="">{t('insurance.selectCompany')}</option>
                 {companies.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="اسم الحساب *" 
+                placeholder={t('insurance.accountName') + ' *'} 
                 value={accountForm.account_name || ''} 
                 onChange={e => setAccountForm({ ...accountForm, account_name: e.target.value })} 
               />
@@ -1040,7 +1040,7 @@ const InsuranceManagementPage: React.FC = () => {
                 type="number" 
                 step="0.01" 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="الرصيد" 
+                placeholder={t('insurance.balance')} 
                 value={accountForm.balance || 0} 
                 onChange={e => setAccountForm({ ...accountForm, balance: Number(e.target.value) })} 
               />
@@ -1049,23 +1049,23 @@ const InsuranceManagementPage: React.FC = () => {
                 value={accountForm.status || 'ACTIVE'} 
                 onChange={e => setAccountForm({ ...accountForm, status: e.target.value as Account['status'] })}
               >
-                <option value="ACTIVE">نشط</option>
-                <option value="INACTIVE">غير نشط</option>
-                <option value="SUSPENDED">معلق</option>
+                <option value="ACTIVE">{t('insurance.active')}</option>
+                <option value="INACTIVE">{t('insurance.inactive')}</option>
+                <option value="SUSPENDED">{t('insurance.suspended')}</option>
               </select>
               <div className="flex gap-2">
                 <button 
                   onClick={saveAccount} 
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  {accountForm.id ? 'تحديث' : 'إضافة'}
+                  {accountForm.id ? t('insurance.update') : t('insurance.add')}
                 </button>
                 {accountForm.id && (
                   <button 
                     onClick={() => setAccountForm({ insurance_company_id: '', account_name: '', balance: 0, status: 'ACTIVE' })} 
                     className="rounded-lg bg-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300"
                   >
-                    إلغاء
+                    {t('insurance.cancel')}
                   </button>
                 )}
               </div>
@@ -1076,11 +1076,11 @@ const InsuranceManagementPage: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800">
                 <tr>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الشركة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">اسم الحساب</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الرصيد</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الحالة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الإجراءات</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.company')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.accountName')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.balance')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.status')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1088,20 +1088,20 @@ const InsuranceManagementPage: React.FC = () => {
                   <tr key={x.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{companyName[x.insurance_company_id] || '-'}</td>
                     <td className="p-3 text-slate-600 dark:text-slate-400">{x.account_name}</td>
-                    <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{Number(x.balance || 0).toFixed(2)} ج.م</td>
+                    <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{Number(x.balance || 0).toFixed(2)} EGP</td>
                     <td className="p-3">{getStatusBadge(x.status)}</td>
                     <td className="p-3 space-x-2 rtl:space-x-reverse">
                       <button 
                         className="rounded-lg bg-amber-500 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-600 transition-colors" 
                         onClick={() => setAccountForm(x)}
                       >
-                        تعديل
+                        {t('common.edit')}
                       </button>
                       <button 
                         className="rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-red-700 transition-colors" 
                         onClick={() => void del('insurance_accounts', x.id)}
                       >
-                        حذف
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>
@@ -1109,7 +1109,7 @@ const InsuranceManagementPage: React.FC = () => {
               </tbody>
             </table>
             {accounts.length === 0 && (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">لا توجد حسابات</div>
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('insurance.noAccounts')}</div>
             )}
           </div>
         </div>
@@ -1119,14 +1119,14 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'transactions' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{txnForm.id ? 'تعديل معاملة' : 'إضافة معاملة جديدة'}</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{txnForm.id ? t('insurance.editTransaction') : t('insurance.addNewTransaction')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
               <select 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
                 value={txnForm.insurance_account_id || ''} 
                 onChange={e => setTxnForm({ ...txnForm, insurance_account_id: e.target.value })}
               >
-                <option value="">اختر الحساب *</option>
+                <option value="">{t('insurance.selectAccount')}</option>
                 {accounts.map(x => <option key={x.id} value={x.id}>{x.account_name}</option>)}
               </select>
               <select 
@@ -1134,14 +1134,14 @@ const InsuranceManagementPage: React.FC = () => {
                 value={txnForm.transaction_type || 'DEBIT'} 
                 onChange={e => setTxnForm({ ...txnForm, transaction_type: e.target.value as Txn['transaction_type'] })}
               >
-                <option value="DEBIT">سحب</option>
-                <option value="CREDIT">إيداع</option>
+                <option value="DEBIT">{t('insurance.debit')}</option>
+                <option value="CREDIT">{t('insurance.credit')}</option>
               </select>
               <input 
                 type="number" 
                 step="0.01" 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="المبلغ" 
+                placeholder={t('insurance.amount')} 
                 value={txnForm.amount || 0} 
                 onChange={e => setTxnForm({ ...txnForm, amount: Number(e.target.value) })} 
               />
@@ -1153,7 +1153,7 @@ const InsuranceManagementPage: React.FC = () => {
               />
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="الوصف" 
+                placeholder={t('insurance.descriptionText')} 
                 value={txnForm.description || ''} 
                 onChange={e => setTxnForm({ ...txnForm, description: e.target.value })} 
               />
@@ -1162,14 +1162,14 @@ const InsuranceManagementPage: React.FC = () => {
                   onClick={saveTxn} 
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  {txnForm.id ? 'تحديث' : 'إضافة'}
+                  {txnForm.id ? t('insurance.update') : t('insurance.add')}
                 </button>
                 {txnForm.id && (
                   <button 
                     onClick={() => setTxnForm({ insurance_account_id: '', transaction_type: 'DEBIT', amount: 0, transaction_date: new Date().toISOString().split('T')[0], description: '', reference_number: '' })} 
                     className="rounded-lg bg-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300"
                   >
-                    إلغاء
+                    {t('insurance.cancel')}
                   </button>
                 )}
               </div>
@@ -1180,12 +1180,12 @@ const InsuranceManagementPage: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800">
                 <tr>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">التاريخ</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الحساب</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">النوع</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">المبلغ</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الوصف</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الإجراءات</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.date')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.account')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('transaction_type')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.amount')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.descriptionText')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1221,7 +1221,7 @@ const InsuranceManagementPage: React.FC = () => {
               </tbody>
             </table>
             {transactions.length === 0 && (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">لا توجد معاملات</div>
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('insurance.noTransactions')}</div>
             )}
           </div>
         </div>
@@ -1231,13 +1231,13 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'patient_links' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{patientLinkForm.id ? 'تعديل تغطية' : 'إضافة تغطية تأمين جديدة'}</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{patientLinkForm.id ? t('insurance.editPatientCoverage') : t('insurance.addNewPatientCoverage')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
               <div className="relative">
                 <input 
                   type="text" 
                   list="patient-list"
-                  placeholder="بحث عن مريض..." 
+                  placeholder={t('insurance.searchPatient')} 
                   value={patientSearch}
                   onChange={e => {
                     setPatientSearch(e.target.value);
@@ -1257,12 +1257,12 @@ const InsuranceManagementPage: React.FC = () => {
                 value={patientLinkForm.insurance_company_id || ''} 
                 onChange={e => setPatientLinkForm({ ...patientLinkForm, insurance_company_id: e.target.value })}
               >
-                <option value="">اختر الشركة *</option>
+                <option value="">{t('insurance.selectCompanyRequired')}</option>
                 {companies.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
               <input 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="رقم البوليصة" 
+                placeholder={t('insurance.policyNumber')} 
                 value={patientLinkForm.policy_number || ''} 
                 onChange={e => setPatientLinkForm({ ...patientLinkForm, policy_number: e.target.value })} 
               />
@@ -1272,14 +1272,14 @@ const InsuranceManagementPage: React.FC = () => {
                 max="100" 
                 step="0.01" 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="نسبة التغطية %" 
+                placeholder={t('insurance.coveragePercentage')} 
                 value={patientLinkForm.coverage_percentage ?? 100} 
                 onChange={e => setPatientLinkForm({ ...patientLinkForm, coverage_percentage: Number(e.target.value) })} 
               />
               <input 
                 type="date" 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="تاريخ البداية" 
+                placeholder={t('insurance.startDate')} 
                 value={patientLinkForm.effective_date || ''} 
                 onChange={e => setPatientLinkForm({ ...patientLinkForm, effective_date: e.target.value })} 
               />
@@ -1288,14 +1288,14 @@ const InsuranceManagementPage: React.FC = () => {
                   onClick={savePatientLink} 
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  {patientLinkForm.id ? 'تحديث' : 'إضافة'}
+                  {patientLinkForm.id ? t('insurance.update') : t('insurance.add')}
                 </button>
                 {patientLinkForm.id && (
                   <button 
                     onClick={() => setPatientLinkForm({ patient_id: '', insurance_company_id: '', coverage_percentage: 100, policy_number: '', effective_date: '', expiry_date: '' })} 
                     className="rounded-lg bg-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300"
                   >
-                    إلغاء
+                    {t('insurance.cancel')}
                   </button>
                 )}
               </div>
@@ -1306,13 +1306,13 @@ const InsuranceManagementPage: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800">
                 <tr>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">المريض</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الشركة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">رقم البوليصة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">نسبة التغطية</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">تاريخ البداية</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">تاريخ الانتهاء</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الإجراءات</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.patient')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.company')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.policyNumber')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.coveragePercentage')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.startDate')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.endDate')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1333,13 +1333,13 @@ const InsuranceManagementPage: React.FC = () => {
                         className="rounded-lg bg-amber-500 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-600 transition-colors" 
                         onClick={() => setPatientLinkForm(x)}
                       >
-                        تعديل
+                        {t('common.edit')}
                       </button>
                       <button 
                         className="rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-red-700 transition-colors" 
                         onClick={() => void del('patient_insurance_link', x.id)}
                       >
-                        حذف
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>
@@ -1347,7 +1347,7 @@ const InsuranceManagementPage: React.FC = () => {
               </tbody>
             </table>
             {filteredPatientLinks.length === 0 && (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">لا توجد تغطيات تأمين للمرضى</div>
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('insurance.noPatientCoverage')}</div>
             )}
           </div>
         </div>
@@ -1426,12 +1426,12 @@ const InsuranceManagementPage: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800">
                 <tr>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">المريض</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">العلاج</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الشركة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">المبلغ</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الحالة</th>
-                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">الإجراءات</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.patient')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.treatment')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.company')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.amount')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.status')}</th>
+                  <th className="p-3 text-start font-semibold text-slate-700 dark:text-slate-300">{t('insurance.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1442,26 +1442,26 @@ const InsuranceManagementPage: React.FC = () => {
                       <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{treatment?.patient_name || '-'}</td>
                       <td className="p-3 text-slate-600 dark:text-slate-400">{treatmentName[x.treatment_record_id] || '-'}</td>
                       <td className="p-3 text-slate-600 dark:text-slate-400">{companyName[x.insurance_company_id] || '-'}</td>
-                      <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{Number(x.claim_amount || 0).toFixed(2)} ج.م</td>
+                      <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{Number(x.claim_amount || 0).toFixed(2)} EGP</td>
                       <td className="p-3">{getStatusBadge(x.claim_status)}</td>
                       <td className="p-3 space-x-2 rtl:space-x-reverse">
                         <button 
                           className="rounded-lg bg-emerald-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-emerald-700 transition-colors" 
                           onClick={() => printClaim(x)}
                         >
-                          طباعة
+                          {t('common.print')}
                         </button>
                         <button 
                           className="rounded-lg bg-amber-500 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-600 transition-colors" 
                           onClick={() => setTreatmentLinkForm(x)}
                         >
-                          تعديل
+                          {t('common.edit')}
                         </button>
                         <button 
                           className="rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-red-700 transition-colors" 
                           onClick={() => void del('treatment_insurance_link', x.id)}
                         >
-                          حذف
+                          {t('common.delete')}
                         </button>
                       </td>
                     </tr>
@@ -1470,7 +1470,7 @@ const InsuranceManagementPage: React.FC = () => {
               </tbody>
             </table>
             {filteredTreatmentLinks.length === 0 && (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">لا توجد مطالبات علاج</div>
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('insurance.noTreatmentClaims')}</div>
             )}
           </div>
         </div>
@@ -1480,16 +1480,16 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'reports' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-4">تقارير التأمين</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-4">{t('insurance.reports')}</h3>
             
             {/* Report Type Selection */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
               {[
-                { id: 'summary', label: 'ملخص التأمينات', icon: '📊' },
-                { id: 'claims', label: 'المطالبات', icon: '📋' },
-                { id: 'patients', label: 'المرضى المؤمن لهم', icon: '👥' },
-                { id: 'transactions', label: 'المعاملات', icon: '💰' },
-                { id: 'account-statement', label: 'كشف حساب', icon: '📄' },
+                { id: 'summary', label: t('insurance.summaryReport'), icon: '📊' },
+                { id: 'claims', label: t('insurance.claimsReport'), icon: '📋' },
+                { id: 'patients', label: t('insurance.patientsReport'), icon: '👥' },
+                { id: 'transactions', label: t('insurance.transactionsReport'), icon: '💰' },
+                { id: 'account-statement', label: t('insurance.accountStatement'), icon: '📄' },
               ].map(r => (
                 <button
                   key={r.id}
@@ -1513,7 +1513,7 @@ const InsuranceManagementPage: React.FC = () => {
                 value={reportFilters.companyId}
                 onChange={e => setReportFilters({ ...reportFilters, companyId: e.target.value })}
               >
-                <option value="">جميع الشركات</option>
+                <option value="">{t('insurance.allCompanies')}</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <select
@@ -1521,7 +1521,7 @@ const InsuranceManagementPage: React.FC = () => {
                 value={reportFilters.accountId}
                 onChange={e => setReportFilters({ ...reportFilters, accountId: e.target.value })}
               >
-                <option value="">جميع الحسابات</option>
+                <option value="">{t('insurance.allAccounts')}</option>
                 {accounts.filter(a => !reportFilters.companyId || a.insurance_company_id === reportFilters.companyId).map(a => (
                   <option key={a.id} value={a.id}>{a.account_name}</option>
                 ))}
@@ -1531,14 +1531,14 @@ const InsuranceManagementPage: React.FC = () => {
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700"
                 value={reportFilters.dateFrom}
                 onChange={e => setReportFilters({ ...reportFilters, dateFrom: e.target.value })}
-                placeholder="من تاريخ"
+                placeholder={t('insurance.fromDate')}
               />
               <input
                 type="date"
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700"
                 value={reportFilters.dateTo}
                 onChange={e => setReportFilters({ ...reportFilters, dateTo: e.target.value })}
-                placeholder="إلى تاريخ"
+                placeholder={t('insurance.toDate')}
               />
             </div>
             
@@ -1547,7 +1547,7 @@ const InsuranceManagementPage: React.FC = () => {
               className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
             >
               <PrintIcon />
-              عرض وطباعة التقرير
+              {t('insurance.viewAndPrintReport')}
             </button>
           </div>
         </div>
