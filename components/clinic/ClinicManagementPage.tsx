@@ -26,6 +26,17 @@ interface ClinicWithBranches extends Clinic {
   userCount?: number;
 }
 
+interface AssignableUser {
+  id: string;
+  username?: string | null;
+  role?: string | null;
+  status?: string | null;
+}
+
+interface ClinicUserAssignment extends UserClinicAccess {
+  userProfile?: AssignableUser;
+}
+
 interface BranchFormData {
   name: string;
   code: string;
@@ -102,6 +113,11 @@ const ClinicManagementPage: React.FC = () => {
   const [showUserAssignModal, setShowUserAssignModal] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
   const [editingBranch, setEditingBranch] = useState<ClinicBranch | null>(null);
+  const [clinicUsers, setClinicUsers] = useState<ClinicUserAssignment[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AssignableUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserRole, setSelectedUserRole] = useState<UserRole>(UserRole.RECEPTIONIST);
+  const [usersLoading, setUsersLoading] = useState(false);
   
   // Form data
   const [clinicForm, setClinicForm] = useState<ClinicFormData>(defaultClinicForm);
@@ -119,6 +135,12 @@ const ClinicManagementPage: React.FC = () => {
   useEffect(() => {
     fetchClinics();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' && selectedClinic) {
+      fetchClinicUsers(selectedClinic.id);
+    }
+  }, [activeTab, selectedClinic]);
 
   // ============================================================================
   // DATA FETCHING
@@ -174,6 +196,143 @@ const ClinicManagementPage: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClinicUsers = async (clinicId: string) => {
+    if (!supabase) return;
+
+    setUsersLoading(true);
+    try {
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('user_clinics')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false });
+
+      if (assignmentsError) throw assignmentsError;
+
+      const assignments = (assignmentsData || []) as any[];
+      const userIds = assignments.map((x) => x.user_id || x.userId).filter(Boolean);
+
+      let profilesMap = new Map<string, AssignableUser>();
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('id, username, role, status')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+        profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p as AssignableUser]));
+      }
+
+      const merged: ClinicUserAssignment[] = assignments.map((item: any) => ({
+        ...item,
+        userProfile: profilesMap.get(item.user_id || item.userId),
+      }));
+
+      setClinicUsers(merged);
+
+      const { data: allUsersData, error: allUsersError } = await supabase
+        .from('user_profiles')
+        .select('id, username, role, status')
+        .order('username', { ascending: true });
+
+      if (allUsersError) throw allUsersError;
+
+      const assignedSet = new Set(merged.map((x: any) => x.user_id || x.userId));
+      const filtered = ((allUsersData || []) as AssignableUser[]).filter((u) => !assignedSet.has(u.id));
+      setAvailableUsers(filtered);
+    } catch (error: any) {
+      console.error('Error fetching clinic users:', error);
+      addNotification({
+        message: error.message || 'Failed to load clinic users',
+        type: 'error' as any,
+      });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const openAssignUserModal = () => {
+    if (!selectedClinic) return;
+    setSelectedUserId('');
+    setSelectedUserRole(UserRole.RECEPTIONIST);
+    setShowUserAssignModal(true);
+  };
+
+  const handleAssignUser = async () => {
+    if (!supabase || !selectedClinic || !selectedUserId) return;
+
+    setIsSubmitting(true);
+    try {
+      const existing = clinicUsers.find((x: any) => (x.user_id || x.userId) === selectedUserId);
+      if (existing) {
+        const { error } = await supabase
+          .from('user_clinics')
+          .update({
+            role_at_clinic: selectedUserRole,
+            access_active: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_clinics')
+          .insert({
+            user_id: selectedUserId,
+            clinic_id: selectedClinic.id,
+            role_at_clinic: selectedUserRole,
+            access_active: true,
+          });
+
+        if (error) throw error;
+      }
+
+      addNotification({
+        message: 'User assigned to clinic successfully',
+        type: 'success' as any,
+      });
+      setShowUserAssignModal(false);
+      await fetchClinicUsers(selectedClinic.id);
+      await fetchClinics();
+    } catch (error: any) {
+      console.error('Error assigning user to clinic:', error);
+      addNotification({
+        message: error.message || 'Failed to assign user',
+        type: 'error' as any,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveUserAssignment = async (assignmentId: string) => {
+    if (!supabase || !selectedClinic) return;
+    if (!window.confirm('Remove this user from the clinic?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_clinics')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+
+      addNotification({
+        message: 'User removed from clinic',
+        type: 'success' as any,
+      });
+      await fetchClinicUsers(selectedClinic.id);
+      await fetchClinics();
+    } catch (error: any) {
+      console.error('Error removing user assignment:', error);
+      addNotification({
+        message: error.message || 'Failed to remove user',
+        type: 'error' as any,
+      });
     }
   };
 
@@ -772,16 +931,73 @@ const ClinicManagementPage: React.FC = () => {
                 )}
 
                 {activeTab === 'users' && (
-                  <div className="text-center py-8">
-                    <svg className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    <p className="text-slate-500 dark:text-slate-400">
-                      User assignment feature coming soon
-                    </p>
-                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
-                      {selectedClinic.userCount || 0} users assigned to this clinic
-                    </p>
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium text-slate-800 dark:text-slate-100">
+                        Assigned Users
+                      </h3>
+                      <button
+                        onClick={openAssignUserModal}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Assign User
+                      </button>
+                    </div>
+
+                    {usersLoading ? (
+                      <div className="p-8 text-center">
+                        <div className="animate-spin w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2">Loading users...</p>
+                      </div>
+                    ) : clinicUsers.length === 0 ? (
+                      <div className="text-center py-8">
+                        <svg className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <p className="text-slate-500 dark:text-slate-400">No users assigned to this clinic</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {clinicUsers.map((assignment: any) => (
+                          <div
+                            key={assignment.id}
+                            className={`p-4 rounded-lg border ${isDark ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-slate-800 dark:text-slate-100">
+                                  {assignment.userProfile?.username || assignment.user_id}
+                                </h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                  @{assignment.userProfile?.username || 'unknown'} • {assignment.role_at_clinic || 'RECEPTIONIST'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                  assignment.access_active
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                }`}>
+                                  {assignment.access_active ? 'Active' : 'Inactive'}
+                                </span>
+                                <button
+                                  onClick={() => handleRemoveUserAssignment(assignment.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
+                                  title="Remove user from clinic"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1147,6 +1363,84 @@ const ClinicManagementPage: React.FC = () => {
                   className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Saving...' : editingBranch ? 'Update Branch' : 'Create Branch'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Assignment Modal */}
+      {showUserAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-lg rounded-xl ${isDark ? 'bg-slate-800' : 'bg-white'} shadow-xl`}>
+            <div className={`px-6 py-4 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'} flex items-center justify-between`}>
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+                Assign User to Clinic
+              </h2>
+              <button
+                onClick={() => setShowUserAssignModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAssignUser();
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  User
+                </label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  required
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'} focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                >
+                  <option value="">Select user</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username || u.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Role at Clinic
+                </label>
+                <select
+                  value={selectedUserRole}
+                  onChange={(e) => setSelectedUserRole(e.target.value as UserRole)}
+                  className={`w-full px-3 py-2 rounded-lg border ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'} focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                >
+                  <option value={UserRole.ADMIN}>ADMIN</option>
+                  <option value={UserRole.DOCTOR}>DOCTOR</option>
+                  <option value={UserRole.ASSISTANT}>ASSISTANT</option>
+                  <option value={UserRole.RECEPTIONIST}>RECEPTIONIST</option>
+                </select>
+              </div>
+              <div className={`pt-4 border-t ${isDark ? 'border-slate-700' : 'border-slate-200'} flex justify-end gap-3`}>
+                <button
+                  type="button"
+                  onClick={() => setShowUserAssignModal(false)}
+                  className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !selectedUserId}
+                  className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Saving...' : 'Assign User'}
                 </button>
               </div>
             </form>

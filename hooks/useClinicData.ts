@@ -982,8 +982,18 @@ export const useClinicData = (): ClinicData => {
     // Doctor Management
     const addDoctor = async (doctor: Omit<Dentist, 'id'>) => {
         if (!user || !supabase) return;
-        console.log('Adding doctor with data:', { ...doctor, user_id: user.id });
-        const { data: newData, error } = await supabase.from('dentists').insert({ ...doctor, user_id: user.id }).select();
+
+        const userClinicIds = await getUserClinicIds();
+        const clinicId = userClinicIds[0];
+
+        if (!clinicId) {
+            addNotification('لا يمكن إضافة طبيب: المستخدم غير مرتبط بأي عيادة', NotificationType.ERROR);
+            return;
+        }
+
+        const payload = { ...doctor, user_id: user.id, clinic_id: clinicId };
+        console.log('Adding doctor with data:', payload);
+        const { data: newData, error } = await supabase.from('dentists').insert(payload).select();
         if (error) {
             console.error('Error adding doctor:', error);
             console.error('Error details:', error.details, error.hint, error.code);

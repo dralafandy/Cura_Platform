@@ -136,7 +136,7 @@ const UserManagement: React.FC = () => {
       // Build query with filters
       let query = supabase
         .from('user_profiles')
-        .select('id, user_id, username, role, status, dentist_id, created_at, updated_at, last_login, oauth_provider, oauth_email, custom_permissions, override_permissions', { count: 'exact' });
+        .select('id, user_id, username, role, status, dentist_id, created_at, updated_at, last_login, custom_permissions, override_permissions', { count: 'exact' });
       
       // Apply search filter
       if (searchTerm) {
