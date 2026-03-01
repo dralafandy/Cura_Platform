@@ -251,7 +251,7 @@ const AppContent: React.FC = () => {
               isMobileDrawerOpen={isMobileDrawerOpen}
               setIsMobileDrawerOpen={setIsMobileDrawerOpen}
             />
-            <main className="flex-1 bg-neutral dark:bg-slate-900 p-4 md:p-6 print:p-0 print:block">
+            <main className="flex-1 bg-neutral dark:bg-slate-900 p-4 pb-6 md:p-6 print:p-0 print:block">
               {renderView()}
             </main>
         </div>

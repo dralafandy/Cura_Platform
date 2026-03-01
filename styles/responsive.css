@@ -842,3 +842,105 @@ html {
     display: block !important;
   }
 }
+
+/* ========================================
+   GLOBAL MOBILE APP HARDENING (ALL PAGES)
+   ======================================== */
+
+/* Prevent horizontal overflow from wide cards/grids/tables on phone screens */
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Allow flex and grid children to shrink correctly instead of overflowing */
+.flex > *,
+.grid > * {
+  min-width: 0;
+}
+
+/* Make media and embedded content responsive by default */
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mobile-specific app-wide fixes */
+@media (max-width: 767px) {
+  /* Reduce oversized headings to avoid clipping/wrapping issues */
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.35;
+  }
+
+  /* Improve text readability and prevent long text overflow */
+  p,
+  span,
+  div,
+  label,
+  button,
+  a {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Keep tables usable on mobile by enabling horizontal scrolling */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  thead,
+  tbody,
+  tr {
+    width: 100%;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+
+  /* Inputs and controls should be touch-friendly and avoid iOS zoom */
+  input,
+  select,
+  textarea,
+  button {
+    min-height: var(--touch-target-min);
+    font-size: 16px;
+  }
+
+  /* Better spacing for page wrappers and section containers */
+  .container,
+  .main-content,
+  .content-wrapper,
+  .page-content {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Generic modal safety: full-width sheet-like behavior on small screens */
+  [role="dialog"],
+  .modal,
+  .modal-content {
+    max-width: 100vw;
+  }
+}

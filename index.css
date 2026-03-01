@@ -1535,3 +1535,6 @@ input, textarea, select, button {
 .high-contrast textarea {
   border-width: 2px !important;
 }
+
+/* Global responsive utilities and mobile behavior */
+@import './styles/responsive.css';

@@ -1,0 +1,1 @@
+import"./index-1Kx_C4ZX.js";const c=async r=>{const t=new TextEncoder().encode(r),a=await crypto.subtle.digest("SHA-256",t);return Array.from(new Uint8Array(a)).map(n=>n.toString(16).padStart(2,"0")).join("")};export{c as hashPassword};
