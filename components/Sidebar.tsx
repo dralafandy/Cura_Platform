@@ -130,6 +130,18 @@ const SettingsIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const ClinicIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18" />
+    <path d="M5 21V7l8-4v18" />
+    <path d="M19 21V11l-6-4" />
+    <path d="M9 9v.01" />
+    <path d="M9 12v.01" />
+    <path d="M9 15v.01" />
+    <path d="M9 18v.01" />
+  </svg>
+);
+
 const LogoutIcon = ({ className = "h-5 w-5" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -233,6 +245,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: Permission.SETTINGS_VIEW, adminOnly: false },
       { id: 'about', label: 'عن البرنامج', icon: AboutIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
+      { id: 'clinicManagement', label: 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW },
     ];
 
     // Filter items based on permissions and admin-only flag
@@ -270,7 +283,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
     },
     {
       label: t('sidebar.group.settings'),
-      items: navItems.filter(item => ['settings', 'userManagement', 'about'].includes(item.id)),
+      items: navItems.filter(item => ['settings', 'userManagement', 'about', 'clinicManagement'].includes(item.id)),
     },
   ];
 

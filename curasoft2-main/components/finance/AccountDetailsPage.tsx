@@ -30,7 +30,7 @@ const AccountDetailsPage: React.FC = () => {
   const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
   if (!userProfile?.permissions?.includes(ACCOUNT_DETAILS_PERMISSIONS.VIEW_ACCOUNT_DETAILS)) {
-    return <div className="text-center py-8">{t('common.accessDenied')}</div>;
+    return <div className="text-center py-8 text-slate-700 dark:text-slate-300">{t('common.accessDenied')}</div>;
   }
 
   const handlePrint = (accountData: any, selectedAccountType: string) => {
@@ -57,11 +57,11 @@ const AccountDetailsPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">{t('financialAccounts.accountDetails.title')}</h2>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('financialAccounts.accountDetails.title')}</h2>
         <div className="flex gap-2">
           <button 
             onClick={resetFilters}
-            className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 flex items-center gap-2"
+            className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

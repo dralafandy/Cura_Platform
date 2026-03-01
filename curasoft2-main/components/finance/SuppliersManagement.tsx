@@ -6,6 +6,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
 import { NotificationType } from '../../types';
 import SupplierStatement from './SupplierStatement';
+import SupplierDetailedReport from './SupplierDetailedReport';
 import LabStatement from './LabStatement';
 import InvoiceAttachmentUploader from './InvoiceAttachmentUploader';
 import { openPrintWindow } from '../../utils/print';
@@ -45,6 +46,73 @@ const getSupplierTypeIcon = (type: string) => {
     }
 };
 
+const SupplierFormSection: React.FC<{
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    className?: string;
+    isDark?: boolean;
+}> = ({ title, icon, children, className = '', isDark = false }) => (
+    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
+                {icon}
+            </div>
+            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
+        </div>
+        {children}
+    </div>
+);
+
+const SupplierInputField: React.FC<{
+    id: string;
+    name: string;
+    label: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    type?: string;
+    placeholder?: string;
+    required?: boolean;
+    icon?: React.ReactNode;
+    className?: string;
+}> = ({
+    id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = ''
+}) => {
+    const inputClasses = `
+        w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
+        focus:ring-2 focus:ring-primary/20 focus:border-primary
+        transition-all duration-200 ease-in-out
+        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        ${icon ? 'ps-10' : ''}
+    `;
+
+    return (
+        <div className={`relative ${className}`}>
+            <label htmlFor={id} className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                {label}
+                {required && <span className="text-red-500 mr-1">*</span>}
+            </label>
+            <div className="relative">
+                <input
+                    id={id}
+                    name={name}
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={inputClasses}
+                    required={required}
+                />
+                {icon && (
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                        {icon}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 
 const AddEditSupplierModal: React.FC<{
     supplier?: Supplier;
@@ -58,83 +126,14 @@ const AddEditSupplierModal: React.FC<{
     );
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave(formData);
         onClose();
-    };
-
-    // Form Section Component
-    const FormSection: React.FC<{
-        title: string;
-        icon: React.ReactNode;
-        children: React.ReactNode;
-        className?: string;
-        isDark?: boolean;
-    }> = ({ title, icon, children, className = '', isDark = false }) => (
-        <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
-                <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
-                    {icon}
-                </div>
-                <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
-            </div>
-            {children}
-        </div>
-    );
-
-    // Input Field Component
-    const InputField: React.FC<{
-        id: string;
-        name: string;
-        label: string;
-        value: string;
-        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
-        type?: string;
-        placeholder?: string;
-        required?: boolean;
-        icon?: React.ReactNode;
-        className?: string;
-        isDark?: boolean;
-    }> = ({
-        id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = '', isDark = false
-    }) => {
-        const inputClasses = `
-            w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
-            focus:ring-2 focus:ring-primary/20 focus:border-primary
-            transition-all duration-200 ease-in-out
-            placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200
-            ${icon ? 'pr-10' : ''}
-        `;
-
-        return (
-            <div className={`relative ${className}`}>
-                <label htmlFor={id} className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                    {label}
-                    {required && <span className="text-red-500 mr-1">*</span>}
-                </label>
-                <div className="relative">
-                    <input
-                        id={id}
-                        name={name}
-                        type={type}
-                        value={value}
-                        onChange={onChange}
-                        placeholder={placeholder}
-                        className={inputClasses}
-                        required={required}
-                    />
-                    {icon && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                            {icon}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -158,9 +157,9 @@ const AddEditSupplierModal: React.FC<{
                 {/* Form Content */}
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
                     <div className="space-y-5 animate-fadeIn">
-                        <FormSection title={t('suppliers.basicInfo')} icon={<PackageIcon />} isDark={isDark}>
+                        <SupplierFormSection title={t('suppliers.basicInfo')} icon={<PackageIcon />} isDark={isDark}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-name"
                                     name="name"
                                     label={t('suppliers.supplierName')}
@@ -169,9 +168,8 @@ const AddEditSupplierModal: React.FC<{
                                     placeholder={t('suppliers.supplierNamePlaceholder')}
                                     required
                                     icon={<PackageIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="contact-person"
                                     name="contact_person"
                                     label={t('suppliers.contactPerson')}
@@ -179,9 +177,8 @@ const AddEditSupplierModal: React.FC<{
                                     onChange={handleChange}
                                     placeholder={t('suppliers.contactPersonPlaceholder')}
                                     icon={<UserIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-phone"
                                     name="phone"
                                     label={t('suppliers.phone')}
@@ -190,9 +187,8 @@ const AddEditSupplierModal: React.FC<{
                                     type="tel"
                                     placeholder="01xxxxxxxxx"
                                     icon={<PhoneIcon />}
-                                    isDark={isDark}
                                 />
-                                <InputField
+                                <SupplierInputField
                                     id="supplier-email"
                                     name="email"
                                     label={t('suppliers.email')}
@@ -201,12 +197,11 @@ const AddEditSupplierModal: React.FC<{
                                     type="email"
                                     placeholder="example@email.com"
                                     icon={<EmailIcon />}
-                                    isDark={isDark}
                                 />
                             </div>
-                        </FormSection>
+                        </SupplierFormSection>
 
-                        <FormSection title={t('suppliers.supplierTypeLabel')} icon={<LabIcon />} isDark={isDark}>
+                        <SupplierFormSection title={t('suppliers.supplierTypeLabel')} icon={<LabIcon />} isDark={isDark}>
                             <div className="relative">
                                 <label htmlFor="type" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
                                     {t('suppliers.supplierType')}
@@ -234,7 +229,7 @@ const AddEditSupplierModal: React.FC<{
                                     </div>
                                 </div>
                             </div>
-                        </FormSection>
+                        </SupplierFormSection>
                     </div>
 
                     {/* Footer */}
@@ -264,9 +259,21 @@ const AddEditInvoiceModal: React.FC<{
     supplierId: string;
     clinicData: ClinicData;
     onClose: () => void;
-    onSave: (invoice: Omit<SupplierInvoice, 'id'> | SupplierInvoice) => void;
+    onSave: (invoice: Omit<SupplierInvoice, 'id'> | SupplierInvoice, updateInventory?: boolean) => void;
 }> = ({ invoice, supplierId, clinicData, onClose, onSave }) => {
     const { t } = useI18n();
+    const { addNotification } = useNotification();
+    
+    // Get inventory items for this supplier (only for Material Suppliers)
+    const supplier = clinicData.suppliers.find(s => s.id === supplierId);
+    const supplierInventoryItems = supplier?.type === 'Material Supplier' 
+        ? clinicData.inventoryItems.filter(item => item.supplierId === supplierId)
+        : [];
+
+    const [showInventorySelector, setShowInventorySelector] = useState(false);
+    const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>('');
+    const [itemQuantity, setItemQuantity] = useState<number>(1);
+
     const [formData, setFormData] = useState<Omit<SupplierInvoice, 'id'> | SupplierInvoice>(
         invoice || {
             supplierId: supplierId,
@@ -275,7 +282,7 @@ const AddEditInvoiceModal: React.FC<{
             dueDate: '',
             amount: 0,
             status: SupplierInvoiceStatus.UNPAID,
-            items: [{ description: '', amount: 0 }],
+            items: [{ description: '', amount: 0, inventoryItemId: undefined, quantity: 1 }],
             payments: [],
             labCaseId: undefined,
             invoiceImageUrl: undefined,
@@ -283,7 +290,6 @@ const AddEditInvoiceModal: React.FC<{
     );
 
     // Get lab cases for the supplier if it's a dental lab
-    const supplier = clinicData.suppliers.find(s => s.id === supplierId);
     const labCases = supplier?.type === 'Dental Lab' ? clinicData.labCases.filter(lc => lc.labId === supplierId) : [];
 
     // Auto-populate invoice data if a lab case is selected
@@ -294,7 +300,7 @@ const AddEditInvoiceModal: React.FC<{
                 ...prev,
                 invoiceNumber: `LC-${selectedLabCase.caseType}-${Date.now()}`,
                 amount: selectedLabCase.labCost,
-                items: [{ description: `Lab case: ${selectedLabCase.caseType}`, amount: selectedLabCase.labCost }],
+                items: [{ description: `Lab case: ${selectedLabCase.caseType}`, amount: selectedLabCase.labCost, inventoryItemId: undefined, quantity: 1 }],
                 dueDate: selectedLabCase.dueDate,
             }));
         }
@@ -307,14 +313,51 @@ const AddEditInvoiceModal: React.FC<{
 
     const handleItemChange = (index: number, field: string, value: string | number) => {
         const newItems = [...formData.items];
-        newItems[index] = { ...newItems[index], [field]: field === 'amount' ? parseFloat(value as string) || 0 : value };
+        newItems[index] = { ...newItems[index], [field]: field === 'amount' ? parseFloat(value as string) || 0 : field === 'quantity' ? parseInt(value as string) || 1 : value };
+        
+        // Auto-calculate amount if quantity or inventory item changes
+        if (field === 'quantity' || field === 'inventoryItemId') {
+            const item = newItems[index];
+            if (item.inventoryItemId) {
+                const inventoryItem = clinicData.inventoryItems.find(i => i.id === item.inventoryItemId);
+                if (inventoryItem) {
+                    item.amount = (item.quantity || 1) * inventoryItem.unitCost;
+                }
+            }
+        }
+        
         setFormData({ ...formData, items: newItems });
+    };
+
+    // Handle adding item from inventory
+    const handleAddFromInventory = () => {
+        if (!selectedInventoryItemId) return;
+        
+        const inventoryItem = clinicData.inventoryItems.find(i => i.id === selectedInventoryItemId);
+        if (!inventoryItem) return;
+
+        const newItem = {
+            description: inventoryItem.name,
+            amount: inventoryItem.unitCost * itemQuantity,
+            inventoryItemId: inventoryItem.id,
+            quantity: itemQuantity
+        };
+
+        setFormData({
+            ...formData,
+            items: [...formData.items, newItem]
+        });
+
+        // Reset selector
+        setSelectedInventoryItemId('');
+        setItemQuantity(1);
+        setShowInventorySelector(false);
     };
 
     const addItem = () => {
         setFormData({
             ...formData,
-            items: [...formData.items, { description: '', amount: 0 }]
+            items: [...formData.items, { description: '', amount: 0, inventoryItemId: undefined, quantity: 1 }]
         });
     };
 
@@ -329,30 +372,42 @@ const AddEditInvoiceModal: React.FC<{
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Check if there are items linked to inventory for update
+        const hasInventoryItems = formData.items.some(item => item.inventoryItemId);
+        
         // Calculate total amount from items
         const totalAmount = formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
         const invoiceToSave = { ...formData, amount: totalAmount };
-        onSave(invoiceToSave);
+        
+        // Save invoice and indicate if inventory should be updated
+        onSave(invoiceToSave, hasInventoryItems);
         onClose();
+    };
+
+    // Helper to get inventory item details
+    const getInventoryItem = (item: { inventoryItemId?: string }) => {
+        if (!item.inventoryItemId) return null;
+        return clinicData.inventoryItems.find(i => i.id === item.inventoryItemId);
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
-                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-900/30 dark:to-amber-900/20">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{invoice ? t('invoices.editInvoice') : t('invoices.addInvoice')}</h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label={t('common.closeForm')}><CloseIcon /></button>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-cyan-50 to-violet-50 dark:from-cyan-900/30 dark:to-violet-900/20">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent">{invoice ? t('invoices.editInvoice') : t('invoices.addInvoice')}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300" aria-label={t('common.closeForm')}><CloseIcon /></button>
                 </header>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleChange} placeholder={t('invoices.invoiceNumber')} className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" />
+                    <input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleChange} placeholder={t('invoices.invoiceNumber')} className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg w-full focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" />
                     {supplier?.type === 'Dental Lab' && labCases.length > 0 && (
                         <div>
-                            <label className="text-sm font-medium text-purple-700 dark:text-purple-400 block mb-2">{t('invoices.relatedLabCase')}</label>
+                            <label className="text-sm font-medium text-cyan-700 dark:text-cyan-400 block mb-2">{t('invoices.relatedLabCase')}</label>
                             <select
                                 name="labCaseId"
                                 value={formData.labCaseId || ''}
                                 onChange={handleChange}
-                                className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg w-full focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 <option value="">{t('invoices.selectLabCaseOptional')}</option>
                                 {labCases.map(lc => (
@@ -365,34 +420,129 @@ const AddEditInvoiceModal: React.FC<{
                     )}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-sm font-medium text-purple-700 dark:text-purple-400" htmlFor="invoiceDate">{t('invoices.invoiceDate')}</label>
-                            <input id="invoiceDate" name="invoiceDate" type="date" value={formData.invoiceDate} onChange={handleChange} className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" required />
+                            <label className="text-sm font-medium text-cyan-700 dark:text-cyan-400" htmlFor="invoiceDate">{t('invoices.invoiceDate')}</label>
+                            <input id="invoiceDate" name="invoiceDate" type="date" value={formData.invoiceDate} onChange={handleChange} className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg w-full focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" required />
                         </div>
                         <div>
-                            <label className="text-sm font-medium text-purple-700 dark:text-purple-400" htmlFor="dueDate">{t('invoices.dueDate')}</label>
-                            <input id="dueDate" name="dueDate" type="date" value={formData.dueDate || ''} onChange={handleChange} className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" />
+                            <label className="text-sm font-medium text-cyan-700 dark:text-cyan-400" htmlFor="dueDate">{t('invoices.dueDate')}</label>
+                            <input id="dueDate" name="dueDate" type="date" value={formData.dueDate || ''} onChange={handleChange} className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg w-full focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200" />
                         </div>
                     </div>
 
                     {/* Invoice Items */}
                     <div>
-                        <label className="text-sm font-medium text-purple-700 dark:text-purple-400 block mb-2">{t('invoices.invoiceItems')}</label>
-                        {formData.items.map((item, index) => (
-                            <div key={index} className="flex gap-2 mb-2">
-                                <input
-                                    type="text"
-                                    placeholder={t('invoices.descriptionLabel')}
-                                    value={item.description}
-                                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                    className="flex-1 p-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
-                                />
+                        <label className="text-sm font-medium text-cyan-700 dark:text-cyan-400 block mb-2">{t('invoices.invoiceItems')}</label>
+                        
+                        {/* Inventory Selection Panel - Only show for Material Suppliers */}
+                        {supplier?.type === 'Material Supplier' && supplierInventoryItems.length > 0 && (
+                            <div className="mb-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                                {!showInventorySelector ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInventorySelector(true)}
+                                        className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                        </svg>
+                                        {t('invoices.addFromInventory') || 'إضافة من المخزون'}
+                                    </button>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                                                {t('invoices.selectFromInventory') || 'اختر من المخزون'}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowInventorySelector(false)}
+                                                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                            >
+                                                {t('common.cancel')}
+                                            </button>
+                                        </div>
+                                        <select
+                                            value={selectedInventoryItemId}
+                                            onChange={(e) => setSelectedInventoryItemId(e.target.value)}
+                                            className="w-full p-2 text-sm border border-emerald-300 dark:border-emerald-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                        >
+                                            <option value="">{t('invoices.selectItem') || 'اختر عنصر'}</option>
+                                            {supplierInventoryItems.map(item => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.name} - {new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(item.unitCost)} (stock: {item.currentStock})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedInventoryItemId && (
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-xs text-emerald-600 dark:text-emerald-400">
+                                                    {t('invoices.quantity') || 'الكمية'}:
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={itemQuantity}
+                                                    onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                                                    className="w-20 p-1 text-sm border border-emerald-300 dark:border-emerald-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddFromInventory}
+                                                    className="flex-1 px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors"
+                                                >
+                                                    {t('common.add') || 'إضافة'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {formData.items.map((item, index) => {
+                            const inventoryItem = getInventoryItem(item);
+                            return (
+                            <div key={index} className="flex gap-2 mb-2 items-start">
+                                <div className="flex-1">
+                                    <input
+                                        type="text"
+                                        placeholder={t('invoices.descriptionLabel')}
+                                        value={item.description}
+                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                        className="w-full p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                    />
+                                    {inventoryItem && (
+                                        <div className="flex items-center gap-2 mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                            </svg>
+                                            <span>{t('inventory.currentStock') || 'المخزون'}: {inventoryItem.currentStock}</span>
+                                            {item.quantity && item.quantity > 1 && (
+                                                <span className="text-cyan-600 dark:text-cyan-400">
+                                                    (+{item.quantity})
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {item.inventoryItemId && (
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder={t('invoices.quantity') || 'كمية'}
+                                        value={item.quantity || 1}
+                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                        className="w-16 p-2 border border-emerald-200 dark:border-emerald-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
+                                        title={t('invoices.quantity') || 'Quantity'}
+                                    />
+                                )}
                                 <input
                                     type="number"
                                     step="0.01"
                                     placeholder={t('invoices.amountLabel')}
                                     value={item.amount}
                                     onChange={(e) => handleItemChange(index, 'amount', e.target.value)}
-                                    className="w-24 p-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                    className="w-24 p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                                 />
                                 {formData.items.length > 1 && (
                                     <button
@@ -404,25 +554,26 @@ const AddEditInvoiceModal: React.FC<{
                                     </button>
                                 )}
                             </div>
-                        ))}
+                            );
+                        })}
                         <button
                             type="button"
                             onClick={addItem}
-                            className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+                            className="text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium"
                         >
                             {t('invoices.addItem')}
                         </button>
                     </div>
 
                     {/* Total Amount Display */}
-                    <div className="bg-gradient-to-br from-purple-50 to-amber-50 dark:from-purple-900/30 dark:to-amber-900/20 p-3 rounded-lg border border-purple-100 dark:border-purple-700">
-                        <p className="text-sm font-medium text-purple-700 dark:text-purple-400">
+                    <div className="bg-gradient-to-br from-cyan-50 to-violet-50 dark:from-cyan-900/30 dark:to-violet-900/20 p-3 rounded-lg border border-cyan-100 dark:border-cyan-700">
+                        <p className="text-sm font-medium text-cyan-700 dark:text-cyan-400">
                             {t('invoices.totalAmountLabel')} {new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(formData.items.reduce((sum, item) => sum + (item.amount || 0), 0))}
                         </p>
                     </div>
 
                             <div>
-                                <label className="text-sm font-medium text-purple-700 dark:text-purple-400 block mb-2">{t('invoices.attachInvoice')}</label>
+                                <label className="text-sm font-medium text-cyan-700 dark:text-cyan-400 block mb-2">{t('invoices.attachInvoice')}</label>
                                 <InvoiceAttachmentUploader
                                     initialUrl={formData.invoiceImageUrl}
                                     onUploadComplete={(url) => setFormData(prev => ({ ...prev, invoiceImageUrl: url }))}
@@ -430,7 +581,7 @@ const AddEditInvoiceModal: React.FC<{
                           </div>
                     <footer className="pt-2 flex justify-end space-x-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all duration-200">{t('common.cancel')}</button>
-                        <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200">{t('common.save')}</button>
+                        <button type="submit" className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-lg hover:from-cyan-600 hover:to-violet-600 focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-200">{t('common.save')}</button>
                     </footer>
                 </form>
             </div>
@@ -498,7 +649,7 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
         return { totalBilled, totalPaid, outstandingBalance };
     }, [relatedInvoices, relatedExpenses]);
 
-    const handleSaveInvoice = (invoice: Omit<SupplierInvoice, 'id'> | SupplierInvoice) => {
+    const handleSaveInvoice = (invoice: Omit<SupplierInvoice, 'id'> | SupplierInvoice, updateInventory?: boolean) => {
         if ('id' in invoice && invoice.id) {
             updateSupplierInvoice(invoice as SupplierInvoice);
             addNotification({
@@ -506,7 +657,40 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                 type: NotificationType.SUCCESS
             });
         } else {
-            addSupplierInvoice(invoice as Omit<SupplierInvoice, 'id'>);
+            // Add the invoice first to get the ID
+            const newInvoice = invoice as Omit<SupplierInvoice, 'id'>;
+            addSupplierInvoice(newInvoice);
+            
+            // Update inventory stock if invoice has linked inventory items
+            if (updateInventory && invoice.items) {
+                // Get the newly created invoice to link to inventory
+                const createdInvoice = clinicData.supplierInvoices.find(inv => 
+                    inv.supplierId === invoice.supplierId && 
+                    inv.invoiceDate === invoice.invoiceDate &&
+                    inv.amount === invoice.amount
+                );
+                
+                invoice.items.forEach(item => {
+                    if (item.inventoryItemId && item.quantity) {
+                        const inventoryItem = clinicData.inventoryItems.find(i => i.id === item.inventoryItemId);
+                        if (inventoryItem) {
+                            // Increase stock by quantity and mark source
+                            const updatedItem = {
+                                ...inventoryItem,
+                                currentStock: inventoryItem.currentStock + item.quantity,
+                                source: 'supplier_invoice' as const,
+                                supplierInvoiceId: createdInvoice?.id
+                            };
+                            clinicData.updateInventoryItem(updatedItem);
+                        }
+                    }
+                });
+                addNotification({
+                    message: t('notifications.inventoryUpdated') || 'تم تحديث المخزون',
+                    type: NotificationType.SUCCESS
+                });
+            }
+            
             addNotification({
                 message: t('notifications.invoiceAdded'),
                 type: NotificationType.SUCCESS
@@ -553,47 +737,47 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-900/30 dark:to-amber-900/20">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{supplier.name}</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-gradient-to-r from-cyan-50 to-violet-50 dark:from-cyan-900/30 dark:to-violet-900/20">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent">{supplier.name}</h2>
                     <div className="flex items-center gap-2">
-                        <button onClick={handlePrintFinancialStatement} className="flex items-center px-3 py-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200">
+                        <button onClick={handlePrintFinancialStatement} className="flex items-center px-3 py-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white rounded-lg hover:from-cyan-600 hover:to-violet-600 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-200">
                            <PrintIcon /> {t('supplierStatement.financialTitle')}
                         </button>
                         {supplier.type === 'Dental Lab' && (
-                             <button onClick={handlePrintCaseStatement} className="flex items-center px-3 py-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-lg hover:from-amber-500 hover:to-amber-600 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all duration-200">
+                             <button onClick={handlePrintCaseStatement} className="flex items-center px-3 py-1 bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-lg hover:from-violet-600 hover:to-violet-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-violet-300 transition-all duration-200">
                                <PrintIcon /> {t('supplierStatement.caseTitle')}
                             </button>
                         )}
-                        <button onClick={onClose} className="p-1 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label={t('common.closeForm')}><CloseIcon /></button>
+                        <button onClick={onClose} className="p-1 rounded-full hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300" aria-label={t('common.closeForm')}><CloseIcon /></button>
                     </div>
                 </header>
-                <main className="p-6 overflow-y-auto space-y-6 bg-gradient-to-br from-slate-50 to-purple-50/30 dark:from-slate-900 dark:to-purple-900/10">
+                <main className="p-6 overflow-y-auto space-y-6 bg-gradient-to-br from-slate-50 to-cyan-50/30 dark:from-slate-900 dark:to-cyan-900/10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Supplier Info */}
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-purple-100 dark:border-purple-700">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-cyan-100 dark:border-cyan-700">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-2 rounded-lg">
+                                <div className="bg-gradient-to-br from-cyan-500 to-violet-500 text-white p-2 rounded-lg">
                                     {getSupplierTypeIcon(supplier.type)}
                                 </div>
-                                <h3 className="font-semibold text-purple-700 dark:text-purple-400">{t('suppliers.contactInfo')}</h3>
+                                <h3 className="font-semibold text-cyan-700 dark:text-cyan-400">{t('suppliers.contactInfo')}</h3>
                             </div>
-                            <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.contactPersonLabel')}:</strong> {supplier.contact_person || '-'}</p>
-                            <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.phoneLabel')}:</strong> {supplier.phone || '-'}</p>
-                            <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.emailLabel')}:</strong> {supplier.email || '-'}</p>
+                            <p className="dark:text-slate-300"><strong className="text-cyan-600 dark:text-cyan-400">{t('suppliers.contactPersonLabel')}:</strong> {supplier.contact_person || '-'}</p>
+                            <p className="dark:text-slate-300"><strong className="text-cyan-600 dark:text-cyan-400">{t('suppliers.phoneLabel')}:</strong> {supplier.phone || '-'}</p>
+                            <p className="dark:text-slate-300"><strong className="text-cyan-600 dark:text-cyan-400">{t('suppliers.emailLabel')}:</strong> {supplier.email || '-'}</p>
                         </div>
                         {/* Financial Summary */}
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-purple-100 dark:border-purple-700">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-cyan-100 dark:border-cyan-700">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-2 rounded-lg">
                                     <DollarIcon />
                                 </div>
-                                <h3 className="font-semibold text-purple-700 dark:text-purple-400">{t('suppliers.financialSummary')}</h3>
+                                <h3 className="font-semibold text-cyan-700 dark:text-cyan-400">{t('suppliers.financialSummary')}</h3>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span className="text-slate-600 dark:text-slate-400">{t('suppliers.totalBilled')}:</span>
-                                    <span className="font-bold text-purple-700 dark:text-purple-400">{currencyFormatter.format(financialSummary.totalBilled)}</span>
+                                    <span className="font-bold text-cyan-700 dark:text-cyan-400">{currencyFormatter.format(financialSummary.totalBilled)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-600 dark:text-slate-400">{t('suppliers.totalPaid')}:</span>
@@ -612,16 +796,16 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                     {/* Invoices Section */}
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                              <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{t('suppliers.invoicesLabel')}</h3>
-                              <button onClick={() => setModalState({ type: 'add_invoice'})} className="flex items-center bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-300"><AddIcon /> {t('suppliers.addInvoiceButton')}</button>
+                              <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent">{t('suppliers.invoicesLabel')}</h3>
+                              <button onClick={() => setModalState({ type: 'add_invoice'})} className="flex items-center bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-3 py-1 rounded-lg hover:from-cyan-600 hover:to-violet-600 text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-300"><AddIcon /> {t('suppliers.addInvoiceButton')}</button>
                          </div>
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-purple-100 dark:border-purple-700 space-y-3">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-cyan-100 dark:border-cyan-700 space-y-3">
                             {relatedInvoices.length > 0 ? relatedInvoices.map(inv => {
                                 const totalPaid = inv.payments.reduce((sum, p) => sum + p.amount, 0);
                                 const balance = inv.amount - totalPaid;
     
                                 return (
-                                <div key={inv.id} className="border border-purple-100 dark:border-purple-700 p-3 rounded-lg hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800">
+                                <div key={inv.id} className="border border-cyan-100 dark:border-cyan-700 p-3 rounded-lg hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800">
                                     <div className="flex flex-wrap justify-between items-start gap-2">
                                         <div>
                                             <p className="font-bold text-slate-800 dark:text-slate-200">{t('invoices.invoice')} #{inv.invoiceNumber || inv.id.slice(-6)}</p>
@@ -629,7 +813,7 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                                             {inv.dueDate && <p className="text-xs text-slate-500 dark:text-slate-500">{t('invoices.due')}: {dateFormatter.format(new Date(inv.dueDate))}</p>}
                                         </div>
                                         <div className="text-end">
-                                            <p className="text-lg font-bold text-purple-700 dark:text-purple-400">{currencyFormatter.format(inv.amount)}</p>
+                                            <p className="text-lg font-bold text-cyan-700 dark:text-cyan-400">{currencyFormatter.format(inv.amount)}</p>
                                             <span className={`text-xs font-semibold px-2 py-1 rounded-full ${balance <= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'}`}>
                                                 {balance <= 0 ? t('invoices.paid') : `${t('invoices.remaining')}: ${currencyFormatter.format(balance)}`}
                                             </span>
@@ -637,7 +821,7 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                                     </div>
                                     {inv.items && inv.items.length > 0 && (
                                         <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                                            <p className="font-semibold text-xs text-purple-600 dark:text-purple-400">{t('suppliers.invoiceDetails')}:</p>
+                                            <p className="font-semibold text-xs text-cyan-600 dark:text-cyan-400">{t('suppliers.invoiceDetails')}:</p>
                                             {inv.items.map((item, index) => (
                                                 <div key={index} className="flex items-center justify-between ps-2">
                                                     <span>{item.description || t('suppliers.undefinedItem')}</span>
@@ -648,7 +832,7 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                                     )}
                                     {inv.payments.length > 0 && (
                                         <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                                            <p className="font-semibold text-xs text-purple-600 dark:text-purple-400">{t('suppliers.paymentsLabel')}:</p>
+                                            <p className="font-semibold text-xs text-cyan-600 dark:text-cyan-400">{t('suppliers.paymentsLabel')}:</p>
                                             {inv.payments.map(p => {
                                                 const expense = expenses.find(e => e.id === p.expenseId);
                                                 return (
@@ -668,17 +852,17 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                                                     const url = att.fileUrl;
                                                     if (!url) return null;
                                                     if (url.endsWith('.pdf') || url.includes('application/pdf')) {
-                                                        return (<a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"><AttachmentIcon/>{t('invoices.viewAttachment')}</a>);
+                                                        return (<a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium"><AttachmentIcon/>{t('invoices.viewAttachment')}</a>);
                                                     }
                                                     return (
                                                         <button onClick={() => setSelectedAttachment({ url, name: inv.invoiceNumber || inv.id.slice(-6) })} className="flex items-center gap-2">
                                                             <img src={url} alt={inv.invoiceNumber} className="max-h-12 rounded-lg border border-slate-200 dark:border-slate-700" />
-                                                            <span className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium">{t('invoices.viewAttachment')}</span>
+                                                            <span className="text-sm text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium">{t('invoices.viewAttachment')}</span>
                                                         </button>
                                                     );
                                                 })()}
                                         {balance > 0 && <button onClick={() => handlePayRemaining(inv)} className="flex items-center gap-1 text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-2 py-1 rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-sm"><CheckCircleIcon />{t('invoices.payRemaining')}</button>}
-                                        <button onClick={() => setModalState({ type: 'edit_invoice', data: inv })} className="flex items-center gap-1 text-sm bg-gradient-to-r from-purple-500 to-purple-600 text-white px-2 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm"><EditIcon />{t('common.edit')}</button>
+                                        <button onClick={() => setModalState({ type: 'edit_invoice', data: inv })} className="flex items-center gap-1 text-sm bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-2 py-1 rounded-lg hover:from-cyan-600 hover:to-violet-600 transition-all duration-200 shadow-sm"><EditIcon />{t('common.edit')}</button>
                                         <button onClick={() => handleDeleteInvoice(inv)} className="flex items-center gap-1 text-sm bg-gradient-to-r from-rose-500 to-rose-600 text-white px-2 py-1 rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all duration-200 shadow-sm"><DeleteIcon />{t('common.delete')}</button>
                                     </div>
                                 </div>
@@ -686,38 +870,38 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                          </div>
                      </div>
 
-                     {/* All Expenses Section */}
-                     <div>
-                          <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent mb-2">{t('suppliers.allExpensesAndPayments')}</h3>
-                         <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-purple-100 dark:border-purple-700 space-y-3">
-                             {relatedExpenses.length > 0 ? relatedExpenses.map(exp => {
-                                 const isInvoicePayment = relatedInvoices.some(inv =>
-                                     inv.payments.some(p => p.expenseId === exp.id)
-                                 );
-                                 const relatedInvoice = relatedInvoices.find(inv =>
-                                     inv.payments.some(p => p.expenseId === exp.id)
-                                 );
-     
-                                  return (
-                                      <div key={exp.id} className="border border-purple-100 dark:border-purple-700 p-3 rounded-lg hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800">
-                                          <div className="flex flex-wrap justify-between items-start gap-2">
-                                              <div>
-                                                  <p className="font-bold text-slate-800 dark:text-slate-200">
-                                                      {isInvoicePayment ? `${t('suppliers.paymentForInvoice')} ${relatedInvoice?.invoiceNumber || relatedInvoice?.id.slice(-6)}` : exp.description}
-                                                  </p>
-                                                  <p className="text-sm text-slate-600 dark:text-slate-400">{t('suppliers.dateLabel')}: {dateFormatter.format(new Date(exp.date))}</p>
-                                                  <p className="text-xs text-slate-500 dark:text-slate-500">{t('suppliers.categoryLabel')}: {exp.category === 'SUPPLIES' ? t('suppliers.suppliesLabel') : exp.category === 'RENT' ? t('expenseCategory.RENT') : exp.category === 'SALARIES' ? t('expenseCategory.SALARIES') : exp.category === 'UTILITIES' ? t('expenseCategory.UTILITIES') : exp.category === 'MARKETING' ? t('expenseCategory.MARKETING') : exp.category === 'LAB_FEES' ? t('expenseCategory.LAB_FEES') : t('expenseCategory.MISC')}</p>
-                                              </div>
-                                              <div className="text-end">
-                                                  <p className="text-lg font-bold text-rose-600 dark:text-rose-400">-{currencyFormatter.format(exp.amount)}</p>
-                                                  {isInvoicePayment && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-full">{t('suppliers.invoicePayment')}</span>}
-                                              </div>
-                                          </div>
-                                      </div>
+                      {/* All Expenses Section */}
+                      <div>
+                           <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent mb-2">{t('suppliers.allExpensesAndPayments')}</h3>
+                          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-cyan-100 dark:border-cyan-700 space-y-3">
+                              {relatedExpenses.length > 0 ? relatedExpenses.map(exp => {
+                                  const isInvoicePayment = relatedInvoices.some(inv =>
+                                      inv.payments.some(p => p.expenseId === exp.id)
                                   );
-                              }) : <p className="text-slate-500 dark:text-slate-400 text-center py-4">{t('suppliers.noExpensesForSupplier')}</p>}
-                         </div>
-                     </div>
+                                  const relatedInvoice = relatedInvoices.find(inv =>
+                                      inv.payments.some(p => p.expenseId === exp.id)
+                                  );
+      
+                                   return (
+                                       <div key={exp.id} className="border border-cyan-100 dark:border-cyan-700 p-3 rounded-lg hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-800">
+                                           <div className="flex flex-wrap justify-between items-start gap-2">
+                                               <div>
+                                                   <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                       {isInvoicePayment ? `${t('suppliers.paymentForInvoice')} ${relatedInvoice?.invoiceNumber || relatedInvoice?.id.slice(-6)}` : exp.description}
+                                                   </p>
+                                                   <p className="text-sm text-slate-600 dark:text-slate-400">{t('suppliers.dateLabel')}: {dateFormatter.format(new Date(exp.date))}</p>
+                                                   <p className="text-xs text-slate-500 dark:text-slate-500">{t('suppliers.categoryLabel')}: {exp.category === 'SUPPLIES' ? t('suppliers.suppliesLabel') : exp.category === 'RENT' ? t('expenseCategory.RENT') : exp.category === 'SALARIES' ? t('expenseCategory.SALARIES') : exp.category === 'UTILITIES' ? t('expenseCategory.UTILITIES') : exp.category === 'MARKETING' ? t('expenseCategory.MARKETING') : exp.category === 'LAB_FEES' ? t('expenseCategory.LAB_FEES') : t('expenseCategory.MISC')}</p>
+                                               </div>
+                                               <div className="text-end">
+                                                   <p className="text-lg font-bold text-rose-600 dark:text-rose-400">-{currencyFormatter.format(exp.amount)}</p>
+                                                   {isInvoicePayment && <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-full">{t('suppliers.invoicePayment')}</span>}
+                                               </div>
+                                           </div>
+                                       </div>
+                                   );
+                               }) : <p className="text-slate-500 dark:text-slate-400 text-center py-4">{t('suppliers.noExpensesForSupplier')}</p>}
+                          </div>
+                      </div>
                 </main>
             </div>
             { (modalState.type === 'add_invoice' || modalState.type === 'edit_invoice') && (
@@ -759,6 +943,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
     const [isAddSupplierModalOpen, setIsAddSupplierModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>(undefined);
     const [viewingSupplier, setViewingSupplier] = useState<Supplier | undefined>(undefined);
+    const [viewingSupplierReport, setViewingSupplierReport] = useState<Supplier | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedType, setSelectedType] = useState<'ALL' | 'Material Supplier' | 'Dental Lab'>('ALL');
     const [sortBy, setSortBy] = useState<'name' | 'balance' | 'type'>('name');
@@ -799,26 +984,26 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
     const dentalLabs = suppliers.filter(s => s.type === 'Dental Lab').length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Enhanced Header with Gold + Purple Theme */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-purple-200 dark:border-purple-700 shadow-lg mb-6 relative overflow-hidden">
+                {/* Enhanced Header with Cyan + Violet Theme */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-cyan-200 dark:border-cyan-700 shadow-sm mb-6 relative overflow-hidden">
                     {/* Decorative gradient bar at top */}
-                    <div className="absolute left-0 top-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-purple-500 to-purple-700"></div>
+                    <div className="absolute left-0 top-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-violet-500 to-violet-700"></div>
                     <div className="relative z-10">
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent mb-2">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent mb-2">
                             {t('suppliers.suppliersList')}
                         </h2>
-                        <p className="text-slate-600 dark:text-slate-400">{t('suppliers.manageSuppliersAndLabs')} <span className="font-semibold text-purple-600 dark:text-purple-400">{suppliers.length}</span> {t('suppliers.supplierCount')}</p>
+                        <p className="text-slate-600 dark:text-slate-400">{t('suppliers.manageSuppliersAndLabs')} <span className="font-semibold text-cyan-600 dark:text-cyan-400">{suppliers.length}</span> {t('suppliers.supplierCount')}</p>
                     </div>
                 </div>
 
-                {/* Stats Cards */}
+                {/* Stats Cards with Glass Morphism */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-lg">
+                    <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-purple-100 text-sm">{t('suppliers.totalSuppliersLabel')}</p>
+                                <p className="text-cyan-100 text-sm">{t('suppliers.totalSuppliersLabel')}</p>
                                 <p className="text-2xl font-bold">{totalSuppliers}</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-lg">
@@ -826,10 +1011,10 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                             </div>
                         </div>
                     </div>
-                    <div className="bg-gradient-to-br from-amber-400 to-amber-500 text-white p-4 rounded-xl shadow-lg">
+                    <div className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-amber-100 text-sm">{t('suppliers.totalOutstandingLabel')}</p>
+                                <p className="text-violet-100 text-sm">{t('suppliers.totalOutstandingLabel')}</p>
                                 <p className="text-2xl font-bold">{currencyFormatter.format(totalOutstanding)}</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-lg">
@@ -837,7 +1022,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                             </div>
                         </div>
                     </div>
-                    <div className="bg-gradient-to-br from-rose-500 to-rose-600 text-white p-4 rounded-xl shadow-lg">
+                    <div className="bg-gradient-to-br from-rose-500 to-rose-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-rose-100 text-sm">{t('suppliers.suppliersByTypeLabel')}</p>
@@ -854,7 +1039,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                 </div>
                 
                 {/* Controls Section */}
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-purple-100 dark:border-purple-700 mb-6">
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-cyan-100 dark:border-cyan-700 mb-6">
                     <div className="flex flex-col md:flex-row gap-4 items-center">
                         <div className="flex-1 w-full">
                             <div className="relative">
@@ -866,7 +1051,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                     placeholder={t('suppliers.searchPlaceholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-4 pr-10 py-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                    className="w-full ps-10 pl-4 py-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                                 />
                             </div>
                         </div>
@@ -874,7 +1059,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                             <select
                                 value={selectedType}
                                 onChange={(e) => setSelectedType(e.target.value as 'ALL' | 'Material Supplier' | 'Dental Lab')}
-                                className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 <option value="ALL">{t('suppliers.allTypes')}</option>
                                 <option value="Material Supplier">{t('supplierType.materialSupplier')}</option>
@@ -885,7 +1070,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value as 'name' | 'balance' | 'type')}
-                                className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 <option value="name">{t('suppliers.sortByName')}</option>
                                 <option value="balance">{t('suppliers.sortByBalance')}</option>
@@ -895,7 +1080,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                         <div>
                             <button
                                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                className="p-2 border border-purple-200 dark:border-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg hover:bg-cyan-50 dark:hover:bg-cyan-900/30 focus:ring-2 focus:ring-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 {sortOrder === 'asc' ? '↑' : '↓'}
                             </button>
@@ -911,7 +1096,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                         </button>
                         <button
                             onClick={() => setIsAddSupplierModalOpen(true)}
-                            className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-violet-600 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-300"
                         >
                             <AddIcon /> {t('suppliers.addSupplier')}
                         </button>
@@ -919,28 +1104,28 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                 </div>
                 
                 {/* Suppliers Grid */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-purple-100 dark:border-purple-700 p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-cyan-100 dark:border-cyan-700 p-4">
                     {suppliers.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-700 p-6 rounded-full inline-block mb-4">
+                        <div className="text-center py-8 animate-fadeIn">
+                            <div className="bg-gradient-to-br from-cyan-100 to-violet-100 dark:from-cyan-800 dark:to-violet-800 p-6 rounded-full inline-block mb-4">
                                 <PackageIcon />
                             </div>
                             <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('suppliers.noSuppliersTitle')}</h3>
                             <p className="text-slate-500 dark:text-slate-400 mb-4">{t('suppliers.noSuppliersDescription')}</p>
                             <button
                                 onClick={() => setIsAddSupplierModalOpen(true)}
-                                className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
+                                className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-violet-600 focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-200"
                             >
                                 <AddIcon /> {t('suppliers.addFirstSupplier')}
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {suppliers
                                 .filter(s => {
                                     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                  s.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                  s.phone.includes(searchTerm);
+                                              s.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                              s.phone.includes(searchTerm);
                                     const matchesType = selectedType === 'ALL' || s.type === selectedType;
                                     return matchesSearch && matchesType;
                                 })
@@ -972,47 +1157,65 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                     const outstandingBalance = totalBilled - totalPaid;
 
                                     return (
-                                        <div key={s.id} className="bg-white dark:bg-slate-800 border border-purple-100 dark:border-purple-700 p-4 rounded-xl hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-600 transition-all duration-200">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-2 rounded-lg">
+                                        <div key={s.id} className="bg-white dark:bg-slate-800 border border-cyan-100 dark:border-cyan-700 p-6 rounded-2xl hover:shadow-md hover:border-cyan-200 dark:hover:border-cyan-600 transition-all duration-300 hover:scale-[1.03] animate-fadeIn cursor-pointer group">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-gradient-to-br from-cyan-500 to-violet-500 text-white p-3 rounded-xl group-hover:scale-110 transition-transform duration-300">
                                                         {getSupplierTypeIcon(s.type)}
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-bold text-slate-800 dark:text-slate-200">{s.name}</h4>
-                                                        <p className="text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full inline-block mt-1">
+                                                        <h4 className="font-bold text-slate-800 dark:text-slate-200 text-lg group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors duration-300">
+                                                            {s.name}
+                                                        </h4>
+                                                        <p className="text-xs text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-900/30 px-3 py-1 rounded-full inline-block mt-1">
                                                             {s.type === 'Material Supplier' ? t('supplierType.materialSupplier') : t('supplierType.dentalLab')}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 {outstandingBalance > 0 && (
-                                                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                                                    <div className="bg-gradient-to-r from-rose-500 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full group-hover:scale-105 transition-transform duration-300">
                                                         {currencyFormatter.format(outstandingBalance)}
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400 mb-4">
-                                                <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.contactPerson')}:</strong> {s.contact_person || '-'}</p>
-                                                <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.phone')}:</strong> {s.phone || '-'}</p>
-                                                <p className="dark:text-slate-300"><strong className="text-purple-600 dark:text-purple-400">{t('suppliers.email')}:</strong> {s.email || '-'}</p>
+                                            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400 mb-6">
+                                                <p className="dark:text-slate-300 flex items-center gap-2">
+                                                    <span className="text-cyan-600 dark:text-cyan-400">👤</span>
+                                                    <strong>{t('suppliers.contactPerson')}:</strong> {s.contact_person || '-'}
+                                                </p>
+                                                <p className="dark:text-slate-300 flex items-center gap-2">
+                                                    <span className="text-cyan-600 dark:text-cyan-400">📞</span>
+                                                    <strong>{t('suppliers.phone')}:</strong> {s.phone || '-'}
+                                                </p>
+                                                <p className="dark:text-slate-300 flex items-center gap-2">
+                                                    <span className="text-cyan-600 dark:text-cyan-400">📧</span>
+                                                    <strong>{t('suppliers.email')}:</strong> {s.email || '-'}
+                                                </p>
                                             </div>
-                                            <div className="flex items-center gap-2 border-t border-purple-100 dark:border-purple-700 pt-3">
+                                            <div className="flex items-center gap-2 border-t border-cyan-100 dark:border-cyan-700 pt-4">
                                                 <button
                                                     onClick={() => setViewingSupplier(s)}
-                                                    className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 font-semibold px-3 py-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200 flex items-center justify-center"
+                                                    className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:from-cyan-600 hover:to-violet-600 font-semibold px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-300 flex items-center justify-center group-hover:shadow-md"
                                                 >
                                                     <EyeIcon /> {t('suppliers.viewDetails')}
                                                 </button>
                                                 <button
+                                                    onClick={() => setViewingSupplierReport(s)}
+                                                    className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 p-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/30 focus:outline-none focus:ring-2 focus:ring-violet-300 transition-all duration-300 group-hover:scale-110"
+                                                    aria-label={t('suppliers.viewSupplierReport')}
+                                                >
+                                                    <PrintIcon />
+                                                </button>
+                                                <button
                                                     onClick={() => { setEditingSupplier(s); setIsAddSupplierModalOpen(true); }}
-                                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 p-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200"
+                                                    className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 p-2 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-300 group-hover:scale-110"
                                                     aria-label={t('suppliers.editSupplierAriaLabel', {name: s.name})}
                                                 >
                                                     <EditIcon />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteSupplier(s)}
-                                                    className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all duration-200"
+                                                    className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all duration-300 group-hover:scale-110"
                                                     aria-label={t('suppliers.deleteSupplierAriaLabel', {name: s.name})}
                                                 >
                                                     <DeleteIcon />
@@ -1041,6 +1244,33 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                     clinicData={clinicData}
                     onDataRefresh={() => setSupplierDataNeedsRefresh(true)}
                 />
+            )}
+
+            {viewingSupplierReport && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden">
+                        <div className="px-6 py-4 flex justify-between items-center flex-shrink-0 bg-gradient-to-r from-amber-500 to-amber-600">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <PrintIcon />
+                                {t('suppliers.supplierDetailedReport')}
+                            </h2>
+                            <button
+                                onClick={() => setViewingSupplierReport(undefined)}
+                                className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                aria-label={t('common.closeForm')}
+                            >
+                                <CloseIcon />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4">
+                            <SupplierDetailedReport
+                                supplierId={viewingSupplierReport.id}
+                                clinicData={clinicData}
+                                onClose={() => setViewingSupplierReport(undefined)}
+                            />
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

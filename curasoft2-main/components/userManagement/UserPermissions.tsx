@@ -213,7 +213,7 @@ export const UserPermissions: React.FC<UserPermissionsProps> = ({
                   <div className="p-4 bg-white dark:bg-gray-800">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {permissions.map(permission => {
-                        const granted = hasPermission(permission);
+                        const granted = Boolean(hasPermission(permission));
                         const fromRole = isRolePermission(permission);
                         const isCustom = isCustomPermission(permission);
                         

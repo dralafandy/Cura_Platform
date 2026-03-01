@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import {
     Patient, Dentist, Appointment, DentalChartData, ToothStatus,
     Supplier, InventoryItem, Expense, TreatmentDefinition, TreatmentRecord,
-    LabCase, Payment, SupplierInvoice, ExpenseCategory, NotificationType, NotificationPriority, DoctorPayment, Prescription, PrescriptionItem, PatientAttachment, SupplierInvoiceAttachment, PaymentMethod, Clinic
+    LabCase, Payment, SupplierInvoice, ExpenseCategory, NotificationType, NotificationPriority, DoctorPayment, Prescription, PrescriptionItem, PatientAttachment, SupplierInvoiceAttachment, PaymentMethod, Clinic, TreatmentDoctorPercentage
 } from '../types';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,6 +53,10 @@ export interface ClinicData {
     updateExpense: (expense: Expense) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
     treatmentDefinitions: TreatmentDefinition[];
+    treatmentDoctorPercentages: TreatmentDoctorPercentage[];
+    getTreatmentPercentages: (treatmentDefinitionId: string, dentistId?: string | null) => { doctorPercentage: number; clinicPercentage: number; isCustom: boolean };
+    upsertTreatmentDoctorPercentage: (data: Omit<TreatmentDoctorPercentage, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    deleteTreatmentDoctorPercentage: (id: string) => Promise<void>;
     addTreatmentDefinition: (def: Omit<TreatmentDefinition, 'id'>) => Promise<void>;
     updateTreatmentDefinition: (def: TreatmentDefinition) => Promise<void>;
     deleteTreatmentDefinition: (id: string) => Promise<void>;
@@ -106,7 +110,7 @@ export interface ClinicData {
 }
 
 export const useClinicData = (): ClinicData => {
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     const { addNotification } = useNotification();
     
     const [patients, setPatients] = useState<Patient[]>([]);
@@ -116,6 +120,7 @@ export const useClinicData = (): ClinicData => {
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [treatmentDefinitions, setTreatmentDefinitions] = useState<TreatmentDefinition[]>([]);
+    const [treatmentDoctorPercentages, setTreatmentDoctorPercentages] = useState<TreatmentDoctorPercentage[]>([]);
     const [treatmentRecords, setTreatmentRecords] = useState<TreatmentRecord[]>([]);
     const [labCases, setLabCases] = useState<LabCase[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -150,6 +155,39 @@ export const useClinicData = (): ClinicData => {
     const [whatsappPrescriptionTemplate, setWhatsappPrescriptionTemplate] = useState<string>(
         'الروشتة الطبية\n\nالمريض: {patientName}\nالتاريخ: {date}\nالدكتور: {dentist}\n\nالأدوية:\n{medications}\n\nالعيادة: {clinicName}'
     );
+
+    const getTreatmentPercentages = useCallback((treatmentDefinitionId: string, dentistId?: string | null) => {
+        const treatmentDef = treatmentDefinitions.find(td => td.id === treatmentDefinitionId);
+        const fallbackDoctor = treatmentDef?.doctorPercentage || 0;
+        const fallbackClinic = treatmentDef?.clinicPercentage || (1 - fallbackDoctor);
+
+        if (!dentistId) {
+            return {
+                doctorPercentage: fallbackDoctor,
+                clinicPercentage: fallbackClinic,
+                isCustom: false
+            };
+        }
+
+        const customRatio = treatmentDoctorPercentages.find(item =>
+            item.treatmentDefinitionId === treatmentDefinitionId &&
+            item.dentistId === dentistId
+        );
+
+        if (customRatio) {
+            return {
+                doctorPercentage: customRatio.doctorPercentage,
+                clinicPercentage: customRatio.clinicPercentage,
+                isCustom: true
+            };
+        }
+
+        return {
+            doctorPercentage: fallbackDoctor,
+            clinicPercentage: fallbackClinic,
+            isCustom: false
+        };
+    }, [treatmentDefinitions, treatmentDoctorPercentages]);
 
     const updateReminderMessageTemplate = (template: string) => {
         setReminderMessageTemplate(template);
@@ -189,7 +227,8 @@ export const useClinicData = (): ClinicData => {
         const tables = [
             'patients', 'dentists', 'appointments', 'suppliers', 'inventory_items',
             'expenses', 'treatment_definitions', 'treatment_records', 'lab_cases',
-            'payments', 'supplier_invoices', 'doctor_payments', 'prescriptions', 'prescription_items', 'patient_attachments', 'clinics'
+            'payments', 'supplier_invoices', 'doctor_payments', 'prescriptions', 'prescription_items',
+            'patient_attachments', 'clinics', 'treatment_doctor_percentages'
         ];
 
         const promises = tables.map((table: string) => {
@@ -200,7 +239,8 @@ export const useClinicData = (): ClinicData => {
         const [
             patientsRes, dentistsRes, appointmentsRes, suppliersRes, inventoryItemsRes,
             expensesRes, treatmentDefsRes, treatmentRecordsRes, labCasesRes,
-            paymentsRes, supplierInvoicesRes, doctorPaymentsRes, prescriptionsRes, prescriptionItemsRes, patientAttachmentsRes, clinicsRes
+            paymentsRes, supplierInvoicesRes, doctorPaymentsRes, prescriptionsRes, prescriptionItemsRes, patientAttachmentsRes,
+            clinicsRes, treatmentDoctorPercentagesRes
         ] = results;
 
         console.log('Data fetch results:', {
@@ -219,7 +259,8 @@ export const useClinicData = (): ClinicData => {
             prescriptions: prescriptionsRes.data?.length || 0,
             prescriptionItems: prescriptionItemsRes.data?.length || 0,
             patientAttachments: patientAttachmentsRes.data?.length || 0,
-            clinics: clinicsRes.data?.length || 0
+            clinics: clinicsRes.data?.length || 0,
+            treatmentDoctorPercentages: treatmentDoctorPercentagesRes.data?.length || 0
         });
 
         if (patientsRes.data) {
@@ -313,6 +354,20 @@ export const useClinicData = (): ClinicData => {
                 clinicPercentage: Number(def.clinic_percentage) || 0
             }));
             setTreatmentDefinitions(formattedTreatmentDefinitions);
+        }
+        if (treatmentDoctorPercentagesRes.data) {
+            console.log('Setting treatment doctor percentages data:', treatmentDoctorPercentagesRes.data.length);
+            const formattedCustomPercentages = treatmentDoctorPercentagesRes.data.map((item: any) => ({
+                id: item.id,
+                treatmentDefinitionId: item.treatment_definition_id,
+                dentistId: item.dentist_id,
+                doctorPercentage: Number(item.doctor_percentage) || 0,
+                clinicPercentage: Number(item.clinic_percentage) || 0,
+                userId: item.user_id,
+                createdAt: item.created_at,
+                updatedAt: item.updated_at
+            }));
+            setTreatmentDoctorPercentages(formattedCustomPercentages);
         }
         if (treatmentRecordsRes.data) {
             console.log('Setting treatment records data:', treatmentRecordsRes.data.length);
@@ -992,7 +1047,12 @@ export const useClinicData = (): ClinicData => {
     const addTreatmentRecord = async (patientId: string, record: Omit<TreatmentRecord, 'id' | 'patientId'>) => {
         if (!user || !supabase) return;
 
-        const { dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, doctorShare, clinicShare, affectedTeeth } = record;
+        const { dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, affectedTeeth } = record;
+        const treatmentDef = treatmentDefinitions.find(td => td.id === treatmentDefinitionId);
+        const basePrice = treatmentDef?.basePrice || 0;
+        const effectivePercentages = getTreatmentPercentages(treatmentDefinitionId, dentistId);
+        const doctorShare = basePrice * effectivePercentages.doctorPercentage;
+        const clinicShare = basePrice * effectivePercentages.clinicPercentage;
         const totalTreatmentCost = Number(doctorShare) + Number(clinicShare);
         const supabaseData = {
             patient_id: patientId,
@@ -1038,8 +1098,11 @@ export const useClinicData = (): ClinicData => {
     const updateTreatmentRecord = async (patientId: string, record: TreatmentRecord) => {
         if (!supabase) return;
 
-        const { id, patientId: pid, dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, doctorShare, clinicShare, affectedTeeth } = record;
-        const totalTreatmentCost = Number(doctorShare) + Number(clinicShare);
+        const { id, patientId: pid, dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, affectedTeeth } = record;
+        const totalTreatmentCost = Number(record.totalTreatmentCost) || (Number(record.doctorShare) + Number(record.clinicShare));
+        const effectivePercentages = getTreatmentPercentages(treatmentDefinitionId, dentistId);
+        const doctorShare = totalTreatmentCost * effectivePercentages.doctorPercentage;
+        const clinicShare = totalTreatmentCost * effectivePercentages.clinicPercentage;
         const supabaseData = {
             patient_id: pid,
             dentist_id: dentistId,
@@ -1093,9 +1156,14 @@ export const useClinicData = (): ClinicData => {
         if (payment.treatmentRecordId) {
             const treatmentRecord = treatmentRecords.find(tr => tr.id === payment.treatmentRecordId);
             if (treatmentRecord) {
-                const treatmentDefinition = treatmentDefinitions.find(td => td.id === treatmentRecord.treatmentDefinitionId);
-                if (treatmentDefinition) {
-                    doctorShare = payment.amount * treatmentDefinition.doctorPercentage;
+                const recordTotal = Number(treatmentRecord.doctorShare) + Number(treatmentRecord.clinicShare);
+                if (recordTotal > 0) {
+                    const doctorRatio = Number(treatmentRecord.doctorShare) / recordTotal;
+                    doctorShare = payment.amount * doctorRatio;
+                    clinicShare = payment.amount - doctorShare;
+                } else {
+                    const effectivePercentages = getTreatmentPercentages(treatmentRecord.treatmentDefinitionId, treatmentRecord.dentistId);
+                    doctorShare = payment.amount * effectivePercentages.doctorPercentage;
                     clinicShare = payment.amount - doctorShare;
                 }
             }
@@ -1399,6 +1467,93 @@ export const useClinicData = (): ClinicData => {
         }
     };
 
+    const upsertTreatmentDoctorPercentage = async (data: Omit<TreatmentDoctorPercentage, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+        if (!user || !supabase) return;
+        if (!isAdmin) {
+            addNotification('Only admin can update custom doctor percentages', NotificationType.ERROR);
+            return;
+        }
+
+        const doctorPercentage = Number(data.doctorPercentage) || 0;
+        const clinicPercentage = Number(data.clinicPercentage) || 0;
+        if (doctorPercentage < 0 || doctorPercentage > 1 || clinicPercentage < 0 || clinicPercentage > 1) {
+            addNotification('Percentages must be between 0 and 1', NotificationType.ERROR);
+            return;
+        }
+        if (Math.abs((doctorPercentage + clinicPercentage) - 1) > 0.0001) {
+            addNotification('Doctor and clinic percentages must add up to 100%', NotificationType.ERROR);
+            return;
+        }
+
+        const payload = {
+            treatment_definition_id: data.treatmentDefinitionId,
+            dentist_id: data.dentistId,
+            doctor_percentage: doctorPercentage,
+            clinic_percentage: clinicPercentage,
+            user_id: user.id
+        };
+
+        const { data: upserted, error } = await supabase
+            .from('treatment_doctor_percentages')
+            .upsert(payload, { onConflict: 'treatment_definition_id,dentist_id,user_id' })
+            .select();
+
+        if (error) {
+            console.error('Error upserting treatment_doctor_percentages:', error);
+            addNotification(error.message, NotificationType.ERROR);
+            return;
+        }
+
+        if (upserted && upserted.length > 0) {
+            const mapped = upserted.map((item: any) => ({
+                id: item.id,
+                treatmentDefinitionId: item.treatment_definition_id,
+                dentistId: item.dentist_id,
+                doctorPercentage: Number(item.doctor_percentage) || 0,
+                clinicPercentage: Number(item.clinic_percentage) || 0,
+                userId: item.user_id,
+                createdAt: item.created_at,
+                updatedAt: item.updated_at
+            }));
+
+            setTreatmentDoctorPercentages((prev: TreatmentDoctorPercentage[]) => {
+                const next = [...prev];
+                mapped.forEach((entry: TreatmentDoctorPercentage) => {
+                    const existingIndex = next.findIndex(
+                        item =>
+                            item.treatmentDefinitionId === entry.treatmentDefinitionId &&
+                            item.dentistId === entry.dentistId
+                    );
+                    if (existingIndex >= 0) {
+                        next[existingIndex] = entry;
+                    } else {
+                        next.push(entry);
+                    }
+                });
+                return next;
+            });
+            addNotification('Custom doctor percentage saved', NotificationType.SUCCESS);
+        }
+    };
+
+    const deleteTreatmentDoctorPercentage = async (id: string) => {
+        if (!supabase) return;
+        if (!isAdmin) {
+            addNotification('Only admin can delete custom doctor percentages', NotificationType.ERROR);
+            return;
+        }
+
+        const { error } = await supabase.from('treatment_doctor_percentages').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting treatment_doctor_percentages:', error);
+            addNotification(error.message, NotificationType.ERROR);
+            return;
+        }
+
+        setTreatmentDoctorPercentages((prev: TreatmentDoctorPercentage[]) => prev.filter(item => item.id !== id));
+        addNotification('Custom doctor percentage deleted', NotificationType.SUCCESS);
+    };
+
     const addLabCase = async (lc: Omit<LabCase, 'id'>) => {
         if (!user || !supabase) return;
 
@@ -1495,6 +1650,7 @@ export const useClinicData = (): ClinicData => {
             console.log('Successfully added supplier invoice:', newData);
             setSupplierInvoices((prev: SupplierInvoice[]) => [...prev, ...newData as SupplierInvoice[]]);
             addNotification('Supplier invoice added successfully', NotificationType.SUCCESS);
+            await fetchData();
             try {
                 const possibleUrl = (i as any).invoiceImageUrl;
                 if (possibleUrl) {
@@ -2159,6 +2315,7 @@ export const useClinicData = (): ClinicData => {
         suppliers, addSupplier, updateSupplier, deleteSupplier,
         inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem,
         expenses, addExpense, updateExpense, deleteExpense,
+        treatmentDoctorPercentages, getTreatmentPercentages, upsertTreatmentDoctorPercentage, deleteTreatmentDoctorPercentage,
         treatmentDefinitions, addTreatmentDefinition, updateTreatmentDefinition, deleteTreatmentDefinition,
         treatmentRecords, addTreatmentRecord, updateTreatmentRecord, deleteTreatmentRecord,
         labCases, addLabCase, updateLabCase, deleteLabCase,

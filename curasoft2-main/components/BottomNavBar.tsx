@@ -182,6 +182,29 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
   const [pressedItem, setPressedItem] = useState<string | null>(null);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   
+  // Haptic feedback helper for mobile devices
+  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+    if (navigator.vibrate) {
+      const patterns = {
+        light: 10,
+        medium: 25,
+        heavy: 50
+      };
+      navigator.vibrate(patterns[type]);
+    }
+  };
+  
+  // Handle navigation with haptic feedback
+  const handleNavClick = (itemId: string, isLogout = false) => {
+    triggerHaptic('light');
+    if (isLogout) {
+      logout();
+    } else {
+      setCurrentView(itemId as View);
+    }
+    setIsMoreMenuOpen(false);
+  };
+  
   // Primary navigation items for mobile (most frequently used) - Main icons per user request
   const primaryNavItems = [
     { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon },
@@ -238,7 +261,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentView(item.id as View)}
+                onClick={() => handleNavClick(item.id)}
                 onTouchStart={() => handlePressStart(item.id)}
                 onTouchEnd={handlePressEnd}
                 onMouseDown={() => handlePressStart(item.id)}
@@ -384,14 +407,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
                   return (
                     <button
                       key={item.id}
-                      onClick={() => {
-                        if (isLogout) {
-                          logout();
-                        } else {
-                          setCurrentView(item.id as View);
-                        }
-                        setIsMoreMenuOpen(false);
-                      }}
+                      onClick={() => handleNavClick(item.id, isLogout)}
                       className={`flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-200 focus:outline-none relative group ${
                         isLogout
                           ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'

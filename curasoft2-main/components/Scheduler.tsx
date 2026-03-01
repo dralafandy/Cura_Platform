@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Appointment, AppointmentStatus, Patient, Dentist } from '../types';
+import { Appointment, AppointmentStatus, Patient, Dentist, Permission, UserRole } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { NotificationType } from '../types';
 import { getSuggestedDuration, getSuggestedTimeSlots, getAppointmentTypeColor } from '../utils/appointmentSuggestions';
 import sgMail from '@sendgrid/mail';
@@ -61,23 +62,58 @@ const LoadingSpinner = () => <svg className="animate-spin h-5 w-5 text-primary" 
 const PlusIcon: React.FC<{ className?: string }> = ({ className = "h-6 w-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>;
 
 
+// Form Section Component for consistent styling
+const FormSection: React.FC<{
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    gradient?: string;
+}> = ({ title, icon, children, gradient = 'from-purple-50 to-white dark:from-slate-800 dark:to-slate-700' }) => (
+    <div className={`bg-gradient-to-br ${gradient} p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm`}>
+        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-600">
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">
+                {icon}
+            </div>
+            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
+        </div>
+        {children}
+    </div>
+);
+
+// Input Label Component
+const InputLabel: React.FC<{
+    htmlFor: string;
+    icon?: React.ReactNode;
+    required?: boolean;
+    children: React.ReactNode;
+}> = ({ htmlFor, icon, required, children }) => (
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+        {icon && <span className="inline w-4 h-4 mr-1">{icon}</span>}
+        {children}
+        {required && <span className="text-red-500 mr-1">*</span>}
+    </label>
+);
+
 const AddAppointmentModal: React.FC<{
     onClose: () => void;
     onSave: (appointment: Omit<Appointment, 'id' | 'reminderSent' | 'userId' | 'createdAt' | 'updatedAt'>) => void;
     clinicData: ClinicData;
     initialDateTime?: Date;
     appointmentToEdit?: Appointment;
-}> = ({ onClose, onSave, clinicData, initialDateTime, appointmentToEdit }) => {
+    initialDentistId?: string;
+    initialDurationMinutes?: number;
+}> = ({ onClose, onSave, clinicData, initialDateTime, appointmentToEdit, initialDentistId, initialDurationMinutes }) => {
     const { t } = useI18n();
     const { addNotification } = useNotification();
 
     // Enhanced form state management
     const [formData, setFormData] = useState(() => {
+        const duration = initialDurationMinutes || 60;
         const initial = appointmentToEdit || {
             patientId: '',
-            dentistId: '',
+            dentistId: initialDentistId || '',
             startTime: initialDateTime || new Date(),
-            endTime: initialDateTime ? new Date(initialDateTime.getTime() + 60 * 60000) : new Date(Date.now() + 60 * 60000),
+            endTime: initialDateTime ? new Date(initialDateTime.getTime() + duration * 60000) : new Date(Date.now() + duration * 60000),
             reason: '',
             status: AppointmentStatus.SCHEDULED,
             reminderTime: '1_day_before',
@@ -252,36 +288,45 @@ const AddAppointmentModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col transform transition-all duration-300 ease-out">
-                {/* Gradient Header */}
-                <header className="p-6 border-b border-purple-200 dark:border-slate-600 flex justify-between items-center bg-gradient-to-r from-purple-100 to-amber-100 dark:from-purple-900 dark:to-purple-800">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2 rounded-lg text-white">
-                            {appointmentToEdit ? <CalendarIcon className="h-5 w-5 text-white" /> : <PlusIcon className="h-5 w-5 text-white" />}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out animate-in fade-in zoom-in-95">
+                {/* Header with gradient */}
+                <header className="relative px-6 py-5 flex justify-between items-center bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 dark:from-purple-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                    
+                    <div className="relative flex items-center gap-3">
+                        <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+                            {appointmentToEdit ? <CalendarIcon className="h-6 w-6 text-white" /> : <PlusIcon className="h-6 w-6 text-white" />}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{appointmentToEdit ? t('scheduler.editAppointment') : t('scheduler.newAppointment')}</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('addAppointmentModal.fillDetails')}</p>
+                            <h2 className="text-xl font-bold text-white">
+                                {appointmentToEdit ? t('scheduler.editAppointment') : t('scheduler.newAppointment')}
+                            </h2>
+                            <p className="text-sm text-purple-200 mt-0.5">{t('addAppointmentModal.fillDetails')}</p>
                         </div>
                     </div>
-                    <button onClick={handleClose} className="p-2 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 text-slate-600 dark:text-slate-400 hover:text-purple-700 dark:hover:text-purple-400 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label={t('addAppointmentModal.closeAriaLabel')}>
+                    <button 
+                        onClick={handleClose} 
+                        className="relative p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 hover:scale-105" 
+                        aria-label={t('addAppointmentModal.closeAriaLabel')}
+                    >
                         <CloseIcon />
                     </button>
                 </header>
 
 
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                    <div className="p-6 space-y-6">
+                    <div className="p-5 space-y-5">
                         {/* Patient & Dentist Section */}
-                        <div className="bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-300 dark:border-slate-600 shadow-sm space-y-4">
-                            <div className="flex items-center gap-2 pb-3 border-b border-slate-300 dark:border-slate-600">
-                                <div className="bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 p-2 rounded-lg">
-                                    <UserIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div className="bg-gradient-to-br from-purple-50 to-white dark:from-slate-800 dark:to-slate-700 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-600">
+                                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">
+                                    <UserIcon className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.patientDentist')}</h3>
+                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.patientDentist')}</h3>
                             </div>
-
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Enhanced Patient Search */}
@@ -292,60 +337,64 @@ const AddAppointmentModal: React.FC<{
                                     </label>
 
                                     <div className="relative">
+                                        <input
+                                            ref={firstFieldRef}
+                                            type="text"
+                                            id="patientSearch"
+                                            placeholder={t('addAppointmentModal.searchPatient')}
+                                            value={patientSearchTerm}
+                                            onChange={(e) => setPatientSearchTerm(e.target.value)}
+                                            onFocus={() => setIsPatientDropdownOpen(true)}
+                                            className={`w-full pl-10 pr-10 py-3 border-2 rounded-xl shadow-sm focus:ring-4 focus:ring-purple-500/20 focus:outline-none transition-all duration-200 ${
+                                                validationErrors.patientId 
+                                                    ? 'border-red-400 bg-red-50 dark:bg-red-900/20 focus:border-red-500 focus:ring-red-500/20' 
+                                                    : 'border-slate-300 dark:border-slate-600 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500'
+                                            }`}
+                                            aria-describedby={validationErrors.patientId ? "patient-error" : undefined}
+                                            aria-invalid={!!validationErrors.patientId}
+                                        />
                                         <SearchIcon />
-                                    <input
-                                        ref={firstFieldRef}
-                                        type="text"
-                                        id="patientSearch"
-                                        placeholder={t('addAppointmentModal.searchPatient')}
-                                        value={patientSearchTerm}
-                                        onChange={(e) => setPatientSearchTerm(e.target.value)}
-                                        onFocus={() => setIsPatientDropdownOpen(true)}
-                                        className={`w-full pr-10 pl-10 py-3 border-2 rounded-xl shadow-sm focus:ring-4 focus:ring-purple-500/50 focus:outline-none transition-all duration-300 hover:shadow-md ${
-                                            validationErrors.patientId ? 'border-red-500 bg-red-900/30 dark:bg-red-900/40 focus:border-red-500 focus:ring-red-500/50' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:border-purple-500 dark:hover:border-purple-600'
-                                        }`}
-                                        aria-describedby={validationErrors.patientId ? "patient-error" : undefined}
-                                        aria-invalid={!!validationErrors.patientId}
-                                    />
                                         <ChevronDownIcon />
-                                        {validationErrors.patientId && <ExclamationCircleIcon className="absolute right-3 top-1/2 -translate-y-1/2" />}
                                     </div>
+                                    
                                     {validationErrors.patientId && (
-                                        <p id="patient-error" className="mt-2 text-sm text-red-700 flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 animate-in slide-in-from-top-1 duration-200">
-                                            <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                                        <p id="patient-error" className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800">
+                                            <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
                                             <span>{validationErrors.patientId}</span>
                                         </p>
                                     )}
 
                                     {isPatientDropdownOpen && (
-                                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                                             {filteredPatients.length > 0 ? (
                                                 <ul className="py-1" role="listbox">
                                                     {filteredPatients.map(patient => (
                                                         <li
                                                             key={patient.id}
                                                             onClick={() => handlePatientSelect(patient.id)}
-                                    className={`px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center gap-3 ${
-                                                                formData.patientId === patient.id ? 'bg-purple-200 dark:bg-purple-800' : ''
+                                                            className={`px-4 py-3 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/30 flex items-center gap-3 transition-colors ${
+                                                                formData.patientId === patient.id ? 'bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-500' : ''
                                                             }`}
                                                             role="option"
                                                             aria-selected={formData.patientId === patient.id}
                                                         >
-                                                            <div className="w-8 h-8 bg-primary-200 rounded-full flex items-center justify-center">
-                                                                <UserIcon className="w-4 h-4 text-primary-700" />
+                                                            <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-900 rounded-full flex items-center justify-center shadow-sm">
+                                                                <UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-300" />
                                                             </div>
-                                                            <div className="flex-1">
-                                                                <div className="font-medium text-slate-700">{patient.name}</div>
-                                                                <div className="text-sm text-slate-500">{patient.phone || t('common.noPhone')}</div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-medium text-slate-700 dark:text-slate-200 truncate">{patient.name}</div>
+                                                                <div className="text-sm text-slate-500 dark:text-slate-400">{patient.phone || t('common.noPhone')}</div>
                                                             </div>
-                                                            {formData.patientId === patient.id && <CheckCircleIcon />}
+                                                            {formData.patientId === patient.id && (
+                                                                <CheckCircleIcon className="w-5 h-5 text-purple-500" />
+                                                            )}
                                                         </li>
                                                     ))}
                                                 </ul>
                                             ) : (
-                                                <div className="px-4 py-3 text-slate-500 text-center">
-                                                    <UserIcon className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                                                    {t('addAppointmentModal.noPatientsFound')}
+                                                <div className="px-4 py-6 text-slate-500 text-center">
+                                                    <UserIcon className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-500" />
+                                                    <p>{t('addAppointmentModal.noPatientsFound')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -365,8 +414,10 @@ const AddAppointmentModal: React.FC<{
                                         id="dentistId"
                                         value={formData.dentistId}
                                         onChange={handleChange}
-                                        className={`w-full py-3 px-4 border-2 rounded-xl shadow-sm focus:ring-4 focus:ring-purple-500/50 focus:outline-none transition-all duration-300 hover:shadow-md ${
-                                            validationErrors.dentistId ? 'border-red-500 bg-red-900/30 dark:bg-red-900/40 focus:border-red-500 focus:ring-red-500/50' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:border-purple-500 dark:hover:border-purple-600'
+                                        className={`w-full py-3 px-4 border-2 rounded-xl shadow-sm focus:ring-4 focus:ring-purple-500/20 focus:outline-none transition-all duration-200 appearance-none ${
+                                            validationErrors.dentistId 
+                                                ? 'border-red-400 bg-red-50 dark:bg-red-900/20 focus:border-red-500 focus:ring-red-500/20' 
+                                                : 'border-slate-300 dark:border-slate-600 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500'
                                         }`}
                                         aria-describedby={validationErrors.dentistId ? "dentist-error" : undefined}
                                         aria-invalid={!!validationErrors.dentistId}
@@ -376,9 +427,10 @@ const AddAppointmentModal: React.FC<{
                                             <option key={d.id} value={d.id}>{d.name}</option>
                                         ))}
                                     </select>
+                                    
                                     {validationErrors.dentistId && (
-                                        <p id="dentist-error" className="mt-2 text-sm text-red-700 flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 animate-in slide-in-from-top-1 duration-200">
-                                            <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                                        <p id="dentist-error" className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800">
+                                            <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
                                             <span>{validationErrors.dentistId}</span>
                                         </p>
                                     )}
@@ -387,12 +439,13 @@ const AddAppointmentModal: React.FC<{
                         </div>
 
                         {/* Date & Time Section */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-600">
-                                <ClockIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.dateTime')}</h3>
+                        <div className="bg-gradient-to-br from-amber-50 to-white dark:from-slate-800 dark:to-slate-700 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-600">
+                                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
+                                    <ClockIcon className="h-5 w-5" />
+                                </div>
+                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.dateTime')}</h3>
                             </div>
-
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -407,15 +460,17 @@ const AddAppointmentModal: React.FC<{
                                         name="startTime"
                                         value={formData.startTime}
                                         onChange={handleChange}
-                                        className={`w-full py-3 px-4 border rounded-lg focus:ring-2 focus:ring-purple-500/40 transition-all ${
-                                            validationErrors.startTime ? 'border-red-500 bg-red-900/30 dark:bg-red-900/40' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                                        className={`w-full py-3 px-4 border-2 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:outline-none transition-all ${
+                                            validationErrors.startTime 
+                                                ? 'border-red-400 bg-red-50 dark:bg-red-900/20' 
+                                                : 'border-slate-300 dark:border-slate-600 focus:border-amber-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                                         }`}
                                         aria-describedby={validationErrors.startTime ? "startTime-error" : undefined}
                                         aria-invalid={!!validationErrors.startTime}
                                     />
                                     {validationErrors.startTime && (
-                                        <p id="startTime-error" className="mt-2 text-sm text-red-700 flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 animate-in slide-in-from-top-1 duration-200">
-                                            <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                                        <p id="startTime-error" className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800">
+                                            <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
                                             <span>{validationErrors.startTime}</span>
                                         </p>
                                     )}
@@ -433,15 +488,17 @@ const AddAppointmentModal: React.FC<{
                                         name="endTime"
                                         value={formData.endTime}
                                         onChange={handleChange}
-                                        className={`w-full py-3 px-4 border rounded-lg focus:ring-2 focus:ring-purple-500/40 transition-all ${
-                                            validationErrors.endTime ? 'border-red-500 bg-red-900/30 dark:bg-red-900/40' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                                        className={`w-full py-3 px-4 border-2 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:outline-none transition-all ${
+                                            validationErrors.endTime 
+                                                ? 'border-red-400 bg-red-50 dark:bg-red-900/20' 
+                                                : 'border-slate-300 dark:border-slate-600 focus:border-amber-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                                         }`}
                                         aria-describedby={validationErrors.endTime ? "endTime-error" : undefined}
                                         aria-invalid={!!validationErrors.endTime}
                                     />
                                     {validationErrors.endTime && (
-                                        <p id="endTime-error" className="mt-2 text-sm text-red-700 flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 animate-in slide-in-from-top-1 duration-200">
-                                            <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                                        <p id="endTime-error" className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800">
+                                            <ExclamationCircleIcon className="w-4 h-4 flex-shrink-0" />
                                             <span>{validationErrors.endTime}</span>
                                         </p>
                                     )}
@@ -449,16 +506,18 @@ const AddAppointmentModal: React.FC<{
                             </div>
 
                             {/* Duration Display and Presets */}
-                            <div className="bg-gradient-to-br from-purple-100 to-amber-100 dark:from-slate-800 dark:to-slate-700 p-4 rounded-lg border border-purple-200 dark:border-slate-600">
+                            <div className="mt-4 bg-gradient-to-r from-amber-100/50 to-orange-100/50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
-                                        <ClockIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">{t('addAppointmentModal.duration')}</span>
-                                        <span className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                                        <div className="p-1.5 bg-amber-500 rounded-lg">
+                                            <ClockIcon className="w-4 h-4 text-white" />
+                                        </div>
+                                        <span className="text-sm font-medium text-amber-700 dark:text-amber-300">{t('addAppointmentModal.duration')}</span>
+                                        <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-lg text-sm font-bold shadow-sm">
                                             {durationMinutes} {t('scheduler.minutes')}
                                         </span>
                                     </div>
-                                    <span className="text-xs text-purple-600 dark:text-purple-400">{t('addAppointmentModal.quickSet')}</span>
+                                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t('addAppointmentModal.quickSet')}</span>
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
@@ -467,7 +526,11 @@ const AddAppointmentModal: React.FC<{
                                             key={minutes}
                                             type="button"
                                             onClick={() => setDuration(minutes)}
-                                            className="px-3 py-1 bg-white dark:bg-slate-700 border border-purple-300 dark:border-purple-500 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-200 text-sm text-purple-800 dark:text-purple-200"
+                                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                                                durationMinutes === minutes
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                                                    : 'bg-white dark:bg-slate-700 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:border-amber-400'
+                                            }`}
                                         >
                                             {minutes}m
                                         </button>
@@ -477,11 +540,15 @@ const AddAppointmentModal: React.FC<{
                         </div>
 
                         {/* Details Section */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-600">
-                                <FileTextIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.details')}</h3>
+                        <div className="bg-gradient-to-br from-emerald-50 to-white dark:from-slate-800 dark:to-slate-700 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
+                            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-200 dark:border-slate-600">
+                                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                                    <FileTextIcon className="h-5 w-5" />
+                                </div>
+                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">{t('addAppointmentModal.details')}</h3>
                             </div>
+
+                            <div className="space-y-4">
 
 
                             <div>
@@ -496,7 +563,7 @@ const AddAppointmentModal: React.FC<{
                                     value={formData.reason}
                                     onChange={handleChange}
                                     className={`w-full py-3 px-4 border rounded-lg focus:ring-2 focus:ring-purple-500/40 transition-all resize-none ${
-                                        validationErrors.reason ? 'border-red-500 bg-red-900/30 dark:bg-red-900/40' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                                        validationErrors.reason ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-purple-400 dark:border-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                                     }`}
                                     placeholder={t('addAppointmentModal.reasonPlaceholder')}
                                     rows={3}
@@ -523,7 +590,7 @@ const AddAppointmentModal: React.FC<{
                                         id="status"
                                         value={formData.status}
                                         onChange={handleChange}
-                                        className="w-full py-3 px-4 border border-purple-400 dark:border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                        className="w-full py-3 px-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 appearance-none"
                                     >
                                         {Object.values(AppointmentStatus).map(s => (
                                             <option key={s} value={s}>{t(`appointmentStatus.${s}`)}</option>
@@ -542,7 +609,7 @@ const AddAppointmentModal: React.FC<{
                                         id="reminderTime"
                                         value={formData.reminderTime}
                                         onChange={handleChange}
-                                        className="w-full py-3 px-4 border border-purple-400 dark:border-purple-500 rounded-lg focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                        className="w-full py-3 px-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 appearance-none"
                                     >
                                         <option value="none">{t('reminders.none')}</option>
                                         <option value="1_hour_before">{t('reminders.1_hour_before')}</option>
@@ -552,19 +619,20 @@ const AddAppointmentModal: React.FC<{
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
 
-                    {/* Footer with Actions - Gold + Purple Theme */}
-                    <footer className="px-6 py-4 bg-gradient-to-r from-purple-100 to-amber-100 dark:from-slate-800 dark:to-slate-700 border-t border-purple-300 dark:border-slate-600 flex justify-between items-center">
+                    {/* Footer with Actions */}
+                    <footer className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
                         <div className="text-sm text-slate-500 dark:text-slate-400">
                             {hasUnsavedChanges && <span className="text-amber-600 dark:text-amber-400">• {t('addAppointmentModal.unsavedChanges')}</span>}
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 flex-wrap">
                             <button
                                 type="button"
                                 onClick={handleClose}
-                                className="px-4 py-2 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg hover:bg-purple-100 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 hover:text-purple-800 dark:hover:text-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200"
+                                className="px-5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 transition-all duration-200"
                                 disabled={isSubmitting}
                             >
                                 {t('common.cancel')}
@@ -572,7 +640,7 @@ const AddAppointmentModal: React.FC<{
 
                             <button
                                 type="submit"
-                                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+                                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 font-medium"
                                 disabled={isSubmitting}
                             >
                                 {isSubmitting ? (
@@ -582,11 +650,54 @@ const AddAppointmentModal: React.FC<{
                                     </>
                                 ) : (
                                     <>
-                                        <CheckCircleIcon className="w-4 h-4" />
+                                        <CheckCircleIcon className="w-5 h-5" />
                                         {appointmentToEdit ? t('common.save') : t('addAppointmentModal.schedule')}
                                     </>
                                 )}
                             </button>
+
+                            {/* Add Another Appointment Button */}
+                            {!appointmentToEdit && (
+                                <button
+                                    type="button"
+                                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200 flex items-center gap-2 font-medium"
+                                    onClick={() => {
+                                        // Save current appointment before resetting, but do NOT close modal
+                                        if(!formData.patientId || !formData.dentistId || !formData.startTime || !formData.endTime) {
+                                            addNotification(t('addAppointmentModal.alertFillAllFields'), NotificationType.ERROR);
+                                            return;
+                                        }
+                                        onSave({
+                                            patientId: formData.patientId,
+                                            dentistId: formData.dentistId,
+                                            startTime: new Date(formData.startTime),
+                                            endTime: new Date(formData.endTime),
+                                            reason: formData.reason,
+                                            status: formData.status as AppointmentStatus,
+                                            reminderTime: formData.reminderTime as Appointment['reminderTime'],
+                                        });
+                                        // Optionally show a notification for success
+                                        addNotification(t('addAppointmentModal.addedSuccessfully') || 'تمت إضافة الموعد بنجاح', NotificationType.SUCCESS);
+                                        // Reset form for another appointment
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            startTime: prev.endTime,
+                                            endTime: '',
+                                            reason: '',
+                                        }));
+                                        setTouchedFields(new Set());
+                                        setValidationErrors({});
+                                        setHasUnsavedChanges(false);
+                                        setIsSubmitting(false);
+                                        if (firstFieldRef.current) firstFieldRef.current.focus();
+                                        // Optionally scroll to top for new entry
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                >
+                                    <PlusIcon className="w-5 h-5" />
+                                    {t('addAppointmentModal.addAnother') || 'Add Another Appointment'}
+                                </button>
+                            )}
                         </div>
                     </footer>
                 </form>
@@ -602,7 +713,9 @@ const AppointmentDetailsModal: React.FC<{
     onClose: () => void;
     onEdit: () => void;
     onDelete: () => void;
-}> = ({ appointment, patient, dentist, onClose, onEdit, onDelete }) => {
+    canEdit?: boolean;
+    canDelete?: boolean;
+}> = ({ appointment, patient, dentist, onClose, onEdit, onDelete, canEdit = true, canDelete = true }) => {
     const { t, locale } = useI18n();
     const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: 'full' });
     const timeFormatter = new Intl.DateTimeFormat(locale, { timeStyle: 'short' });
@@ -753,16 +866,19 @@ const AppointmentDetailsModal: React.FC<{
 
                 {/* Footer Actions */}
                 <footer className="px-5 py-4 bg-gradient-to-r from-purple-50 via-purple-50 to-amber-50 border-t border-purple-200 flex justify-between items-center">
-                    <button
-                        type="button"
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 hover:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all duration-200 flex items-center gap-2 shadow-sm"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        {t('common.delete')}
-                    </button>
+                    {canDelete && (
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 hover:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all duration-200 flex items-center gap-2 shadow-sm"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            {t('common.delete')}
+                        </button>
+                    )}
+                    {!canDelete && <div />}
                     <div className="flex gap-3">
                         <button 
                             type="button" 
@@ -771,16 +887,18 @@ const AppointmentDetailsModal: React.FC<{
                         >
                             {t('common.close')}
                         </button>
-                        <button 
-                            type="button" 
-                            onClick={onEdit} 
-                            className="px-5 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200 flex items-center gap-2 shadow-md"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            {t('common.edit')}
-                        </button>
+                        {canEdit && (
+                            <button 
+                                type="button" 
+                                onClick={onEdit} 
+                                className="px-5 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all duration-200 flex items-center gap-2 shadow-md"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                {t('common.edit')}
+                            </button>
+                        )}
                     </div>
                 </footer>
             </div>
@@ -843,103 +961,616 @@ const MobileAppointmentList: React.FC<{
     onAddClick: () => void;
     onSendReminder: (apt: Appointment) => void;
     onStatusClick: (apt: Appointment) => void;
-}> = ({ dailyAppointments, patients, dentists, onAppointmentClick, onAddClick, onSendReminder, onStatusClick }) => {
+    selectedDate: Date;
+    onDateChange: (date: Date) => void;
+    appointmentStats: {
+        total: number;
+        scheduled: number;
+        completed: number;
+        cancelled: number;
+    };
+    calendarDate: Date;
+    onCalendarDateChange: (date: Date) => void;
+    onPrevMonth: () => void;
+    onNextMonth: () => void;
+    daysInMonth: number;
+    firstDayOfMonth: number;
+    appointmentsByDay: Map<string, Set<string>>;
+}> = ({ dailyAppointments, patients, dentists, onAppointmentClick, onAddClick, onSendReminder, onStatusClick, selectedDate, onDateChange, appointmentStats, calendarDate, onCalendarDateChange, onPrevMonth, onNextMonth, daysInMonth, firstDayOfMonth, appointmentsByDay }) => {
     const { t, locale } = useI18n();
     const timeFormatter = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dayFormatter = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+    const monthYearFormatter = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
+    const dayOfWeekShortFormatter = new Intl.DateTimeFormat(locale, { weekday: 'short' });
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeFilter, setActiveFilter] = useState<string>('all');
+    const [showStats, setShowStats] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
-    // Filter appointments based on search term
+    // Get upcoming dates for quick navigation
+    const upcomingDates = useMemo(() => {
+        const dates = [];
+        const today = new Date();
+        for (let i = -3; i <= 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            dates.push(date);
+        }
+        return dates;
+    }, []);
+
+    // Check if a date is today
+    const isToday = (date: Date) => {
+        const today = new Date();
+        return date.getDate() === today.getDate() && 
+               date.getMonth() === today.getMonth() && 
+               date.getFullYear() === today.getFullYear();
+    };
+
+    // Check if a date is selected
+    const isSelected = (date: Date) => {
+        return date.getDate() === selectedDate.getDate() && 
+               date.getMonth() === selectedDate.getMonth() && 
+               date.getFullYear() === selectedDate.getFullYear();
+    };
+
+    // Filter appointments based on search and active filter
     const filteredAppointments = useMemo(() => {
-        if (!searchTerm.trim()) return dailyAppointments;
-        const term = searchTerm.toLowerCase().trim();
-        return dailyAppointments.filter(apt => {
-            const patient = patients.find(p => p.id === apt.patientId);
-            const dentist = dentists.find(d => d.id === apt.dentistId);
-            const matchesPatient = patient?.name.toLowerCase().includes(term);
-            const matchesReason = apt.reason.toLowerCase().includes(term);
-            const matchesDentist = dentist?.name.toLowerCase().includes(term);
-            return matchesPatient || matchesReason || matchesDentist;
-        });
-    }, [dailyAppointments, patients, dentists, searchTerm]);
+        let filtered = dailyAppointments;
+        
+        // Apply status filter
+        if (activeFilter !== 'all') {
+            filtered = filtered.filter(apt => apt.status === activeFilter);
+        }
+        
+        // Apply search filter
+        if (searchTerm.trim()) {
+            const term = searchTerm.toLowerCase().trim();
+            filtered = filtered.filter(apt => {
+                const patient = patients.find(p => p.id === apt.patientId);
+                const dentist = dentists.find(d => d.id === apt.dentistId);
+                const matchesPatient = patient?.name.toLowerCase().includes(term);
+                const matchesReason = apt.reason.toLowerCase().includes(term);
+                const matchesDentist = dentist?.name.toLowerCase().includes(term);
+                return matchesPatient || matchesReason || matchesDentist;
+            });
+        }
+        return filtered;
+    }, [dailyAppointments, patients, dentists, searchTerm, activeFilter]);
 
-    return (
-        <div className="p-4 space-y-4">
-            <button onClick={onAddClick} className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500/50 shadow-md hover:shadow-lg transition-all duration-200">
+    // Get status color classes
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'SCHEDULED': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'COMPLETED': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'CANCELLED': return 'bg-rose-100 text-rose-700 border-rose-200';
+            case 'CONFIRMED': return 'bg-violet-100 text-violet-700 border-violet-200';
+            default: return 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+    };
+
+    // Get status icon
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'SCHEDULED': return '⏳';
+            case 'COMPLETED': return '✅';
+            case 'CANCELLED': return '❌';
+            case 'CONFIRMED': return '✓';
+            default: return '•';
+        }
+    };
+
+    // Check if a date has appointments
+    const hasAppointments = (date: Date) => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        return appointmentsByDay.has(dateStr);
+    };
+
+    // Check if selected date
+    const isSelectedDate = (date: Date) => {
+        return date.getDate() === selectedDate.getDate() && 
+               date.getMonth() === selectedDate.getMonth() && 
+               date.getFullYear() === selectedDate.getFullYear();
+    };
+
+    // Check if today
+    const isTodayDate = (date: Date) => {
+        const today = new Date();
+        return date.getDate() === today.getDate() && 
+               date.getMonth() === today.getMonth() && 
+               date.getFullYear() === today.getFullYear();
+    };
+
+    // Render calendar view
+    const renderCalendarView = () => (
+        <div className="p-4 pb-24">
+            {/* Calendar Header */}
+            <div className="flex justify-between items-center mb-4">
+                <button 
+                    onClick={onPrevMonth}
+                    className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                >
+                    <ChevronLeftIcon />
+                </button>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                    {monthYearFormatter.format(calendarDate)}
+                </h3>
+                <button 
+                    onClick={onNextMonth}
+                    className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                >
+                    <ChevronRightIcon />
+                </button>
+            </div>
+
+            {/* Add Appointment Button for Calendar View */}
+            <button
+                onClick={onAddClick}
+                className="w-full mb-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+            >
+                <PlusIcon className="h-5 w-5" />
                 {t('scheduler.newAppointment')}
             </button>
 
-            {/* Search input for mobile */}
-            <div className="relative">
-                <SearchIcon />
-                <input
-                    type="text"
-                    placeholder="ابحث في المواعيد..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-purple-200 dark:border-purple-600 rounded-lg bg-white dark:bg-slate-700 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200"
-                />
+            {/* Day headers - locale-based */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+                {Array.from({length: 7}).map((_, i) => {
+                    // Get locale-based day name
+                    const dayDate = new Date(2024, 0, i + 1); // Jan 7, 2024 is a Sunday
+                    return (
+                        <div key={i} className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 py-2">
+                        </div>
+                    );
+                })}
             </div>
 
-            {filteredAppointments.length === 0 ? (
-                <p className="text-center text-slate-500">{t('scheduler.noAppointments')}</p>
-            ) : (
-                filteredAppointments.map(apt => {
-                    const patient = patients.find(p => p.id === apt.patientId);
-                    const dentist = dentists.find(d => d.id === apt.dentistId);
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+                {Array.from({length: firstDayOfMonth}).map((_, i) => (
+                    <div key={`empty-${i}`} className="aspect-square" />
+                ))}
+                {Array.from({length: daysInMonth}).map((_, day) => {
+                    const date = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day + 1);
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    const dots = appointmentsByDay.get(dateStr);
+                    const isCurrentSelected = isSelectedDate(date);
+                    const isCurrentToday = isTodayDate(date);
+                    const hasApts = hasAppointments(date);
+                    
                     return (
-                        <div
-                            key={apt.id}
-                            className={`p-3 rounded-lg shadow-md cursor-pointer transition-all hover:shadow-lg ${dentist?.color || 'bg-slate-500'} text-white`}
-                            onClick={() => onAppointmentClick(apt)}
+                        <button
+                            key={dateStr}
+                            onClick={() => onDateChange(date)}
+                            className={`relative aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 ${
+                                isCurrentSelected 
+                                    ? 'bg-purple-600 text-white shadow-lg' 
+                                    : isCurrentToday
+                                        ? 'bg-amber-100 dark:bg-amber-500/30 text-amber-700 dark:text-amber-300 font-bold'
+                                        : 'hover:bg-purple-50 dark:hover:bg-purple-900/20 text-slate-700 dark:text-slate-300'
+                            }`}
                         >
-                            <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-1 flex-wrap">
-                                    <span className="font-semibold text-sm truncate">{patient?.name}</span>
-                                    <span className="bg-white bg-opacity-20 px-1 py-0.5 rounded text-xs font-medium">{apt.reason}</span>
-                                    <span className="bg-yellow-200 text-yellow-800 px-1 py-0.5 rounded text-xs font-medium">{Math.round((apt.endTime.getTime() - apt.startTime.getTime()) / 60000)}m</span>
+                            <span className="text-sm font-medium">{day + 1}</span>
+                            {hasApts && (
+                                <div className={`absolute bottom-1 flex gap-0.5 ${
+                                    isCurrentSelected ? 'justify-center w-full' : ''
+                                }`}>
+                                    {Array.from(dots || []).slice(0, 3).map((color, idx) => (
+                                        <span 
+                                            key={idx} 
+                                            className={`w-1.5 h-1.5 rounded-full ${color} ${
+                                                isCurrentSelected ? 'border border-white' : 'border-0'
+                                            }`}
+                                        />
+                                    ))}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <span className="bg-slate-200 text-slate-800 px-1 py-0.5 rounded text-xs font-medium">{dentist?.name}</span>
-                                    <button
-                                        className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 ${apt.status === 'SCHEDULED' ? 'bg-green-200 text-green-800' : apt.status === 'COMPLETED' ? 'bg-blue-200 text-blue-800' : apt.status === 'CANCELLED' ? 'bg-red-200 text-red-800' : 'bg-gray-200 text-gray-800'}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onStatusClick(apt);
-                                        }}
-                                        title={t('scheduler.clickToChangeStatus')}
-                                    >
-                                        {apt.status === 'SCHEDULED' ? '🟢' : apt.status === 'COMPLETED' ? '✅' : apt.status === 'CANCELLED' ? '❌' : '⏳'}
-                                        {t(`appointmentStatus.${apt.status}`)}
-                                    </button>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Selected date appointments */}
+            <div className="mt-6">
+                <div className="flex items-center gap-3 mb-3">
+                    <h4 className="font-semibold text-slate-700 dark:text-slate-300">
+                        {dayFormatter.format(selectedDate)}
+                    </h4>
+                    {/* Show unique doctor colors for the day */}
+                    <div className="flex gap-1">
+                        {Array.from(new Set(dailyAppointments.map(apt => {
+                            const dentist = dentists.find(d => d.id === apt.dentistId);
+                            return dentist?.color || 'bg-purple-500';
+                        }))).map((color, idx) => (
+                            <span key={idx} className={`w-4 h-4 rounded-full border-2 border-white shadow ${color}`} title="لون الطبيب" />
+                        ))}
+                    </div>
+                </div>
+                {dailyAppointments.length === 0 ? (
+                    <p className="text-slate-500 dark:text-slate-400 text-center py-4">
+                        {t('scheduler.noAppointments')}
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {dailyAppointments.map(apt => {
+                            const patient = patients.find(p => p.id === apt.patientId);
+                            const dentist = dentists.find(d => d.id === apt.dentistId);
+                            const durationMinutes = Math.round((apt.endTime.getTime() - apt.startTime.getTime()) / 60000);
+
+                            return (
+                                <div
+                                    key={apt.id}
+                                    onClick={() => onAppointmentClick(apt)}
+                                    className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700 overflow-hidden"
+                                >
+                                    <div className={`h-1.5 ${dentist?.color || 'bg-purple-500'}`} />
+                                    <div className="p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                                    <ClockIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-800 dark:text-slate-200">
+                                                        {timeFormatter.format(apt.startTime)}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">
+                                                        {durationMinutes} min
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(apt.status)}`}>
+                                                {getStatusIcon(apt.status)} {t(`appointmentStatus.${apt.status}`)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {/* دائرة لون الطبيب */}
+                                            <span className={`w-4 h-4 rounded-full border-2 border-white shadow ${dentist?.color || 'bg-purple-500'}`} title="لون الطبيب" />
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${dentist?.color || 'bg-purple-500'}`}>
+                                                {patient?.name?.charAt(0) || '?'}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                                    {patient?.name}
+                                                </div>
+                                                <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                                                    {apt.reason}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
+            {/* Quick Stats Card */}
+            <div className="px-4 pt-4">
+                <div 
+                    className="bg-gradient-to-r from-purple-600 to-violet-600 rounded-2xl p-4 text-white shadow-lg border border-white/20"
+                    onClick={() => setShowStats(!showStats)}
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/20 p-2 rounded-xl">
+                                <CalendarIcon className="h-5 w-5" />
                             </div>
-                            <div className="flex justify-end mb-2">
+                            <div>
+                                <h3 className="text-lg font-bold">{dayFormatter.format(selectedDate)}</h3>
+                                <p className="text-purple-100 text-sm">{appointmentStats.total} {t('scheduler.totalAppointments')}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* View Toggle */}
+                            <div className="bg-white/20 rounded-lg p-1 flex">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onSendReminder(apt);
+                                        setViewMode('list');
                                     }}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                                    title="إرسال تذكير واتساب"
+                                    className={`p-2 rounded-md transition-all ${
+                                        viewMode === 'list' ? 'bg-white text-purple-600' : 'text-white/70 hover:text-white'
+                                    }`}
                                 >
-                                    <WhatsAppIcon className="h-5 w-5" />
-                                    إرسال رسالة تذكير
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setViewMode('calendar');
+                                    }}
+                                    className={`p-2 rounded-md transition-all ${
+                                        viewMode === 'calendar' ? 'bg-white text-purple-600' : 'text-white/70 hover:text-white'
+                                    }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
                                 </button>
                             </div>
-                            <div className="text-right text-xs opacity-75">
-                                {timeFormatter.format(apt.startTime)} - {timeFormatter.format(apt.endTime)}
+                            <div className={`bg-white/20 p-2 rounded-xl transition-transform ${showStats ? 'rotate-180' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </div>
                         </div>
-                    );
-                })
-            )}
+                    </div>
+                    
+                    {/* Stats Grid */}
+                    <div className={`grid grid-cols-4 gap-2 overflow-hidden transition-all duration-300 ${showStats ? 'max-h-24 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
+                        <div className="text-center bg-white/10 rounded-lg p-2">
+                            <div className="text-2xl font-bold">{appointmentStats.total}</div>
+                            <div className="text-xs text-purple-100">Total</div>
+                        </div>
+                        <div className="text-center bg-emerald-500/20 rounded-lg p-2">
+                            <div className="text-2xl font-bold">{appointmentStats.scheduled}</div>
+                            <div className="text-xs text-emerald-100">Scheduled</div>
+                        </div>
+                        <div className="text-center bg-blue-500/20 rounded-lg p-2">
+                            <div className="text-2xl font-bold">{appointmentStats.completed}</div>
+                            <div className="text-xs text-blue-100">Completed</div>
+                        </div>
+                        <div className="text-center bg-rose-500/20 rounded-lg p-2">
+                            <div className="text-2xl font-bold">{appointmentStats.cancelled}</div>
+                            <div className="text-xs text-rose-100">Cancelled</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content based on view mode */}
+            {viewMode === 'calendar' ? (
+                renderCalendarView()
+            ) : (
+            <>
+            {/* Quick Date Navigation */}
+            <div className="px-4 py-3 mt-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {upcomingDates.map((date, index) => {
+                        // احصل على ألوان الأطباء لهذا اليوم
+                        const dateStr = toLocalDateString(date);
+                        const doctorColors = Array.from(appointmentsByDay.get(dateStr) || []);
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => onDateChange(date)}
+                                className={`flex-shrink-0 flex flex-col items-center justify-center w-14 h-[74px] rounded-2xl transition-all duration-200 border ${
+                                    isSelectedDate(date) 
+                                        ? 'bg-purple-600 text-white shadow-lg scale-105 border-purple-500' 
+                                        : isTodayDate(date)
+                                            ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
+                                            : 'bg-white/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                                }`}
+                            >
+                                <span className="text-xs font-medium">{dayFormatter.format(date).split(' ')[0]}</span>
+                                <span className="text-lg leading-none font-bold mt-0.5">{date.getDate()}</span>
+                                {/* دوائر ألوان الأطباء لهذا اليوم أو دائرة رمادية */}
+                                <div className="flex gap-0.5 mt-1 min-h-[8px] items-center">
+                                    {doctorColors.length > 0
+                                        ? doctorColors.slice(0, 3).map((color, idx) => (
+                                            <span key={idx} className={`w-2 h-2 rounded-full border border-white shadow ${color}`} title="لون الطبيب" />
+                                        ))
+                                        : <span className="w-2 h-2 rounded-full border border-white shadow bg-slate-300 dark:bg-slate-600" title="لا يوجد مواعيد" />
+                                    }
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Day header with doctor colors for day list view */}
+            <div className="flex items-center gap-3 px-4 mb-2 mt-2">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300">
+                    {dayFormatter.format(selectedDate)}
+                </h4>
+                {/* Show unique doctor colors for the day */}
+                <div className="flex gap-1">
+                    {Array.from(new Set(dailyAppointments.map(apt => {
+                        const dentist = dentists.find(d => d.id === apt.dentistId);
+                        return dentist?.color || 'bg-purple-500';
+                    }))).map((color, idx) => (
+                        <span key={idx} className={`w-4 h-4 rounded-full border-2 border-white shadow ${color}`} title="لون الطبيب" />
+                    ))}
+                </div>
+            </div>
+
+            {/* Quick Filters */}
+            <div className="px-4 pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {[
+                        { key: 'all', label: 'All', color: 'from-purple-500 to-violet-500' },
+                        { key: 'SCHEDULED', label: 'Scheduled', color: 'from-emerald-500 to-teal-500' },
+                        { key: 'COMPLETED', label: 'Completed', color: 'from-blue-500 to-cyan-500' },
+                        { key: 'CANCELLED', label: 'Cancelled', color: 'from-rose-500 to-red-500' }
+                    ].map(filter => (
+                        <button
+                            key={filter.key}
+                            onClick={() => setActiveFilter(filter.key)}
+                            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                                activeFilter === filter.key 
+                                    ? `bg-gradient-to-r ${filter.color} text-white shadow-lg`
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            {filter.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="px-4 pb-3">
+                <div className="relative">
+                    <SearchIcon />
+                    <input
+                        type="text"
+                        placeholder={t('scheduler.searchAppointments') || 'Search appointments...'}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200 placeholder-slate-400"
+                    />
+                    {searchTerm && (
+                        <button 
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-200 dark:bg-slate-700 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Appointments List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-24 pt-1 space-y-3">
+                {filteredAppointments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                        <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                            <CalendarIcon className="h-10 w-10 text-purple-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                            {searchTerm || activeFilter !== 'all' ? 'No appointments found' : t('scheduler.noAppointments')}
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+                            {searchTerm || activeFilter !== 'all' 
+                                ? 'Try adjusting your filters' 
+                                : 'Tap the + button to add a new appointment'}
+                        </p>
+                        {!searchTerm && activeFilter === 'all' && (
+                            <button 
+                                onClick={onAddClick}
+                            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                            >
+                                <PlusIcon className="h-5 w-5" />
+                                {t('scheduler.newAppointment')}
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    filteredAppointments.map(apt => {
+                        const patient = patients.find(p => p.id === apt.patientId);
+                        const dentist = dentists.find(d => d.id === apt.dentistId);
+                        const durationMinutes = Math.round((apt.endTime.getTime() - apt.startTime.getTime()) / 60000);
+                        
+                        return (
+                            <div
+                                key={apt.id}
+                                onClick={() => onAppointmentClick(apt)}
+                                className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-md active:scale-[0.99]"
+                            >
+                                {/* Color indicator bar */}
+                                <div className={`h-1.5 ${dentist?.color || 'bg-purple-500'}`} />
+                                
+                                <div className="p-4">
+                                    {/* Header with time and status */}
+                                    <div className="flex justify-between items-start gap-2 mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                                                <ClockIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                                                    {timeFormatter.format(apt.startTime)}
+                                                </div>
+                                                <div className="text-xs text-slate-500">
+                                                    {durationMinutes} min • {timeFormatter.format(apt.endTime)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap ${getStatusColor(apt.status)}`}>
+                                            {getStatusIcon(apt.status)} {t(`appointmentStatus.${apt.status}`)}
+                                        </span>
+                                    </div>
+
+                                    {/* Patient Info */}
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ${dentist?.color || 'bg-gradient-to-br from-purple-500 to-violet-600'}`}>
+                                            {patient?.name?.charAt(0) || '?'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                                {patient?.name || t('common.unknownPatient')}
+                                            </div>
+                                            <div className="text-sm text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                                                <StethoscopeIcon className="h-3 w-3" />
+                                                {dentist?.name || t('common.unknownDentist')}
+                                            </div>
+                                        </div>
+                                        {patient?.phone && (
+                                            <a
+                                                href={`tel:${patient.phone.replace(/[^0-9+]/g, '')}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="p-2.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                                            >
+                                                <PhoneIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* Reason */}
+                                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 border border-slate-100 dark:border-slate-700/60">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('scheduler.reasonForVisit')}</div>
+                                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2">
+                                            {apt.reason}
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onStatusClick(apt);
+                                            }}
+                                            className="flex-1 min-h-[42px] py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            {t('scheduler.changeStatus')}
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSendReminder(apt);
+                                            }}
+                                            className="flex-1 min-h-[42px] py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl text-sm font-medium text-white hover:from-green-600 hover:to-emerald-600 transition-all shadow-md flex items-center justify-center gap-2"
+                                        >
+                                            <WhatsAppIcon className="h-4 w-4" />
+                                            {t('scheduler.sendReminder')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Floating Action Button */}
+            <button
+                onClick={onAddClick}
+                className="fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] w-16 h-16 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-full shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center z-40 ring-4 ring-purple-100 dark:ring-purple-900/40"
+            >
+                <PlusIcon className="h-8 w-8" />
+            </button>
+            </>)}
         </div>
     );
 };
 
 const MobileTimeSelectorModal: React.FC<{
     onClose: () => void;
-    onSelectTime: (hour: number, minute: number) => void;
+    onSelectTime: (hour: number, minute: number, dentistId?: string, durationMinutes?: number) => void;
     selectedDate: Date;
     dailyAppointments: Appointment[];
     patients: Patient[];
@@ -949,152 +1580,292 @@ const MobileTimeSelectorModal: React.FC<{
 }> = ({ onClose, onSelectTime, selectedDate, dailyAppointments, patients, dentists, workStartHour, workEndHour }) => {
     const { t, locale } = useI18n();
     const timeFormatter = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dayFormatter = new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'short', day: 'numeric' });
+    const [selectedDuration, setSelectedDuration] = useState(60);
+    const [selectedDentistId, setSelectedDentistId] = useState<string>('');
 
-    // Generate 30-minute time slots
-    const timeSlots = [];
+    // Generate time slots with 30-minute intervals
+    type TimeSlot = { hour: number; minute: number };
+    const timeSlots: TimeSlot[] = [];
     for (let hour = workStartHour; hour < workEndHour; hour++) {
-        timeSlots.push({ hour, minute: 0 }); // 00 minutes
-        timeSlots.push({ hour, minute: 30 }); // 30 minutes
+        timeSlots.push({ hour, minute: 0 });
+        timeSlots.push({ hour, minute: 30 });
     }
 
-    // Function to check if a time slot is available for a typical appointment duration
-    const isSlotAvailable = (slotHour: number, slotMinute: number, durationMinutes: number = 60) => {
+    // Function to check if a time slot is available
+    // Modified to allow overlapping appointments if they have different doctors
+    const isSlotAvailable = (slotHour: number, slotMinute: number, durationMinutes: number = selectedDuration, dentistId?: string) => {
         const slotStart = new Date(selectedDate);
         slotStart.setHours(slotHour, slotMinute, 0, 0);
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
 
-        // Check if any existing appointment overlaps with this slot
         for (const apt of dailyAppointments) {
             const aptStart = apt.startTime;
             const aptEnd = apt.endTime;
-            
-            // Check for overlap
             if (slotStart < aptEnd && slotEnd > aptStart) {
-                return false;
+                // If a dentist is specified, allow overlapping if the doctor is different
+                if (dentistId && apt.dentistId !== dentistId) {
+                    continue; // Allow overlapping for different doctors
+                }
+                return false; // Block if same doctor or no dentist specified
             }
         }
-
         return true;
     };
 
-    // Function to get overlapping appointments for a slot
-    const getOverlappingAppointments = (slotHour: number, slotMinute: number) => {
+    // Get available doctors for a specific time slot
+    const getAvailableDoctors = (slotHour: number, slotMinute: number, durationMinutes: number = selectedDuration) => {
         const slotStart = new Date(selectedDate);
         slotStart.setHours(slotHour, slotMinute, 0, 0);
-        const slotEnd = new Date(slotStart.getTime() + 60 * 60000); // 1 hour duration
+        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
 
+        const availableDoctors: Dentist[] = [];
+        
+        for (const dentist of dentists) {
+            let isAvailable = true;
+            for (const apt of dailyAppointments) {
+                if (apt.dentistId === dentist.id) {
+                    const aptStart = apt.startTime;
+                    const aptEnd = apt.endTime;
+                    if (slotStart < aptEnd && slotEnd > aptStart) {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+            }
+            if (isAvailable) {
+                availableDoctors.push(dentist);
+            }
+        }
+        
+        return availableDoctors;
+    };
+
+    // Function to get appointments at a specific time
+    const getAppointmentsAtTime = (slotHour: number, slotMinute: number) => {
         return dailyAppointments.filter(apt => {
-            const aptStart = apt.startTime;
-            const aptEnd = apt.endTime;
-            return slotStart < aptEnd && slotEnd > aptStart;
+            return apt.startTime.getHours() === slotHour && apt.startTime.getMinutes() === slotMinute;
         });
     };
 
-    // Status icons
-    const AvailableIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
-    const OccupiedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
-    const BlockedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
+    // Handler for booking with a specific doctor
+    const handleBookWithDoctor = (slotHour: number, slotMinute: number, dentistId: string) => {
+        setSelectedDentistId(dentistId);
+        onSelectTime(slotHour, slotMinute, dentistId, selectedDuration);
+    };
+
+    // Group time slots by morning/afternoon/evening
+    const getTimePeriod = (hour: number) => {
+        if (hour < 12) return 'morning';
+        if (hour < 17) return 'afternoon';
+        return 'evening';
+    };
+
+    const groupedSlots = useMemo(() => {
+        const groups: Record<'morning' | 'afternoon' | 'evening', TimeSlot[]> = { morning: [], afternoon: [], evening: [] };
+        timeSlots.forEach(slot => {
+            const period = getTimePeriod(slot.hour) as 'morning' | 'afternoon' | 'evening';
+            groups[period].push(slot);
+        });
+        return groups;
+    }, [timeSlots]);
+
+    const periodLabels = {
+        morning: '🌅 Morning',
+        afternoon: '☀️ Afternoon',
+        evening: '🌙 Evening'
+    };
+
+    const durationOptions = [15, 30, 45, 60, 90, 120];
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-                {/* Gradient Header */}
-                <header className="p-4 border-b border-purple-200 flex justify-between items-center bg-gradient-to-r from-purple-50 to-amber-50">
-                    <div>
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-amber-500 bg-clip-text text-transparent">{t('scheduler.selectTime')}</h2>
-                        <p className="text-sm text-slate-500 mt-1">{t('scheduler.selectTimeDescription')}</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+                {/* Header */}
+                <header className="p-5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-t-3xl">
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-purple-100 dark:bg-purple-900/40 p-2.5 rounded-xl">
+                                <ClockIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">{t('scheduler.selectTime')}</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{dayFormatter.format(selectedDate)}</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={onClose} 
+                            className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-colors"
+                            aria-label={t('common.close')}
+                        >
+                            <CloseIcon />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300" aria-label={t('common.close')}>
-                        <CloseIcon />
-                    </button>
+
+                    {/* Duration Selector */}
+                    <div className="mt-4">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block">Appointment Duration</label>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            {durationOptions.map(duration => (
+                                <button
+                                    key={duration}
+                                    onClick={() => setSelectedDuration(duration)}
+                                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                                        selectedDuration === duration
+                                            ? 'bg-purple-600 text-white shadow-md'
+                                            : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-purple-300'
+                                    }`}
+                                >
+                                    {duration < 60 ? `${duration}m` : `${duration / 60}h`}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </header>
-                <div className="p-4 overflow-y-auto space-y-2">
-                    {timeSlots.map(slot => {
-                        const slotTime = new Date(0, 0, 0, slot.hour, slot.minute);
-                        const isAvailable = isSlotAvailable(slot.hour, slot.minute);
-                        
-                        // Find appointments that start at this exact time
-                        const appointmentsAtThisTime = dailyAppointments.filter(apt => {
-                            return apt.startTime.getHours() === slot.hour && apt.startTime.getMinutes() === slot.minute;
-                        });
-                        
-                        // Get overlapping appointments for blocked slots
-                        const overlappingAppointments = !isAvailable && appointmentsAtThisTime.length === 0
-                            ? getOverlappingAppointments(slot.hour, slot.minute)
-                            : [];
+
+                {/* Time Slots */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {Object.entries(groupedSlots).map(([period, slots]) => {
+                        const typedSlots = slots as TimeSlot[];
+                        if (typedSlots.length === 0) return null;
                         
                         return (
-                            <div key={`${slot.hour}-${slot.minute}`}                            className={`border-2 rounded-lg p-3 transition-all ${isAvailable ? 'border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium text-slate-700">{timeFormatter.format(slotTime)}</span>
-                                        {isAvailable ? <AvailableIcon /> : appointmentsAtThisTime.length > 0 ? <OccupiedIcon /> : <BlockedIcon />}
-                                    </div>
-                                    {isAvailable ? (
-                                        <button
-                                            onClick={() => onSelectTime(slot.hour, slot.minute)}
-                                            className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 rounded-lg hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm flex items-center gap-1 transition-all duration-200"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" /></svg>
-                                            {t('scheduler.addAppointment')}
-                                        </button>
-                                    ) : (
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-slate-500 text-sm font-medium">{t('scheduler.occupied')}</span>
-                                            <span className="text-red-500 text-sm font-medium">AT</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                        </div>
-                                    )}
+                            <div key={period}>
+                                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+                                    <span>{periodLabels[period as keyof typeof periodLabels]}</span>
+                                    <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{slots.length} slots</span>
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {typedSlots.map(slot => {
+                                        const slotTime = new Date(0, 0, 0, slot.hour, slot.minute);
+                                        const isAvailable = isSlotAvailable(slot.hour, slot.minute);
+                                        const appointmentsAtTime = getAppointmentsAtTime(slot.hour, slot.minute);
+                                        const hasExistingAppointment = appointmentsAtTime.length > 0;
+                                        const availableDoctors = getAvailableDoctors(slot.hour, slot.minute);
+                                        return (
+                                            <div
+                                                key={`${slot.hour}-${slot.minute}`}
+                                                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${
+                                                    isAvailable 
+                                                        ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20 hover:border-emerald-400 hover:shadow-md cursor-pointer'
+                                                        : hasExistingAppointment
+                                                            ? 'border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-900/20'
+                                                            : 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/20'
+                                                }`}
+                                            >
+                                                {/* Status Indicator */}
+                                                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
+                                                    isAvailable ? 'bg-emerald-500' : hasExistingAppointment ? 'bg-rose-500' : 'bg-amber-500'
+                                                }`} />
+                                                
+                                                <div className="text-center">
+                                                    <div className={`text-lg font-bold ${
+                                                        isAvailable ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'
+                                                    }`}>
+                                                        {timeFormatter.format(slotTime)}
+                                                    </div>
+                                                    <div className="text-xs mt-1">
+                                                        {isAvailable ? (
+                                                            <span className="text-emerald-600 dark:text-emerald-500 font-medium">Available</span>
+                                                        ) : hasExistingAppointment ? (
+                                                            <span className="text-rose-600 dark:text-rose-500">Booked</span>
+                                                        ) : (
+                                                            <span className="text-amber-600 dark:text-amber-500">Partial</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Show existing appointments */}
+                                                {hasExistingAppointment && (
+                                                    <div className="mt-3 pt-3 border-t border-rose-200 dark:border-rose-800">
+                                                        {appointmentsAtTime.slice(0, 2).map(apt => {
+                                                            const patient = patients.find(p => p.id === apt.patientId);
+                                                            const dentist = dentists.find(d => d.id === apt.dentistId);
+                                                            return (
+                                                                <div key={apt.id} className={`text-xs p-1.5 rounded mb-1 ${dentist?.color || 'bg-slate-500'} text-white truncate`}>
+                                                                    {patient?.name} - {apt.reason}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {appointmentsAtTime.length > 2 && (
+                                                            <div className="text-xs text-slate-500 text-center">+{appointmentsAtTime.length - 2} more</div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Add button for available slots */}
+                                                {isAvailable && availableDoctors.length > 0 && (
+                                                    <div className="mt-3">
+                                                        <div className="mb-1 text-xs text-slate-500 dark:text-slate-400">Available Doctors:</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {availableDoctors.map(doc => (
+                                                                <button
+                                                                    key={doc.id}
+                                                                    onClick={e => {
+                                                                        e.stopPropagation();
+                                                                        handleBookWithDoctor(slot.hour, slot.minute, doc.id);
+                                                                    }}
+                                                                    className="py-1 px-3 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <PlusIcon className="h-4 w-4" />
+                                                                    {doc.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* If slot is booked, allow booking with another doctor if available */}
+                                                {!isAvailable && availableDoctors.length > 0 && (
+                                                    <div className="mt-3">
+                                                        <div className="mb-1 text-xs text-slate-500 dark:text-slate-400">Other available doctors:</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {availableDoctors.map(doc => (
+                                                                <button
+                                                                    key={doc.id}
+                                                                    onClick={e => {
+                                                                        e.stopPropagation();
+                                                                        handleBookWithDoctor(slot.hour, slot.minute, doc.id);
+                                                                    }}
+                                                                    className="py-1 px-3 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <PlusIcon className="h-4 w-4" />
+                                                                    {doc.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                {appointmentsAtThisTime.length > 0 && (
-                                    <div className="space-y-1">
-                                        {appointmentsAtThisTime.map(apt => {
-                                            const patient = patients.find(p => p.id === apt.patientId);
-                                            const dentist = dentists.find(d => d.id === apt.dentistId);
-                                            return (
-                                                <div key={apt.id} className={`p-2 rounded text-white text-sm ${dentist?.color || 'bg-slate-500'} flex items-center gap-2`}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                                                    <div className="flex-1">
-                                                        <p className="font-semibold truncate">{patient?.name}</p>
-                                                        <p className="truncate text-xs">{apt.reason}</p>
-                                                        <p className="text-xs opacity-75 mt-0.5">
-                                                            {timeFormatter.format(apt.startTime)} - {timeFormatter.format(apt.endTime)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                {overlappingAppointments.length > 0 && (
-                                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                                        <div className="flex items-center gap-1 text-yellow-700 mb-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.493-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
-                                            <span className="font-medium">{t('scheduler.slotBlockedByOtherAppointment')}</span>
-                                        </div>
-                                        {overlappingAppointments.map(apt => {
-                                            const patient = patients.find(p => p.id === apt.patientId);
-                                            const dentist = dentists.find(d => d.id === apt.dentistId);
-                                            return (
-                                                <div key={apt.id} className={`p-1.5 rounded text-xs ${dentist?.color || 'bg-slate-400'} text-white mt-1 flex items-center gap-1`}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                                                    <div>
-                                                        <p className="font-semibold">{patient?.name}</p>
-                                                        <p className="truncate">{apt.reason} ({timeFormatter.format(apt.startTime)} - {timeFormatter.format(apt.endTime)})</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
                             </div>
                         );
                     })}
+
+                    {timeSlots.length === 0 && (
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <ClockIcon className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400">No available time slots for this day</p>
+                        </div>
+                    )}
                 </div>
-                </div>
+
+                {/* Footer */}
+                <footer className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-3xl sm:rounded-b-2xl">
+                    <button
+                        onClick={onClose}
+                        className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                </footer>
             </div>
-        );
-    };
+        </div>
+    );
+};
 
 const AppointmentStatsCard: React.FC<{
     appointmentStats: {
@@ -1184,11 +1955,56 @@ const toLocalDateString = (date: Date): string => {
 };
 
 const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
-    const { appointments, patients, dentists, addAppointment, updateAppointment, deleteAppointment } = clinicData;
+    const { appointments: allAppointments, patients: allPatients, dentists: allDentists, addAppointment, updateAppointment, deleteAppointment } = clinicData;
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
+    const auth = useAuth();
+    const hasPermission = (permission: Permission): boolean => {
+        const checkFn = auth?.hasPermission || auth?.checkPermission;
+        return checkFn ? checkFn(permission) : false;
+    };
+    
+    const canAddAppointment = hasPermission(Permission.APPOINTMENT_CREATE);
+    const canEditAppointment = hasPermission(Permission.APPOINTMENT_EDIT);
+    const canDeleteAppointment = hasPermission(Permission.APPOINTMENT_DELETE);
+    const linkedDoctorId = useMemo(() => {
+        if (auth?.userProfile?.dentist_id) return auth.userProfile.dentist_id;
+        if (auth?.userProfile?.role === UserRole.DOCTOR) {
+            const matchedDoctor = allDentists.find(
+                d => d.name.trim().toLowerCase() === (auth.userProfile?.username || '').trim().toLowerCase()
+            );
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [auth?.userProfile, allDentists]);
+
+    const dentists = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allDentists;
+        return allDentists.filter(d => d.id === linkedDoctorId);
+    }, [auth?.userProfile?.role, linkedDoctorId, allDentists]);
+
+    const appointments = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allAppointments;
+        return allAppointments.filter(a => a.dentistId === linkedDoctorId);
+    }, [auth?.userProfile?.role, linkedDoctorId, allAppointments]);
+
+    const patients = useMemo(() => {
+        if (auth?.userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return allPatients;
+        const linkedPatientIds = new Set<string>([
+            ...appointments.filter(a => a.dentistId === linkedDoctorId).map(a => a.patientId),
+            ...clinicData.treatmentRecords.filter(tr => tr.dentistId === linkedDoctorId).map(tr => tr.patientId),
+        ]);
+        return allPatients.filter(p => linkedPatientIds.has(p.id));
+    }, [auth?.userProfile?.role, linkedDoctorId, allPatients, appointments, clinicData.treatmentRecords]);
+
+    const scopedClinicData = useMemo(
+        () => ({ ...clinicData, patients, dentists, appointments }),
+        [clinicData, patients, dentists, appointments]
+    );
+
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
+    const [showSelectedDayList, setShowSelectedDayList] = useState(false);
     const [modalState, setModalState] = useState<{ type: 'add' | 'details' | 'edit' | 'time_selector' | null; data?: any }>({ type: null });
     const [workStartHour, setWorkStartHour] = useState(() => parseInt(localStorage.getItem('workStartHour') || '14', 10));
     const [workEndHour, setWorkEndHour] = useState(() => parseInt(localStorage.getItem('workEndHour') || '24', 10));
@@ -1246,6 +2062,10 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
 
     const handlePrevMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
     const handleNextMonth = () => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    const handleCalendarDateChange = (date: Date) => {
+        setCalendarDate(date);
+        setSelectedDate(date);
+    };
 
     const dailyAppointments = useMemo(() => {
         return appointments
@@ -1406,6 +2226,177 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
     const handleSendWhatsApp = (appointment: Appointment) => {
         handleSendReminder(appointment, 'whatsapp');
     };
+
+    const handlePrintDailySchedule = () => {
+        const isArabic = locale.startsWith('ar');
+        const dir = isArabic ? 'rtl' : 'ltr';
+        const lang = isArabic ? 'ar' : 'en';
+
+        const labels = {
+            title: isArabic ? 'تقرير جدول المواعيد اليومي' : 'Daily Appointments Schedule Report',
+            clinic: isArabic ? 'العيادة' : 'Clinic',
+            date: isArabic ? 'التاريخ' : 'Date',
+            total: isArabic ? 'إجمالي المواعيد' : 'Total Appointments',
+            noData: isArabic ? 'لا توجد مواعيد لهذا اليوم' : 'No appointments for this day',
+            patient: isArabic ? 'المريض' : 'Patient',
+            doctor: isArabic ? 'الطبيب' : 'Doctor',
+            time: isArabic ? 'الوقت' : 'Time',
+            duration: isArabic ? 'المدة' : 'Duration',
+            status: isArabic ? 'الحالة' : 'Status',
+            reason: isArabic ? 'سبب الزيارة' : 'Reason',
+            phone: isArabic ? 'الهاتف' : 'Phone',
+            minutes: isArabic ? 'دقيقة' : 'min',
+            generatedAt: isArabic ? 'تم إنشاء التقرير في' : 'Generated at',
+        };
+
+        const todayForFile = new Date().toISOString().slice(0, 10);
+        const clinicSlug = (clinicData.clinicInfo.name || 'CuraSoft')
+            .replace(/[^a-zA-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'CuraSoft';
+        const printFileTitle = `${clinicSlug}_Daily_Schedule_${todayForFile}`;
+
+        const escapeHtml = (value: string) =>
+            value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+        const getStatusClass = (status: AppointmentStatus) => {
+            switch (status) {
+                case 'SCHEDULED':
+                    return 'status scheduled';
+                case 'COMPLETED':
+                    return 'status completed';
+                case 'CANCELLED':
+                    return 'status cancelled';
+                default:
+                    return 'status';
+            }
+        };
+
+        const tableRows = dailyAppointments.length > 0
+            ? dailyAppointments.map((apt, index) => {
+                const patient = patients.find(p => p.id === apt.patientId);
+                const dentist = dentists.find(d => d.id === apt.dentistId);
+                const durationMinutes = Math.round((apt.endTime.getTime() - apt.startTime.getTime()) / 60000);
+                const timeRange = `${timeFormatter.format(apt.startTime)} - ${timeFormatter.format(apt.endTime)}`;
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${escapeHtml(patient?.name || t('common.unknownPatient'))}</td>
+                        <td>${escapeHtml(dentist?.name || t('common.unknownDentist'))}</td>
+                        <td>${escapeHtml(patient?.phone || '-')}</td>
+                        <td>${escapeHtml(timeRange)}</td>
+                        <td>${durationMinutes} ${labels.minutes}</td>
+                        <td><span class="${getStatusClass(apt.status)}">${escapeHtml(t(`appointmentStatus.${apt.status}`))}</span></td>
+                        <td>${escapeHtml(apt.reason || '-')}</td>
+                    </tr>
+                `;
+            }).join('')
+            : `<tr><td colspan="8" style="text-align:center; padding:16px;">${labels.noData}</td></tr>`;
+
+        const printableHtml = `
+            <!doctype html>
+            <html lang="${lang}" dir="${dir}">
+            <head>
+                <meta charset="utf-8" />
+                <title>${printFileTitle}</title>
+                <style>
+                    body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; margin: 0; color: #0f172a; background: #f8fafc; }
+                    .sheet { max-width: 1100px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+                    .title { margin: 0; font-size: 24px; font-weight: 700; }
+                    .subtitle { margin: 6px 0 0; font-size: 13px; opacity: 0.95; }
+                    .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+                    .meta div { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+                    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+                    .stat { border-radius: 10px; padding: 10px 12px; color: #fff; font-size: 12px; }
+                    .stat b { display: block; font-size: 22px; line-height: 1.1; margin-top: 4px; }
+                    .stat.total { background: linear-gradient(135deg, #4f46e5, #4338ca); }
+                    .stat.scheduled { background: linear-gradient(135deg, #f59e0b, #d97706); }
+                    .stat.completed { background: linear-gradient(135deg, #10b981, #059669); }
+                    .stat.cancelled { background: linear-gradient(135deg, #ef4444, #dc2626); }
+                    table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 12px; overflow: hidden; }
+                    th, td { border: 1px solid #e2e8f0; padding: 9px; vertical-align: top; }
+                    th { background: #f1f5f9; text-align: ${isArabic ? 'right' : 'left'}; font-weight: 700; color: #334155; }
+                    tbody tr:nth-child(even) { background: #f8fafc; }
+                    .status { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid transparent; }
+                    .status.scheduled { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+                    .status.completed { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+                    .status.cancelled { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+                    .footer { margin-top: 12px; font-size: 11px; color: #64748b; text-align: ${isArabic ? 'left' : 'right'}; }
+                    .actions { margin-top: 10px; display: flex; justify-content: ${isArabic ? 'flex-start' : 'flex-end'}; gap: 8px; }
+                    .btn { border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
+                    .btn:hover { background: #f8fafc; }
+                    @media print {
+                        body { background: #fff; }
+                        .sheet { padding: 0; max-width: 100%; }
+                        .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .stat { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .actions { display: none !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="sheet">
+                <div class="header">
+                    <h1 class="title">${labels.title}</h1>
+                    <p class="subtitle">${escapeHtml(dateHeaderFormatter.format(selectedDate))}</p>
+                </div>
+                <div class="meta">
+                    <div><strong>${labels.clinic}:</strong> ${escapeHtml(clinicData.clinicInfo.name || 'CuraSoft')}</div>
+                    <div><strong>${labels.date}:</strong> ${escapeHtml(dateHeaderFormatter.format(selectedDate))}</div>
+                    <div><strong>${labels.total}:</strong> ${dailyAppointments.length}</div>
+                </div>
+                <div class="stats">
+                    <div class="stat total">${labels.total}<b>${appointmentStats.total}</b></div>
+                    <div class="stat scheduled">${isArabic ? 'المجدولة' : 'Scheduled'}<b>${appointmentStats.scheduled}</b></div>
+                    <div class="stat completed">${isArabic ? 'المكتملة' : 'Completed'}<b>${appointmentStats.completed}</b></div>
+                    <div class="stat cancelled">${isArabic ? 'الملغاة' : 'Cancelled'}<b>${appointmentStats.cancelled}</b></div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>${labels.patient}</th>
+                            <th>${labels.doctor}</th>
+                            <th>${labels.phone}</th>
+                            <th>${labels.time}</th>
+                            <th>${labels.duration}</th>
+                            <th>${labels.status}</th>
+                            <th>${labels.reason}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                <div class="footer">
+                    ${labels.generatedAt}: ${escapeHtml(new Date().toLocaleString(locale))}
+                </div>
+                <div class="actions">
+                    <button class="btn" onclick="window.close()">${isArabic ? 'إغلاق التقرير' : 'Close Report'}</button>
+                </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const printWindow = window.open('', '_blank', 'width=1200,height=900');
+        if (!printWindow) {
+            addNotification(isArabic ? 'تعذر فتح نافذة الطباعة' : 'Unable to open print window', NotificationType.ERROR);
+            return;
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(printableHtml);
+        printWindow.document.close();
+        printWindow.document.title = printFileTitle;
+        printWindow.focus();
+        printWindow.print();
+    };
     
     const dateHeaderFormatter = new Intl.DateTimeFormat(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const monthYearFormatter = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
@@ -1415,6 +2406,7 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Modern Header with Gold + Purple Theme */}
+                {!isMobile && (
                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg p-6 relative overflow-hidden mb-6">
                     {/* Decorative gradient bar at top */}
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-purple-500 to-purple-700"></div>
@@ -1453,13 +2445,36 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                             </div>
                             {!isMobile && (
                                 <div className="flex gap-2 self-start sm:self-center">
-                                    <button onClick={() => window.print()} className="bg-gradient-to-r from-amber-400 to-amber-500 text-white px-4 py-2 rounded-lg hover:from-amber-500 hover:to-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200">
+                                    <button
+                                        onClick={() => setShowSelectedDayList(prev => !prev)}
+                                        className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 shadow-md hover:shadow-lg ${
+                                            showSelectedDayList
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white focus:ring-emerald-500/50'
+                                                : 'bg-gradient-to-r from-slate-500 to-slate-600 text-white focus:ring-slate-500/50'
+                                        }`}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            {showSelectedDayList ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                                </svg>
+                                            )}
+                                            {showSelectedDayList ? (t('scheduler.showSchedule') || 'Show Schedule') : (t('scheduler.appointmentList') || 'Appointments List')}
+                                        </span>
+                                    </button>
+                                    <button onClick={handlePrintDailySchedule} className="bg-gradient-to-r from-amber-400 to-amber-500 text-white px-4 py-2 rounded-lg hover:from-amber-500 hover:to-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                         </svg>
                                         طباعة الجدول
                                     </button>
-                                    <button onClick={() => setModalState({ type: 'add', data: { initialDateTime: selectedDate } })} className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500/50 shadow-md hover:shadow-lg transition-all duration-200">{t('scheduler.newAppointment')}</button>
+                                    {canAddAppointment && (
+                                        <button onClick={() => setModalState({ type: 'add', data: { initialDateTime: selectedDate } })} className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500/50 shadow-md hover:shadow-lg transition-all duration-200">{t('scheduler.newAppointment')}</button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1521,6 +2536,7 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                         </div>
                     </div>
                 </div>
+                )}
 
             {/* Quick Filters and Search Bar - Gold + Purple Theme */}
             {!isMobile && (
@@ -1603,9 +2619,48 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                 </div>
             )}
 
+            {isMobile && (
+                <div className="mb-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            onClick={() => setShowSelectedDayList(prev => !prev)}
+                            className={`w-full px-4 py-3 rounded-xl text-white font-medium shadow-md transition-all ${
+                                showSelectedDayList
+                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
+                                    : 'bg-gradient-to-r from-slate-500 to-slate-600'
+                            }`}
+                        >
+                            <span className="inline-flex items-center gap-2">
+                                {showSelectedDayList ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
+                                )}
+                                {showSelectedDayList ? (t('scheduler.showSchedule') || 'Show Schedule') : (t('scheduler.appointmentList') || 'Appointments List')}
+                            </span>
+                        </button>
+                        <button
+                            onClick={handlePrintDailySchedule}
+                            className="w-full px-4 py-3 rounded-xl text-white font-medium shadow-md bg-gradient-to-r from-amber-400 to-amber-500"
+                        >
+                            <span className="inline-flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                {t('scheduler.printSchedule') || 'Print Schedule'}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-                {/* Calendar Section - Gold + Purple Theme */}
-                <div className="w-full flex-shrink-0 print:hidden">
+            {/* Calendar Section - Gold + Purple Theme - Hidden on mobile */}
+                <div className="w-full flex-shrink-0 print:hidden hidden md:block">
                     <div className="flex justify-between items-center mb-2">
                         <h3 className="font-semibold text-purple-700">{monthYearFormatter.format(calendarDate)}</h3>
                         <div className="flex">
@@ -1637,7 +2692,7 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                 </div>
 
                 <div className="flex-1 relative overflow-y-auto border-s border-e border-slate-200 md:border-s md:border-e">
-                    {isMobile ? (
+                    {(isMobile && !showSelectedDayList) ? (
                         <MobileAppointmentList
                             dailyAppointments={dailyAppointments}
                             patients={patients}
@@ -1646,7 +2701,103 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                             onAddClick={() => setModalState({ type: 'time_selector' })}
                             onSendReminder={handleSendReminder}
                             onStatusClick={handleStatusClick}
+                            selectedDate={selectedDate}
+                            onDateChange={setSelectedDate}
+                            appointmentStats={appointmentStats}
+                            calendarDate={calendarDate}
+                            onCalendarDateChange={handleCalendarDateChange}
+                            onPrevMonth={handlePrevMonth}
+                            onNextMonth={handleNextMonth}
+                            daysInMonth={daysInMonth}
+                            firstDayOfMonth={firstDayOfMonth}
+                            appointmentsByDay={appointmentsByDay}
                         />
+                    ) : showSelectedDayList ? (
+                        <div className="h-full overflow-y-auto p-4 bg-white dark:bg-slate-800">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                    {dateHeaderFormatter.format(selectedDate)}
+                                </h3>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    {dailyAppointments.length} {t('scheduler.totalAppointments')}
+                                </span>
+                            </div>
+                            {dailyAppointments.length === 0 ? (
+                                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                    {t('scheduler.noAppointments')}
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {dailyAppointments.map(apt => {
+                                        const patient = patients.find(p => p.id === apt.patientId);
+                                        const dentist = dentists.find(d => d.id === apt.dentistId);
+                                        return (
+                                            <div
+                                                key={apt.id}
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => setModalState({ type: 'details', data: apt })}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        setModalState({ type: 'details', data: apt });
+                                                    }
+                                                }}
+                                                className="w-full text-start p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="min-w-0">
+                                                        <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">
+                                                            {patient?.name || t('common.unknownPatient')}
+                                                        </div>
+                                                        <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                                                            {apt.reason}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1">
+                                                            {dentist?.name || t('common.unknownDentist')}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                type="button"
+                                                                disabled={!patient?.phone}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!patient?.phone) return;
+                                                                    window.location.href = `tel:${patient.phone.replace(/[^0-9+]/g, '')}`;
+                                                                }}
+                                                                className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('common.call') || 'Call'}
+                                                            >
+                                                                <PhoneIcon className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={!patient?.phone}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!patient?.phone) return;
+                                                                    handleSendWhatsApp(apt);
+                                                                }}
+                                                                className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('scheduler.sendWhatsAppReminder') || 'Send WhatsApp Reminder'}
+                                                            >
+                                                                <WhatsAppIcon className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                        <span className={`w-3 h-3 rounded-full ${dentist?.color || 'bg-slate-500'}`} />
+                                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                            {timeFormatter.format(apt.startTime)} - {timeFormatter.format(apt.endTime)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div className="grid grid-cols-[auto_1fr] h-full">
                             <div className="w-16 text-end text-sm text-slate-500">
@@ -1812,8 +2963,8 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                 </div>
             )}
 
-            {modalState.type === 'add' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={clinicData} initialDateTime={modalState.data.initialDateTime} />}
-            {modalState.type === 'edit' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={clinicData} appointmentToEdit={modalState.data} />}
+            {modalState.type === 'add' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={scopedClinicData} initialDateTime={modalState.data.initialDateTime} initialDentistId={modalState.data.initialDentistId} initialDurationMinutes={modalState.data.initialDurationMinutes} />}
+            {modalState.type === 'edit' && <AddAppointmentModal onClose={() => setModalState({ type: null })} onSave={handleSaveAppointment} clinicData={scopedClinicData} appointmentToEdit={modalState.data} />}
             {modalState.type === 'details' && (
                 <AppointmentDetailsModal
                     appointment={modalState.data}
@@ -1822,15 +2973,17 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                     onClose={() => setModalState({ type: null })}
                     onEdit={() => setModalState({ type: 'edit', data: modalState.data })}
                     onDelete={() => handleDeleteAppointment(modalState.data.id)}
+                    canEdit={canEditAppointment}
+                    canDelete={canDeleteAppointment}
                 />
             )}
             {modalState.type === 'time_selector' && (
                 <MobileTimeSelectorModal
                     onClose={() => setModalState({ type: null })}
-                    onSelectTime={(hour, minute) => {
+                    onSelectTime={(hour, minute, dentistId, durationMinutes) => {
                         const newDate = new Date(selectedDate);
                         newDate.setHours(hour, minute, 0, 0);
-                        setModalState({ type: 'add', data: { initialDateTime: newDate } });
+                        setModalState({ type: 'add', data: { initialDateTime: newDate, initialDentistId: dentistId, initialDurationMinutes: durationMinutes } });
                     }}
                     selectedDate={selectedDate}
                     dailyAppointments={dailyAppointments}
@@ -1846,3 +2999,13 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
 };
 
 export default Scheduler;
+
+
+
+
+
+
+
+
+
+

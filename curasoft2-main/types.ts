@@ -88,6 +88,8 @@ export interface InventoryItem {
   unitCost: number; // Cost per unit for the clinic
   minStockLevel: number; // Minimum stock before re-order alert
   expiryDate?: string; // YYYY-MM-DD
+  source?: 'manual' | 'supplier_invoice'; // Track how the item was added/updated
+  supplierInvoiceId?: string; // Link to the supplier invoice if added via invoice
 }
 
 export enum ExpenseCategory {
@@ -119,6 +121,17 @@ export interface TreatmentDefinition { // Renamed from TreatmentCost to be more 
   basePrice: number; // The patient-facing price
   doctorPercentage: number; // e.g., 0.60 for 60%
   clinicPercentage: number; // e.g., 0.40 for 40%
+}
+
+export interface TreatmentDoctorPercentage {
+  id: string;
+  treatmentDefinitionId: string;
+  dentistId: string;
+  doctorPercentage: number;
+  clinicPercentage: number;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TreatmentRecord { // A specific treatment performed on a patient
@@ -237,7 +250,7 @@ export type FilterOptions = {
 
 export type PatientDetailTab = 'details' | 'chart' | 'treatments' | 'prescriptions' | 'financials' | 'attachments'; // Added 'attachments' tab
 export type DoctorDetailTab = 'details' | 'treatments' | 'financials' | 'schedule';
-export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations';
+export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement';
 
 
 
@@ -260,7 +273,7 @@ export interface SupplierInvoice {
     dueDate?: string; // YYYY-MM-DD
     amount: number;
     status: SupplierInvoiceStatus;
-    items: { description: string; amount: number; }[];
+    items: { description: string; amount: number; inventoryItemId?: string; quantity?: number; }[];
     payments: { expenseId: string; amount: number; date: string; }[];
     labCaseId?: string; // Optional lab case ID for dental lab invoices
     invoiceImageUrl?: string; // URL for the invoice image
@@ -475,6 +488,12 @@ export enum Permission {
   USER_MANAGEMENT_EDIT = 'USER_MANAGEMENT_EDIT',
   USER_MANAGEMENT_DELETE = 'USER_MANAGEMENT_DELETE',
 
+  // Doctor Management
+  DOCTOR_VIEW = 'DOCTOR_VIEW',
+  DOCTOR_CREATE = 'DOCTOR_CREATE',
+  DOCTOR_EDIT = 'DOCTOR_EDIT',
+  DOCTOR_DELETE = 'DOCTOR_DELETE',
+
   // Patient Management
   PATIENT_VIEW = 'PATIENT_VIEW',
   PATIENT_CREATE = 'PATIENT_CREATE',
@@ -505,6 +524,12 @@ export enum Permission {
   FINANCE_INVOICES_MANAGE = 'FINANCE_INVOICES_MANAGE',
   FINANCE_ACCOUNTS_VIEW = 'FINANCE_ACCOUNTS_VIEW',
   FINANCE_ACCOUNTS_MANAGE = 'FINANCE_ACCOUNTS_MANAGE',
+  FINANCE_PAYMENT_ADD = 'FINANCE_PAYMENT_ADD',
+  FINANCE_PAYMENT_EDIT = 'FINANCE_PAYMENT_EDIT',
+  FINANCE_PAYMENT_DELETE = 'FINANCE_PAYMENT_DELETE',
+  FINANCE_DISCOUNT_ADD = 'FINANCE_DISCOUNT_ADD',
+  FINANCE_DISCOUNT_EDIT = 'FINANCE_DISCOUNT_EDIT',
+  FINANCE_DISCOUNT_DELETE = 'FINANCE_DISCOUNT_DELETE',
 
   // Inventory Management
   INVENTORY_VIEW = 'INVENTORY_VIEW',
@@ -542,6 +567,7 @@ export interface UserProfile {
   user_id: string; // Supabase auth user id
   username: string;
   role: UserRole;
+  dentist_id?: string | null; // Linked dentist for doctor-specific dashboard and scope
   avatar_url?: string; // URL for user avatar image
   status: UserStatus; // User status
   last_login?: string; // Last login timestamp

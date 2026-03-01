@@ -65,6 +65,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     
     // Settings (view only)
     Permission.SETTINGS_VIEW,
+    Permission.CLINIC_BRANCH_VIEW,
   ],
   
   [UserRole.ASSISTANT]: [
@@ -116,6 +117,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     
     // Settings (view only)
     Permission.SETTINGS_VIEW,
+    Permission.CLINIC_BRANCH_VIEW,
   ],
   
   [UserRole.RECEPTIONIST]: [
@@ -147,6 +149,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     
     // Settings (view only)
     Permission.SETTINGS_VIEW,
+    Permission.CLINIC_BRANCH_VIEW,
   ],
 };
 
@@ -218,6 +221,10 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
   'Settings': [
     Permission.SETTINGS_VIEW,
     Permission.SETTINGS_EDIT,
+    Permission.CLINIC_BRANCH_VIEW,
+    Permission.CLINIC_BRANCH_CREATE,
+    Permission.CLINIC_BRANCH_EDIT,
+    Permission.CLINIC_BRANCH_DELETE,
   ],
   'Notifications': [
     Permission.NOTIFICATIONS_VIEW,
@@ -292,6 +299,10 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   
   [Permission.SETTINGS_VIEW]: 'View Settings',
   [Permission.SETTINGS_EDIT]: 'Edit Settings',
+  [Permission.CLINIC_BRANCH_VIEW]: 'View Clinic Branches',
+  [Permission.CLINIC_BRANCH_CREATE]: 'Create Clinic Branches',
+  [Permission.CLINIC_BRANCH_EDIT]: 'Edit Clinic Branches',
+  [Permission.CLINIC_BRANCH_DELETE]: 'Delete Clinic Branches',
   
   [Permission.NOTIFICATIONS_VIEW]: 'View Notifications',
   [Permission.NOTIFICATIONS_MANAGE]: 'Manage Notifications',

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
-import { Patient, NotificationType, View } from '../types';
+import { Patient, NotificationType, View, Permission, UserRole } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
 import AddEditPatientModal from './patient/AddEditPatientModal';
 import { useI18n } from '../hooks/useI18n';
+import { useAuth } from '../contexts/AuthContext';
 
 // Modern Icons with Gold + Purple theme
 const SearchIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
@@ -121,8 +122,9 @@ const PatientCardSkeleton = () => (
     </div>
 );
 
-const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData }> = ({ patient, onSelect, onEdit, onDelete, clinicData }) => {
+const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData; canEdit?: boolean; canDelete?: boolean }> = ({ patient, onSelect, onEdit, onDelete, clinicData, canEdit = false, canDelete = false }) => {
     const { t } = useI18n();
+    const { hasPermission } = useAuth();
     const [expanded, setExpanded] = useState(false);
     const dateFormatter = new Intl.DateTimeFormat('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
     const currencyFormatter = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
@@ -212,13 +214,15 @@ const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-1">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                                className="w-8 h-8 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
-                                aria-label={t('patientList.editPatientAriaLabel', { patientName: patient.name })}
-                            >
-                                <EditIcon className="h-4 w-4" />
-                            </button>
+                            {(canEdit || hasPermission(Permission.PATIENT_EDIT)) && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                                    className="w-8 h-8 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
+                                    aria-label={t('patientList.editPatientAriaLabel', { patientName: patient.name })}
+                                >
+                                    <EditIcon className="h-4 w-4" />
+                                </button>
+                            )}
                             <button
                                 onClick={handleSendWhatsApp}
                                 className="w-8 h-8 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
@@ -226,13 +230,15 @@ const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit
                             >
                                 <WhatsAppIcon className="h-4 w-4" />
                             </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                                className="w-8 h-8 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
-                                aria-label={t('patientList.deletePatientAriaLabel', { patientName: patient.name })}
-                            >
-                                <DeleteIcon className="h-4 w-4" />
-                            </button>
+                            {(canDelete || hasPermission(Permission.PATIENT_DELETE)) && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                                    className="w-8 h-8 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
+                                    aria-label={t('patientList.deletePatientAriaLabel', { patientName: patient.name })}
+                                >
+                                    <DeleteIcon className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -348,6 +354,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const { patients, addPatient, updatePatient, deletePatient, payments, treatmentRecords } = clinicData;
     const { addNotification } = useNotification();
     const { t, locale } = useI18n();
+    const { userProfile } = useAuth();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -357,6 +364,30 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const [timelineModalPatient, setTimelineModalPatient] = useState<Patient | null>(null);
     
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
+
+    const linkedDoctorId = useMemo(() => {
+        if (userProfile?.dentist_id) return userProfile.dentist_id;
+        if (userProfile?.role === UserRole.DOCTOR) {
+            const matchedDoctor = clinicData.dentists.find(
+                d => d.name.trim().toLowerCase() === (userProfile.username || '').trim().toLowerCase()
+            );
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [userProfile, clinicData.dentists]);
+
+    const scopedPatients = useMemo(() => {
+        if (userProfile?.role !== UserRole.DOCTOR || !linkedDoctorId) return patients;
+        const linkedPatientIds = new Set<string>([
+            ...clinicData.appointments
+                .filter(a => a.dentistId === linkedDoctorId)
+                .map(a => a.patientId),
+            ...treatmentRecords
+                .filter(tr => tr.dentistId === linkedDoctorId)
+                .map(tr => tr.patientId),
+        ]);
+        return patients.filter(p => linkedPatientIds.has(p.id));
+    }, [userProfile?.role, linkedDoctorId, patients, clinicData.appointments, treatmentRecords]);
 
     const handleSavePatient = useCallback((patientData: Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'> | Patient) => {
         if ('id' in patientData && patientData.id) {
@@ -379,9 +410,9 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
 
     const filteredPatients = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        let filtered = patients;
+        let filtered = scopedPatients;
         if (term) {
-            filtered = patients.filter(p =>
+            filtered = scopedPatients.filter(p =>
                 (p.name && p.name.toLowerCase().includes(term)) ||
                 (p.phone && p.phone.includes(term)) ||
                 (p.email && p.email.toLowerCase().includes(term))
@@ -403,13 +434,19 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                 return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
             }
         });
-    }, [patients, searchTerm, sortBy, sortOrder, treatmentRecords, payments]);
+    }, [scopedPatients, searchTerm, sortBy, sortOrder, treatmentRecords, payments]);
 
-    const totalPatients = patients.length;
+    const totalPatients = scopedPatients.length;
     const totalOutstanding = useMemo(() => {
-        return treatmentRecords.reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0) -
-               payments.reduce((sum, p) => sum + p.amount, 0);
-    }, [treatmentRecords, payments]);
+        const scopedIds = new Set(scopedPatients.map(p => p.id));
+        const scopedTreatmentsTotal = treatmentRecords
+            .filter(tr => scopedIds.has(tr.patientId))
+            .reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0);
+        const scopedPaymentsTotal = payments
+            .filter(p => scopedIds.has(p.patientId))
+            .reduce((sum, p) => sum + p.amount, 0);
+        return scopedTreatmentsTotal - scopedPaymentsTotal;
+    }, [scopedPatients, treatmentRecords, payments]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
@@ -477,7 +514,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                                 <div>
                                     <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{t('patientList.patientsWithBalance')}</p>
                                     <p className="text-2xl font-bold text-rose-900 dark:text-rose-300">
-                                        {patients.filter(p => {
+                                        {scopedPatients.filter(p => {
                                             const balance = treatmentRecords.filter(tr => tr.patientId === p.id).reduce((sum, tr) => sum + (tr.doctorShare + tr.clinicShare), 0) -
                                                            payments.filter(pay => pay.patientId === p.id).reduce((sum, pay) => sum + pay.amount, 0);
                                             return balance > 0;
@@ -501,7 +538,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                                 placeholder={t('patientList.searchPatients')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full ps-10 pl-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             />
                         </div>
                     </div>

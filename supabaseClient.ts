@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // User's provided Supabase credentials
-const supabaseUrl = 'https://xiaolhekiioawkymvjwb.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpYW9saGVraWlvYXdreW12andiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MjQxNzYsImV4cCI6MjA3NzIwMDE3Nn0.iyAUKnGa5Y_sKZgsvw1XujjeG61j_Rf4hXibyzsL_VU';
+const supabaseUrl = 'https://vlhnceijreyoukkttbao.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsaG5jZWlqcmV5b3Vra3R0YmFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjM1ODAsImV4cCI6MjA4NzYzOTU4MH0.vnoRgBGYPPE9yphuMvKdCZ2eRJGdvVlj6RVho7oOmMo';
 
 // The supabase client is exported.
 // An error will be logged if the URL or Key is missing.

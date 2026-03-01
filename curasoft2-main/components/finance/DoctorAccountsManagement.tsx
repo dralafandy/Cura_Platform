@@ -31,12 +31,18 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
    };
 
    const handleEdit = (payment: DoctorPayment) => {
+     if (!checkPermission(Permission.FINANCE_DISCOUNT_EDIT)) {
+       return;
+     }
      setEditingPayment(payment);
      setSelectedDentistId(payment.dentistId);
      setIsModalOpen(true);
    };
 
    const handleDelete = async (id: string) => {
+     if (!checkPermission(Permission.FINANCE_DISCOUNT_DELETE)) {
+       return;
+     }
      if (window.confirm(t('common.confirmDelete'))) {
        try {
          await deleteDoctorPayment(id);
@@ -107,18 +113,22 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
                    {payment.notes || '-'}
                  </td>
                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                   <button
-                     onClick={() => handleEdit(payment)}
-                     className="text-primary hover:text-primary-dark mr-4"
-                   >
-                     {t('common.edit')}
-                   </button>
-                   <button
-                     onClick={() => handleDelete(payment.id)}
-                     className="text-red-600 hover:text-red-900"
-                   >
-                     {t('common.delete')}
-                   </button>
+                   {checkPermission(Permission.FINANCE_DISCOUNT_EDIT) && (
+                     <button
+                       onClick={() => handleEdit(payment)}
+                       className="text-primary hover:text-primary-dark mr-4"
+                     >
+                       {t('common.edit')}
+                     </button>
+                   )}
+                   {checkPermission(Permission.FINANCE_DISCOUNT_DELETE) && (
+                     <button
+                       onClick={() => handleDelete(payment.id)}
+                       className="text-red-600 hover:text-red-900"
+                     >
+                       {t('common.delete')}
+                     </button>
+                   )}
                  </td>
                </tr>
              ))}

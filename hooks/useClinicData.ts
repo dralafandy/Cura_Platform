@@ -214,6 +214,31 @@ export const useClinicData = (): ClinicData => {
     };
 
 
+    // Get user's accessible clinic IDs
+    const getUserClinicIds = useCallback(async (): Promise<string[]> => {
+        if (!user || !supabase) return [];
+        
+        try {
+            // Get user's clinics from user_clinics view
+            const { data, error } = await supabase
+                .from('user_clinics_view')
+                .select('clinic_id')
+                .eq('user_id', user.id)
+                .eq('access_active', true);
+            
+            if (error) {
+                console.warn('Error fetching user clinics:', error);
+                // Fallback: if no clinics assigned, try to get from user_profiles
+                return [];
+            }
+            
+            return data?.map(row => row.clinic_id).filter(Boolean) || [];
+        } catch (err) {
+            console.warn('Error getting user clinic IDs:', err);
+            return [];
+        }
+    }, [user, supabase]);
+
     const fetchData = useCallback(async () => {
         if (!user || !supabase) {
             console.log('Cannot fetch data - user or supabase not available:', { user, supabase });
@@ -224,6 +249,10 @@ export const useClinicData = (): ClinicData => {
         console.log('Fetching data from all tables...');
         setIsLoading(true);
 
+        // Get user's accessible clinic IDs for filtering
+        const userClinicIds = await getUserClinicIds();
+        console.log('User accessible clinic IDs:', userClinicIds);
+
         const tables = [
             'patients', 'dentists', 'appointments', 'suppliers', 'inventory_items',
             'expenses', 'treatment_definitions', 'treatment_records', 'lab_cases',
@@ -231,10 +260,23 @@ export const useClinicData = (): ClinicData => {
             'patient_attachments', 'clinics', 'treatment_doctor_percentages'
         ];
 
-        const promises = tables.map((table: string) => {
-            return supabase!.from(table).select('*');
+        // Build queries with clinic filtering where applicable
+        const queries = tables.map((table: string) => {
+            let query = supabase!.from(table).select('*');
+            
+            // Filter by clinic_id for tables that have it
+            if (userClinicIds.length > 0 && ['patients', 'appointments', 'treatment_records', 'payments', 'expenses', 'suppliers', 'inventory_items', 'dentists'].includes(table)) {
+                // For tables with clinic_id, filter by user's accessible clinics
+                query = query.in('clinic_id', userClinicIds);
+            } else if (userClinicIds.length > 0 && table === 'patient_attachments') {
+                // For patient_attachments, we need to join with patients to filter by clinic
+                // This will be handled separately after fetching
+            }
+            
+            return query;
         });
-        const results = await Promise.all(promises);
+        
+        const results = await Promise.all(queries);
 
         const [
             patientsRes, dentistsRes, appointmentsRes, suppliersRes, inventoryItemsRes,

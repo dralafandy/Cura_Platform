@@ -4,6 +4,8 @@ import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
 import { NotificationType } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
+import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Icons
 const CloseIcon = () => (
@@ -149,11 +151,11 @@ const InputField: React.FC<InputFieldProps> = ({
     id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = '', isTextarea, rows = 3, isDark = false
 }) => {
     const inputClasses = `
-        w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
+        w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
         focus:ring-2 focus:ring-primary/20 focus:border-primary
         transition-all duration-200 ease-in-out
-        placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200
-        ${icon ? 'pr-12' : ''}
+        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        ${icon ? 'ps-12' : ''}
     `;
 
     return (
@@ -200,6 +202,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
     const { t } = useI18n();
     const { addNotification } = useNotification();
     const { isDark } = useTheme();
+    const { user } = useAuth();
 
     const [formData, setFormData] = useState<Omit<Patient, 'id' | 'dentalChart'> | Patient>(
         patient || {
@@ -219,10 +222,59 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
             emergencyContactName: '',
             emergencyContactPhone: '',
             images: [],
+            attachments: [],
         }
     );
 
     const [activeTab, setActiveTab] = useState<'basic' | 'medical' | 'emergency' | 'images'>('basic');
+    
+    // Insurance companies state
+    const [insuranceCompanies, setInsuranceCompanies] = useState<{ id: string; name: string }[]>([]);
+    const [selectedInsuranceId, setSelectedInsuranceId] = useState<string>('');
+    const [coveragePercentage, setCoveragePercentage] = useState<number>(100);
+    const [policyNumber, setPolicyNumber] = useState<string>('');
+    
+    // Load insurance companies
+    useEffect(() => {
+        const loadInsuranceCompanies = async () => {
+            if (!supabase || !user?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('insurance_companies')
+                    .select('id, name')
+                    .eq('user_id', user.id)
+                    .order('name');
+                if (error) throw error;
+                setInsuranceCompanies(data || []);
+            } catch (err) {
+                console.error('Failed to load insurance companies:', err);
+            }
+        };
+        void loadInsuranceCompanies();
+    }, [user?.id]);
+    
+    // Load existing patient insurance link if editing
+    useEffect(() => {
+        const loadPatientInsurance = async () => {
+            if (!patient?.id || !supabase || !user?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('insurance_company_id, coverage_percentage, policy_number')
+                    .eq('patient_id', patient.id)
+                    .eq('user_id', user.id)
+                    .single();
+                if (data) {
+                    setSelectedInsuranceId(data.insurance_company_id || '');
+                    setCoveragePercentage(data.coverage_percentage || 100);
+                    setPolicyNumber(data.policy_number || '');
+                }
+            } catch (err) {
+                console.error('Failed to load patient insurance:', err);
+            }
+        };
+        void loadPatientInsurance();
+    }, [patient?.id, user?.id]);
 
     useEffect(() => {
         if (patient && !patient.lastVisit) {
@@ -260,13 +312,33 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name || !formData.dob || !formData.phone) {
-            addNotification(t('addPatientModal.alertFillRequired'), NotificationType.ERROR);
+            addNotification({ message: t('addPatientModal.alertFillRequired'), type: NotificationType.ERROR });
             return;
         }
-        onSave(formData);
+        
+        // Save patient first
+        await onSave(formData);
+        
+        // Create insurance link if insurance is selected
+        if (selectedInsuranceId && patient?.id) {
+            try {
+                if (!supabase || !user?.id) return;
+                await supabase
+                    .from('patient_insurance_link')
+                    .upsert({
+                        patient_id: patient.id,
+                        insurance_company_id: selectedInsuranceId,
+                        coverage_percentage: coveragePercentage,
+                        policy_number: policyNumber || null,
+                        user_id: user.id
+                    }, { onConflict: 'patient_id,insurance_company_id' });
+            } catch (err) {
+                console.error('Failed to save insurance link:', err);
+            }
+        }
     };
 
     const tabs = [
@@ -357,7 +429,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 name="gender"
                                                 value={formData.gender}
                                                 onChange={handleChange}
-                                                className="w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 appearance-none"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 appearance-none"
                                                 required
                                             >
                                                 <option value="Male">ذكر</option>
@@ -415,7 +487,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 onChange={handleChange}
                                                 placeholder="أدخل العنوان الكامل"
                                                 rows={3}
-                                                className="w-full px-4 py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                                             />
                                             <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
                                                 <LocationIcon />
@@ -444,7 +516,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.medicalHistoryPlaceholder')}
                                                 rows={4}
-                                                className="w-full px-4 py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                                             />
                                         <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
                                             <FileTextIcon />
@@ -467,7 +539,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 value={formData.allergies}
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.allergiesPlaceholder')}
-                                                className="w-full px-4 py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                                             />
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
                                                 <HeartIcon />
@@ -486,7 +558,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 value={formData.medications}
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.currentMedicationsPlaceholder')}
-                                                className="w-full px-4 py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                                             />
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
                                                 <PillIcon />
@@ -529,27 +601,85 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                             </FormSection>
 
                             <FormSection title="معلومات التأمين" icon={<ShieldIcon />} isDark={isDark}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <InputField
-                                        id="insuranceProvider"
-                                        name="insuranceProvider"
-                                        label={t('addPatientModal.insuranceProvider')}
-                                        value={formData.insuranceProvider}
-                                        onChange={handleChange}
-                                        placeholder="اسم شركة التأمين"
-                                        icon={<ShieldIcon />}
-                                        isDark={isDark}
-                                    />
-                                    <InputField
-                                        id="insurancePolicyNumber"
-                                        name="insurancePolicyNumber"
-                                        label={t('addPatientModal.policyNumber')}
-                                        value={formData.insurancePolicyNumber}
-                                        onChange={handleChange}
-                                        placeholder="رقم البوليصة"
-                                        icon={<FileTextIcon />}
-                                        isDark={isDark}
-                                    />
+                                <div className="space-y-4">
+                                    {/* Insurance Company Selection */}
+                                    <div className="relative">
+                                        <label htmlFor="insurance_company" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                            شركة التأمين
+                                        </label>
+                                        <select
+                                            id="insurance_company"
+                                            value={selectedInsuranceId}
+                                            onChange={(e) => setSelectedInsuranceId(e.target.value)}
+                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 appearance-none"
+                                        >
+                                            <option value="">بدون تأمين</option>
+                                            {insuranceCompanies.map(company => (
+                                                <option key={company.id} value={company.id}>{company.name}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 translate-y-1 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                            <ShieldIcon />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Policy Number and Coverage Percentage */}
+                                    {selectedInsuranceId && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="relative">
+                                                <label htmlFor="policy_number" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                                    رقم البوليصة
+                                                </label>
+                                                <input
+                                                    id="policy_number"
+                                                    type="text"
+                                                    value={policyNumber}
+                                                    onChange={(e) => setPolicyNumber(e.target.value)}
+                                                    placeholder="رقم بوليصة التأمين"
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200"
+                                                />
+                                            </div>
+                                            <div className="relative">
+                                                <label htmlFor="coverage_percentage" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                                    نسبة التغطية (%)
+                                                </label>
+                                                <input
+                                                    id="coverage_percentage"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value={coveragePercentage}
+                                                    onChange={(e) => setCoveragePercentage(Number(e.target.value))}
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Legacy Insurance Provider Field (for backward compatibility) */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <InputField
+                                            id="insuranceProvider"
+                                            name="insuranceProvider"
+                                            label={t('addPatientModal.insuranceProvider') + ' (يدوي)'}
+                                            value={formData.insuranceProvider}
+                                            onChange={handleChange}
+                                            placeholder="اسم شركة التأمين (اختياري)"
+                                            icon={<ShieldIcon />}
+                                            isDark={isDark}
+                                        />
+                                        <InputField
+                                            id="insurancePolicyNumber"
+                                            name="insurancePolicyNumber"
+                                            label={t('addPatientModal.policyNumber') + ' (يدوي)'}
+                                            value={formData.insurancePolicyNumber}
+                                            onChange={handleChange}
+                                            placeholder="رقم البوليصة"
+                                            icon={<FileTextIcon />}
+                                            isDark={isDark}
+                                        />
+                                    </div>
                                 </div>
                             </FormSection>
                         </div>
@@ -642,7 +772,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                             onChange={handleChange}
                                             placeholder={t('addPatientModal.initialTreatmentNotesPlaceholder')}
                                             rows={4}
-                                            className="w-full px-4 py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200"
+                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
                                         />
                                         <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
                                             <FileTextIcon />

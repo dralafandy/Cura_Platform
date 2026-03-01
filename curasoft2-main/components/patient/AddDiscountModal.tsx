@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Payment, TreatmentRecord } from '../../types';
+import { Payment, TreatmentRecord, Permission, NotificationType } from '../../types';
 import { ClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
-import { NotificationType } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 // Icons as simple SVG components
@@ -49,8 +49,8 @@ interface AddDiscountModalProps {
 const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicData, onClose, onAdd, onUpdateTreatmentRecord }) => {
 
     const { t, locale } = useI18n();
-
     const { addNotification } = useNotification();
+    const { checkPermission } = useAuth();
     const [isAnimating, setIsAnimating] = useState(false);
     const [formData, setFormData] = useState({
         notes: '',
@@ -112,6 +112,12 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Check permission
+        if (!checkPermission(Permission.FINANCE_DISCOUNT_ADD)) {
+            addNotification({ message: t('common.accessDenied'), type: NotificationType.ERROR });
+            return;
+        }
+
         // Get the selected treatment
         const selectedTreatment = clinicData.treatmentRecords.find(tr => tr.id === selectedTreatmentRecordId);
         if (!selectedTreatment) {
@@ -138,8 +144,10 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
             return;
         }
 
-        // Simple hardcoded password for discount approval
-        if (approvalPassword !== '123') {
+        // Get the configured discount password from settings
+        const configuredPassword = localStorage.getItem('curasoft_discount_password') || '123';
+        
+        if (approvalPassword !== configuredPassword) {
             addNotification({ message: t('addDiscountModal.passwordIncorrect'), type: NotificationType.ERROR });
             return;
         }
@@ -219,7 +227,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                 id="treatmentRecord"
                                 value={selectedTreatmentRecordId}
                                 onChange={(e) => setSelectedTreatmentRecordId(e.target.value)}
-                                className={`w-full p-3 ${isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white transition-all duration-200 appearance-none cursor-pointer`}
+                                className={`w-full p-3 ${isRTL ? 'ps-10 pl-4' : 'ps-10 pl-4'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white transition-all duration-200 appearance-none cursor-pointer`}
                                 required
                             >
                                 <option value="" className="text-slate-500">{t('addDiscountModal.selectTreatmentPlaceholder')}</option>
@@ -330,7 +338,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                     step="0.01" 
                                     value={percentage} 
                                     onChange={handleChange} 
-                                    className={`w-full p-3 ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-10'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white text-lg font-semibold transition-all duration-200 placeholder-slate-400`}
+                                    className={`w-full p-3 ${isRTL ? 'ps-10 pl-4' : 'ps-10 pl-4'} bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-primary text-slate-800 dark:text-white text-lg font-semibold transition-all duration-200 placeholder-slate-500`}
                                     placeholder="0"
                                     required 
                                     min="0.01" 

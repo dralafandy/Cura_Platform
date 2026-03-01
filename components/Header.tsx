@@ -5,6 +5,7 @@ import { useClinicData, ClinicData } from '../hooks/useClinicData';
 import { useTheme } from '../contexts/ThemeContext';
 import { View, UserRole } from '../types';
 import NotificationBell from './NotificationBell';
+import { ClinicSelector } from './clinic/ClinicSelector';
 
 interface HeaderProps {
   currentView: View;
@@ -460,6 +461,9 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Clinic Selector */}
+              <ClinicSelector variant="compact" />
 
               {/* Notification Bell - Enhanced */}
               <div className="relative group">

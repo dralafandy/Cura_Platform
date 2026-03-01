@@ -69,8 +69,9 @@ const AddTreatmentRecordModal: React.FC<{
         });
 
         const basePrice = selectedTreatmentDef?.basePrice || 0;
-        const doctorShare = basePrice * (selectedTreatmentDef?.doctorPercentage || 0);
-        const clinicShare = basePrice * (selectedTreatmentDef?.clinicPercentage || 0);
+        const effectivePercentages = clinicData.getTreatmentPercentages(formData.treatmentDefinitionId, formData.dentistId || null);
+        const doctorShare = basePrice * effectivePercentages.doctorPercentage;
+        const clinicShare = basePrice * effectivePercentages.clinicPercentage;
 
         return {
             doctorShare,
@@ -78,7 +79,7 @@ const AddTreatmentRecordModal: React.FC<{
             totalMaterialCost,
             itemsUsedForRecord,
         };
-    }, [formData.selectedInventoryItems, inventoryItems, selectedTreatmentDef]);
+    }, [formData.selectedInventoryItems, inventoryItems, selectedTreatmentDef, clinicData, formData.treatmentDefinitionId, formData.dentistId]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

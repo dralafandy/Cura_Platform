@@ -357,7 +357,6 @@ export const PatientDetailsPanel: React.FC<{
                                 </div>
                                 <div>
                                     <h1 className="text-xl font-bold text-slate-800 dark:text-white">{patient.name}</h1>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('patientDetails.patientId')}: {patient.id.slice(-8)}</p>
                                 </div>
                             </div>
                         </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../hooks/useI18n';
-import { verifyPassword } from '../services/userService';
+import { verifyPassword, hashPassword } from '../services/userService';
+import { UserRole, UserStatus } from '../types';
 
 // Reusable Input Field Component
 interface InputFieldProps {
@@ -12,10 +13,12 @@ interface InputFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
+  autoComplete?: string;
   required?: boolean;
   error?: string;
   showPasswordToggle?: boolean;
   onTogglePassword?: () => void;
+  icon?: React.ReactNode;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -25,10 +28,12 @@ const InputField: React.FC<InputFieldProps> = ({
   value,
   onChange,
   placeholder,
+  autoComplete,
   required = false,
   error,
   showPasswordToggle = false,
   onTogglePassword,
+  icon,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -36,12 +41,17 @@ const InputField: React.FC<InputFieldProps> = ({
     <div className="space-y-2">
       <label 
         htmlFor={id} 
-        className="block text-sm font-medium text-slate-700 transition-colors"
+        className="block text-[13px] font-semibold tracking-wide text-slate-700 dark:text-slate-200 transition-colors"
       >
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="relative">
+        {icon && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+            {icon}
+          </span>
+        )}
         <input
           id={id}
           type={type}
@@ -49,18 +59,20 @@ const InputField: React.FC<InputFieldProps> = ({
           onChange={onChange}
           required={required}
           placeholder={placeholder}
+          autoComplete={autoComplete}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className={`
-            w-full px-4 py-3 bg-white border rounded-lg text-sm
-            placeholder-slate-400 transition-all duration-200
+            w-full py-3 bg-white dark:bg-slate-900/70 border rounded-xl text-sm text-slate-800 dark:text-slate-100
+            placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
+            ${icon ? 'pl-10' : 'px-4'}
             ${isFocused 
-              ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm' 
-              : 'border-slate-200 hover:border-slate-300'
+              ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-cyan-900/50 shadow-sm' 
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }
-            ${error ? 'border-red-300 ring-2 ring-red-100' : ''}
+            ${error ? 'border-red-300 ring-2 ring-red-100 dark:border-red-500/70 dark:ring-red-900/40' : ''}
             ${showPasswordToggle ? 'pr-12' : ''}
           `}
         />
@@ -68,7 +80,7 @@ const InputField: React.FC<InputFieldProps> = ({
           <button
             type="button"
             onClick={onTogglePassword}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             aria-label={type === 'password' ? 'Show password' : 'Hide password'}
           >
             {type === 'password' ? (
@@ -85,7 +97,7 @@ const InputField: React.FC<InputFieldProps> = ({
         )}
       </div>
       {error && (
-        <p id={`${id}-error`} className="text-sm text-red-600 flex items-center gap-1" role="alert">
+        <p id={`${id}-error`} className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
@@ -105,7 +117,7 @@ interface ErrorAlertProps {
 const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onDismiss }) => {
   return (
     <div 
-      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
+      className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none"
       role="alert"
     >
       <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -149,8 +161,8 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, col
 
   return (
     <div 
-      className={`group relative bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-100 
-        shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2
+      className={`group relative bg-white/80 dark:bg-slate-900/65 backdrop-blur-sm rounded-2xl p-5 border border-slate-100 dark:border-slate-800 
+        shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 motion-reduce:transform-none motion-reduce:transition-none
         ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -164,14 +176,14 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, col
       </div>
       
       {/* Title */}
-      <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-transparent 
+      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-transparent 
         group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-slate-600 
         transition-all duration-300">
         {title}
       </h3>
       
       {/* Description */}
-      <p className="text-sm text-slate-500 leading-relaxed">
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
         {description}
       </p>
 
@@ -221,18 +233,18 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
       disabled={disabled || isLoading}
       className={`
         w-full inline-flex justify-center items-center px-4 py-3 
-        border border-slate-200 rounded-lg bg-white text-sm font-medium
+        border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900/70 text-sm font-medium text-slate-700 dark:text-slate-200
         transition-all duration-200
         ${disabled || isLoading 
           ? 'opacity-50 cursor-not-allowed' 
-          : 'hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
+          : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm'
         }
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-cyan-500 dark:focus:ring-offset-slate-900
       `}
       aria-label={`Sign in with ${provider}`}
     >
       {isLoading ? (
-        <svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
@@ -246,7 +258,12 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
   );
 };
 
+// Admin Setup Key - Change this to your desired admin registration key
+// In production, this should be stored in environment variables
+const ADMIN_SETUP_KEY = 'curasoft-admin-2024';
+
 const LoginPage: React.FC = () => {
+  // Login state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -255,6 +272,19 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
   const [mounted, setMounted] = useState(false);
+  
+  // Registration state
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [regUsername, setRegUsername] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regShowPassword, setRegShowPassword] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
+  const [regSuccess, setRegSuccess] = useState<string | null>(null);
+  const [adminSetupKey, setAdminSetupKey] = useState('');
+  const [showAdminKeyField, setShowAdminKeyField] = useState(false);
+  
   const { loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useI18n();
 
@@ -275,31 +305,130 @@ const LoginPage: React.FC = () => {
         throw new Error('Password is required');
       }
 
-      const { data, error } = await supabase!
+      // First, try to find user by username (case-insensitive)
+      const { data: userDataArray, error: queryError } = await supabase!
         .from('user_profiles')
         .select('*')
-        .eq('username', username);
+        .ilike('username', username.toLowerCase());
 
-      if (error || !data || data.length === 0) {
+      if (queryError) {
+        console.error('Query error:', queryError);
+      }
+
+      // If user doesn't exist, throw error
+      if (!userDataArray || userDataArray.length === 0) {
         throw new Error('Invalid username or password');
       }
 
-      const userData = data[0];
+      // If user exists and has password_hash, use custom authentication
+      if (userDataArray && userDataArray.length > 0) {
+        const userData = userDataArray[0];
 
-      if (!userData.password_hash) {
-        throw new Error('Account not properly configured. Please contact administrator.');
+        if (userData.password_hash) {
+          // Use custom authentication with password hash
+          const isValidPassword = await verifyPassword(password, userData.password_hash);
+
+          if (!isValidPassword) {
+            throw new Error('Invalid username or password');
+          }
+
+          sessionStorage.setItem('clinic_session', JSON.stringify({
+            user: userData,
+            loginTime: new Date().toISOString(),
+          }));
+
+          setError(null);
+          window.location.reload();
+          return;
+        } else {
+          // User has no password_hash - try Supabase Auth as fallback
+          // Use username as email for Supabase Auth
+          const { error: supabaseError } = await supabase!.auth.signInWithPassword({
+            email: username, // Try username as email
+            password: password,
+          });
+
+          if (supabaseError) {
+            // Also try with @gmail.com suffix if it's a short name
+            if (!username.includes('@')) {
+              const { error: gmailError } = await supabase!.auth.signInWithPassword({
+                email: `${username}@gmail.com`,
+                password: password,
+              });
+
+              if (gmailError) {
+                throw new Error('Invalid username or password');
+              }
+
+              // Get user profile after successful Supabase Auth login
+              const { data: supabaseUser } = await supabase!.auth.getUser();
+              if (supabaseUser?.user) {
+                const { data: profileData } = await supabase!
+                  .from('user_profiles')
+                  .select('*')
+                  .eq('id', supabaseUser.user.id)
+                  .single();
+
+                sessionStorage.setItem('clinic_session', JSON.stringify({
+                  user: profileData || userData,
+                  loginTime: new Date().toISOString(),
+                }));
+
+                setError(null);
+                window.location.reload();
+                return;
+              }
+            }
+            throw supabaseError;
+          }
+
+          // Get user profile after successful Supabase Auth login
+          const { data: supabaseUser } = await supabase!.auth.getUser();
+          if (supabaseUser?.user) {
+            const { data: profileData } = await supabase!
+              .from('user_profiles')
+              .select('*')
+              .eq('id', supabaseUser.user.id)
+              .single();
+
+            sessionStorage.setItem('clinic_session', JSON.stringify({
+              user: profileData || userData,
+              loginTime: new Date().toISOString(),
+            }));
+
+            setError(null);
+            window.location.reload();
+            return;
+          }
+        }
       }
 
-      const isValidPassword = await verifyPassword(password, userData.password_hash);
+      // User not found by username - try Supabase Auth directly
+      const { error: supabaseError } = await supabase!.auth.signInWithPassword({
+        email: username,
+        password: password,
+      });
 
-      if (!isValidPassword) {
+      if (supabaseError) {
         throw new Error('Invalid username or password');
       }
 
-      sessionStorage.setItem('clinic_session', JSON.stringify({
-        user: userData,
-        loginTime: new Date().toISOString(),
-      }));
+      // Get user profile after successful Supabase Auth login
+      const { data: supabaseUser } = await supabase!.auth.getUser();
+      if (supabaseUser?.user) {
+        const { data: profileData } = await supabase!
+          .from('user_profiles')
+          .select('*')
+          .eq('id', supabaseUser.user.id)
+          .single();
+
+        if (profileData) {
+          sessionStorage.setItem('clinic_session', JSON.stringify({
+            user: profileData,
+            loginTime: new Date().toISOString(),
+          }));
+        }
+      }
 
       setError(null);
       window.location.reload();
@@ -354,38 +483,172 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // Handle registration
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setRegSuccess(null);
+    setRegLoading(true);
+
+    try {
+      // Validation
+      if (!regUsername.trim()) {
+        throw new Error('Username is required');
+      }
+      if (regUsername.trim().length < 3) {
+        throw new Error('Username must be at least 3 characters');
+      }
+      if (!regEmail.trim()) {
+        throw new Error('Email is required');
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
+        throw new Error('Please enter a valid email address');
+      }
+      if (!regPassword) {
+        throw new Error('Password is required');
+      }
+      if (regPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+      if (regPassword !== regConfirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      // Check if admin setup key is provided and validate it
+      let isAdmin = false;
+      if (adminSetupKey.trim()) {
+        if (adminSetupKey.trim() === ADMIN_SETUP_KEY) {
+          isAdmin = true;
+        } else {
+          throw new Error('Invalid admin setup key. Please check and try again.');
+        }
+      }
+
+      if (!supabase) {
+        throw new Error('Database not configured');
+      }
+
+      // Check if username already exists
+      const { data: existingUser } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .ilike('username', regUsername.toLowerCase())
+        .single();
+
+      if (existingUser) {
+        throw new Error('Username already exists. Please choose a different username.');
+      }
+
+      // Check if email already exists
+      const { data: existingEmail } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .ilike('email', regEmail.toLowerCase())
+        .single();
+
+      if (existingEmail) {
+        throw new Error('Email already registered. Please use a different email or login.');
+      }
+
+      // Hash password for direct login capability
+      const passwordHash = await hashPassword(regPassword);
+
+      // Determine role based on admin setup key
+      const assignedRole = isAdmin ? UserRole.ADMIN : UserRole.RECEPTIONIST;
+
+      // Generate a UUID for the new user
+      const newUserId = crypto.randomUUID();
+
+      // Create user profile directly (without Supabase Auth to avoid email confirmation)
+      const { data: newUser, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: newUserId,
+          user_id: newUserId,
+          username: regUsername.toLowerCase(),
+          email: regEmail.toLowerCase(),
+          role: assignedRole,
+          status: UserStatus.ACTIVE,
+          password_hash: passwordHash,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error('Failed to create user profile. Please contact support.');
+      }
+
+      // Registration successful
+      if (isAdmin) {
+        setRegSuccess('Admin account created successfully! You can now sign in with your credentials.');
+      } else {
+        setRegSuccess('Account created successfully! You can now sign in with your credentials.');
+      }
+      
+      // Clear form
+      setRegUsername('');
+      setRegEmail('');
+      setRegPassword('');
+      setRegConfirmPassword('');
+      setAdminSetupKey('');
+      
+      // Switch to login mode after 2 seconds
+      setTimeout(() => {
+        setIsRegisterMode(false);
+        setRegSuccess(null);
+      }, 2000);
+
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  // Toggle between login and register modes
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setError(null);
+    setRegSuccess(null);
+  };
+
   return (
-    <div className="min-h-screen flex relative overflow-hidden bg-gradient-to-br from-slate-50 via-cyan-50 to-violet-50">
+    <div className="min-h-screen flex relative overflow-hidden bg-gradient-to-br from-slate-50 via-cyan-50 to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Animated Background Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-cyan-300/30 to-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" />
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-violet-300/30 to-violet-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000" />
-        <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-gradient-to-br from-teal-300/30 to-cyan-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-cyan-300/30 to-cyan-500/20 dark:from-cyan-700/30 dark:to-cyan-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob motion-reduce:animate-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-300/30 to-blue-500/20 dark:from-blue-700/30 dark:to-blue-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000 motion-reduce:animate-none" />
+        <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-gradient-to-br from-teal-300/30 to-cyan-400/20 dark:from-teal-700/30 dark:to-cyan-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000 motion-reduce:animate-none" />
       </div>
+      <div className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none bg-[linear-gradient(to_right,rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] bg-[size:34px_34px]" />
 
       {/* Left Side - Illustration (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative items-center justify-center p-12">
-        <div className={`relative z-10 max-w-2xl transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className={`relative z-10 max-w-2xl transition-all duration-1000 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           {/* Brand Title */}
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-slate-800 mb-2">
-              <span className="bg-gradient-to-r from-cyan-600 to-violet-600 bg-clip-text text-transparent">CuraSoft</span>
+            <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 mb-2">
+              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">CuraSoft</span>
             </h1>
-            <p className="text-xl text-slate-500 font-medium">Clinic Management System</p>
+            <p className="text-lg text-slate-600 dark:text-slate-300 font-semibold tracking-wide">Clinic Management System</p>
           </div>
 
           {/* Dental Illustration with Logo */}
           <div className="relative">
             <div className="w-72 h-72 mx-auto relative">
               {/* Main Circle with gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/30 via-violet-400/20 to-teal-400/30 rounded-full animate-pulse-slow shadow-2xl shadow-cyan-300/20" />
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/30 via-blue-400/20 to-teal-400/30 dark:from-cyan-700/25 dark:via-blue-700/20 dark:to-teal-700/25 rounded-full animate-pulse-slow motion-reduce:animate-none shadow-2xl shadow-cyan-300/20" />
               
               {/* Inner rotating ring */}
-              <div className="absolute inset-4 border-2 border-dashed border-cyan-300/40 rounded-full animate-spin" style={{ animationDuration: '30s' }} />
+              <div className="absolute inset-4 border-2 border-dashed border-cyan-300/40 dark:border-cyan-800/40 rounded-full animate-spin motion-reduce:animate-none" style={{ animationDuration: '30s' }} />
               
               {/* Logo in Center */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-36 h-36 bg-white/95 backdrop-blur-sm rounded-full p-6 shadow-2xl shadow-cyan-200/50 border-4 border-white/80 animate-float">
+                <div className="w-36 h-36 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm rounded-full p-6 shadow-2xl shadow-cyan-200/50 border-4 border-white/80 dark:border-slate-700/60 animate-float motion-reduce:animate-none">
                   <img 
                     src="/logo.svg" 
                     alt="CuraSoft Logo" 
@@ -395,21 +658,21 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Orbiting Elements */}
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '20s' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '20s' }}>
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-6 h-6 bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-full shadow-lg shadow-cyan-400/50 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
                   </svg>
                 </div>
               </div>
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '15s', animationDirection: 'reverse' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '15s', animationDirection: 'reverse' }}>
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-3 w-5 h-5 bg-gradient-to-br from-violet-400 to-violet-500 rounded-full shadow-lg shadow-violet-400/50 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
-              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '25s' }}>
+              <div className="absolute inset-0 animate-spin motion-reduce:animate-none" style={{ animationDuration: '25s' }}>
                 <div className="absolute top-1/2 right-0 translate-x-3 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-teal-400 to-teal-500 rounded-full shadow-lg shadow-teal-400/50 flex items-center justify-center">
                   <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -420,7 +683,7 @@ const LoginPage: React.FC = () => {
 
             {/* Text Content */}
             <div className="mt-10 text-center">
-              <p className="text-lg text-slate-600 max-w-md mx-auto leading-relaxed mb-8">
+              <p className="text-lg text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed mb-8">
                 Modern dental clinic management system designed for efficiency and patient care excellence.
               </p>
               
@@ -504,15 +767,19 @@ const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
+      {/* Right Side - Login/Register Form */}
       <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative z-10">
-        <div className={`w-full max-w-md transition-all duration-700 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          {/* Login Card with Glass Morphism */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 border border-white/50 p-8 sm:p-10 space-y-6">
+        <div className={`w-full max-w-md transition-all duration-700 delay-300 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          {/* Login/Register Card with Glass Morphism */}
+          <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 border border-white/50 dark:border-slate-700/60 p-8 sm:p-10 space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800/60 bg-cyan-50 dark:bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+              <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse motion-reduce:animate-none" />
+              {isRegisterMode ? 'Create Account' : 'Secure Access'}
+            </div>
             
             {/* Header Section with Logo */}
             <div className="text-center space-y-3">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-200/50 animate-float p-3">
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-200/50 dark:shadow-cyan-950/50 animate-float motion-reduce:animate-none p-3">
                 <img 
                   src="/logo.svg" 
                   alt="CuraSoft Logo" 
@@ -520,14 +787,24 @@ const LoginPage: React.FC = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                  Welcome Back
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                  {isRegisterMode ? 'Create Account' : 'Welcome Back'}
                 </h1>
-                <p className="text-slate-500 text-sm mt-1">
-                  Sign in to your clinic account
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
+                  {isRegisterMode ? 'Register for a new clinic account' : 'Sign in to your clinic account'}
                 </p>
               </div>
             </div>
+
+            {/* Success Alert for Registration */}
+            {regSuccess && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="flex-1 text-sm">{regSuccess}</span>
+              </div>
+            )}
 
             {/* Error Alert */}
             {error && (
@@ -538,89 +815,259 @@ const LoginPage: React.FC = () => {
             )}
 
             {/* Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className={`transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
-                <InputField
-                  id="username"
-                  label={t('auth.login.username') || 'Username'}
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('auth.login.usernamePlaceholder') || 'Enter your username'}
-                  required
-                />
-              </div>
-              
-              <div className={`transition-all duration-500 delay-200 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
-                <InputField
-                  id="password"
-                  label={t('auth.login.password') || 'Password'}
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t('auth.login.passwordPlaceholder') || 'Enter your password'}
-                  required
-                  showPasswordToggle
-                  onTogglePassword={() => setShowPassword(!showPassword)}
-                />
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div className={`flex items-center justify-between transition-all duration-500 delay-300 ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
-                <label className="flex items-center space-x-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-0 transition-colors cursor-pointer"
-                  />
-                  <span className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">
-                    {t('auth.login.rememberMe') || 'Remember me'}
-                  </span>
-                </label>
-                <a 
-                  href="#" 
-                  className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors hover:underline"
-                >
-                  {t('auth.login.forgotPassword') || 'Forgot password?'}
-                </a>
-              </div>
-
-              <div className={`transition-all duration-500 delay-400 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold rounded-lg shadow-lg shadow-cyan-200/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {!isRegisterMode && (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className={`transition-all duration-500 delay-100 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="username"
+                    label={t('auth.login.username') || 'Username'}
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={t('auth.login.usernamePlaceholder') || 'Enter your username'}
+                    autoComplete="username"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <span>{t('auth.login.signingIn') || 'Signing in...'}</span>
+                    }
+                    required
+                  />
+                </div>
+                
+                <div className={`transition-all duration-500 delay-200 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="password"
+                    label={t('auth.login.password') || 'Password'}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('auth.login.passwordPlaceholder') || 'Enter your password'}
+                    autoComplete="current-password"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2h-1V9a5 5 0 10-10 0v2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                    }
+                    required
+                    showPasswordToggle
+                    onTogglePassword={() => setShowPassword(!showPassword)}
+                  />
+                </div>
+
+                {/* Remember Me & Forgot Password */}
+                <div className={`flex items-center justify-between transition-all duration-500 delay-300 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <label className="flex items-center space-x-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 focus:ring-offset-0 dark:focus:ring-offset-slate-900 transition-colors cursor-pointer"
+                    />
+                    <span className="text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
+                      {t('auth.login.rememberMe') || 'Remember me'}
+                    </span>
+                  </label>
+                  <a 
+                    href="#" 
+                    className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors hover:underline"
+                  >
+                    {t('auth.login.forgotPassword') || 'Forgot password?'}
+                  </a>
+                </div>
+
+                <div className={`transition-all duration-500 delay-400 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-cyan-200/50 dark:shadow-cyan-950/60 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-[0.99] motion-reduce:transition-none motion-reduce:transform-none"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>{t('auth.login.signingIn') || 'Signing in...'}</span>
+                      </div>
+                    ) : (
+                      t('auth.login.signIn') || 'Sign In'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Registration Form */}
+            {isRegisterMode && (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className={`transition-all duration-500 delay-100 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="reg-username"
+                    label="Username"
+                    type="text"
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value)}
+                    placeholder="Choose a username"
+                    autoComplete="username"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    }
+                    required
+                  />
+                </div>
+
+                <div className={`transition-all duration-500 delay-150 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="reg-email"
+                    label="Email"
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    }
+                    required
+                  />
+                </div>
+                
+                <div className={`transition-all duration-500 delay-200 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="reg-password"
+                    label="Password"
+                    type={regShowPassword ? 'text' : 'password'}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Create a password (min 6 characters)"
+                    autoComplete="new-password"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2h-1V9a5 5 0 10-10 0v2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                    }
+                    required
+                    showPasswordToggle
+                    onTogglePassword={() => setRegShowPassword(!regShowPassword)}
+                  />
+                </div>
+
+                <div className={`transition-all duration-500 delay-250 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <InputField
+                    id="reg-confirm-password"
+                    label="Confirm Password"
+                    type={regShowPassword ? 'text' : 'password'}
+                    value={regConfirmPassword}
+                    onChange={(e) => setRegConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    autoComplete="new-password"
+                    icon={
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Admin Setup Key - Optional */}
+                <div className={`transition-all duration-500 delay-275 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label 
+                        htmlFor="admin-setup-key" 
+                        className="block text-[13px] font-semibold tracking-wide text-slate-700 dark:text-slate-200 transition-colors"
+                      >
+                        Admin Setup Key
+                        <span className="text-slate-400 dark:text-slate-500 text-xs font-normal ml-1">(Optional)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminKeyField(!showAdminKeyField)}
+                        className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+                      >
+                        {showAdminKeyField ? 'Hide' : 'Register as Admin'}
+                      </button>
                     </div>
-                  ) : (
-                    t('auth.login.signIn') || 'Sign In'
-                  )}
-                </button>
-              </div>
-            </form>
+                    {showAdminKeyField && (
+                      <div className="relative">
+                        <InputField
+                          id="admin-setup-key"
+                          label=""
+                          type="text"
+                          value={adminSetupKey}
+                          onChange={(e) => setAdminSetupKey(e.target.value)}
+                          placeholder="Enter admin setup key"
+                          autoComplete="off"
+                          icon={
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            </svg>
+                          }
+                        />
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Enter the admin setup key to create an administrator account
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className={`transition-all duration-500 delay-300 motion-reduce:transition-none ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                  <button
+                    type="submit"
+                    disabled={regLoading}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-200/50 dark:shadow-emerald-950/60 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-[0.99] motion-reduce:transition-none motion-reduce:transform-none"
+                  >
+                    {regLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Creating Account...</span>
+                      </div>
+                    ) : (
+                      'Create Account'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Toggle Login/Register */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors hover:underline"
+              >
+                {isRegisterMode 
+                  ? 'Already have an account? Sign in' 
+                  : "Don't have an account? Register now"
+                }
+              </button>
+            </div>
 
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
+                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white/90 text-slate-500 font-medium">
+                <span className="px-4 bg-white/90 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 font-medium">
                   {t('auth.oauth.or') || 'or continue with'}
                 </span>
               </div>
             </div>
 
             {/* OAuth Buttons */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <OAuthButton
                 provider="google"
                 onClick={handleGoogleLogin}
@@ -638,14 +1085,14 @@ const LoginPage: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-4 border-t border-slate-100">
-              <p className="text-slate-500 text-xs">
+            <div className="text-center pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 {t('auth.login.agreement') || 'By signing in, you agree to our'}{' '}
-                <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+                <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                   {t('auth.login.terms') || 'Terms of Service'}
                 </a>
                 {' '}{t('common.and') || 'and'}{' '}
-                <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+                <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                   {t('auth.login.privacy') || 'Privacy Policy'}
                 </a>
               </p>
@@ -653,10 +1100,15 @@ const LoginPage: React.FC = () => {
           </div>
 
           {/* Help Text */}
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Encrypted</div>
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Fast Access</div>
+            <div className="rounded-lg bg-white/70 dark:bg-slate-900/70 border border-white/60 dark:border-slate-700 p-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">Audit Ready</div>
+          </div>
           <div className="mt-6 text-center">
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {t('auth.login.needHelp') || 'Need help?'}{' '}
-              <a href="#" className="text-cyan-600 hover:text-cyan-700 font-medium transition-colors hover:underline">
+              <a href="#" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-medium transition-colors hover:underline">
                 {t('auth.login.contactSupport') || 'Contact Support'}
               </a>
             </p>

@@ -197,7 +197,7 @@ const EditToothModal: React.FC<{
                             id="toothNotes"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg h-32 focus:ring-primary focus:border-primary transition-shadow bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg h-32 focus:ring-primary focus:border-primary transition-shadow bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400"
                             placeholder={t('editToothModal.addNotesPlaceholder')}
                         />
                     </div>
@@ -253,7 +253,7 @@ const BulkEditModal: React.FC<{
                             id="bulkNotes"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg h-32 focus:ring-primary focus:border-primary transition-shadow bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg h-32 focus:ring-primary focus:border-primary transition-shadow bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400"
                             placeholder={t('bulkEditModal.addNotesPlaceholder')}
                         />
                     </div>

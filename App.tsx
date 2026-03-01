@@ -33,10 +33,12 @@ import ReportsPage from './components/reports/ReportsPage';
 import PublicBookingPage from './components/PublicBookingPage';
 import EmployeesManagement from './components/employees/EmployeesManagement';
 import AboutPage from './components/AboutPage';
+import ClinicManagementPage from './components/clinic/ClinicManagementPage';
 
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
 import { Permission } from './types';
+import { AuthProvider } from './contexts/AuthContext';
 
 
 
@@ -51,7 +53,7 @@ const AppContent: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { loading: authLoading, userProfile } = useAuth();
+  const { isLoading: authLoading, user } = useAuth();
   
   // Use new RBAC system for permission checking
   const { hasPermission, isReady } = useRBAC();
@@ -138,8 +140,8 @@ const AppContent: React.FC = () => {
         if (!hasPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
         const resolvedDoctorId =
           selectedDoctorId ||
-          userProfile?.dentist_id ||
-          clinicData.dentists.find(d => d.name.trim().toLowerCase() === (userProfile?.username || '').trim().toLowerCase())?.id ||
+          (user as any)?.dentist_id ||
+          clinicData.dentists.find(d => d.name.trim().toLowerCase() === (user?.username || '').trim().toLowerCase())?.id ||
           null;
         if (!resolvedDoctorId) return <div className="text-center py-8">Doctor not found.</div>;
         return <DoctorDetailsPage clinicData={clinicData} doctorId={resolvedDoctorId} onBack={() => setCurrentView('doctors')} />;
@@ -166,11 +168,15 @@ const AppContent: React.FC = () => {
         return <PublicBookingPage />;
       case 'about':
         return <AboutPage />;
+      case 'clinicManagement':
+        return hasPermission(Permission.SETTINGS_EDIT) ? (
+          <ClinicManagementPage />
+        ) : <AccessDenied />;
 
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
     }
-  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, userProfile]);
+  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user]);
   
   const viewTitles: Record<View, string> = {
       dashboard: t('sidebar.dashboard'),
@@ -207,7 +213,8 @@ const AppContent: React.FC = () => {
       'reports': 'Reports',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
       'about': 'عن البرنامج',
-      'pendingReservations': t('adminReservations.title') || 'Pending Reservations'
+      'pendingReservations': t('adminReservations.title') || 'Pending Reservations',
+      'clinicManagement': 'Clinic & Branch Management'
   }
 
   // Show loading state while auth is loading
@@ -263,14 +270,16 @@ const AppContent: React.FC = () => {
   );
 };
 
-// Main App component with RBAC and UserPreferences provider wrappers
+// Main App component with Auth, RBAC and UserPreferences provider wrappers
 const App: React.FC = () => {
   return (
-    <RBACProvider>
-      <UserPreferencesProvider>
-        <AppContent />
-      </UserPreferencesProvider>
-    </RBACProvider>
+    <AuthProvider>
+      <RBACProvider>
+        <UserPreferencesProvider>
+          <AppContent />
+        </UserPreferencesProvider>
+      </RBACProvider>
+    </AuthProvider>
   );
 };
 

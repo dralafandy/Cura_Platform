@@ -3,6 +3,7 @@ import { ClinicData } from '../../hooks/useClinicData';
 import { Expense, ExpenseCategory, Supplier, SupplierInvoice, SupplierInvoiceStatus, PaymentMethod } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
+import { usePageView, ViewMode } from '../../contexts/UserPreferencesContext';
 import InvoiceAttachmentUploader from './InvoiceAttachmentUploader';
 
 const AddIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 me-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
@@ -424,7 +425,7 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                                 placeholder={t('expenses.searchExpenses')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-4 pr-10 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full ps-10 pl-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             />
                         </div>
                     </div>
@@ -511,8 +512,16 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                             const supplier = e.supplierId ? suppliers.find(s => s.id === e.supplierId) : null;
                             const invoice = e.supplierInvoiceId ? supplierInvoices.find(i => i.id === e.supplierInvoiceId) : null;
                             return (
-                                <div key={e.id} className="bg-white dark:bg-slate-800 border border-purple-100 dark:border-purple-700 rounded-lg p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-600 transition-all duration-300">
-                                    <div className="flex items-start justify-between mb-3">
+                                <div 
+                                    key={e.id} 
+                                    className={`bg-white dark:bg-slate-800 border border-purple-100 dark:border-purple-700 rounded-lg p-4 hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-600 transition-all duration-300 ${e.expenseReceiptImageUrl ? 'cursor-pointer' : ''}`}
+                                    onClick={() => {
+                                        if (e.expenseReceiptImageUrl) {
+                                            window.open(e.expenseReceiptImageUrl, '_blank');
+                                        }
+                                    }}
+                                >
+                                    <div className="flex items-start justify-between mb-3" onClick={(evt) => evt.stopPropagation()}>
                                         <div className="flex items-center gap-2">
                                             <span className={`p-2 rounded-lg ${getCategoryColor(e.category)}`}>
                                                 {getCategoryIcon(e.category)}

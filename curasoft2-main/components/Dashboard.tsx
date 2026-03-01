@@ -3,8 +3,10 @@ import { ClinicData } from '../hooks/useClinicData';
 import { AppointmentStatus, LabCaseStatus, View, Dentist, TreatmentRecord, ExpenseCategory, Appointment } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserPreferences } from '../contexts/UserPreferencesContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import NotificationBell from './NotificationBell';
+import DoctorDashboard from './DoctorDashboard';
 
 
 interface StatCardProps {
@@ -73,7 +75,9 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, trend, s
 
 const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View) => void }> = ({ clinicData, setCurrentView }) => {
     const { t, locale } = useI18n();
-    const { isAdmin } = useAuth();
+    const { isAdmin, userProfile } = useAuth();
+    const { preferences } = useUserPreferences();
+    const { dashboard } = preferences;
     console.log('Dashboard component rendered with clinicData:', {
         patientsCount: clinicData.patients?.length || 0,
         appointmentsCount: clinicData.appointments?.length || 0,
@@ -91,6 +95,28 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
     });
 
     const { patients, appointments, treatmentRecords, inventoryItems, labCases, dentists, payments, expenses, supplierInvoices, doctorPayments, prescriptions, prescriptionItems } = clinicData;
+
+    const linkedDoctorId = useMemo(() => {
+        if (userProfile?.dentist_id) return userProfile.dentist_id;
+        if (userProfile?.role === 'DOCTOR') {
+            const matchedDoctor = dentists.find(d => d.name.trim().toLowerCase() === userProfile.username.trim().toLowerCase());
+            return matchedDoctor?.id || null;
+        }
+        return null;
+    }, [userProfile, dentists]);
+
+    if (userProfile?.role === 'DOCTOR') {
+        if (!linkedDoctorId) {
+            return (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-5">
+                    Your account is a doctor account, but it is not linked to a doctor profile yet.
+                    Please ask admin to link this user to a doctor from User Management.
+                </div>
+            );
+        }
+        return <DoctorDashboard clinicData={clinicData} doctorId={linkedDoctorId} setCurrentView={setCurrentView} />;
+    }
+
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
     const fullCurrencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
     const dateFormatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' });
@@ -508,7 +534,14 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                             </svg>
                                             <div className="absolute -top-1 -right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full animate-pulse"></div>
                                         </div>
-                                        <span className="font-semibold text-xs sm:text-sm">{currencyFormatter.format(clinicProfitThisMonth)} <span className="text-white/80 font-normal">{t('dashboard.monthlyNetProfit') || 'صافي الربح الشهري'}</span></span>
+                                        <div className="flex flex-col leading-tight">
+                                            <span className="font-semibold text-xs sm:text-sm">
+                                                {currencyFormatter.format(netToday)} <span className="text-white/80 font-normal">{t('dashboard.dailyNetProfit') || 'صافي الربح اليومي'}</span>
+                                            </span>
+                                            <span className="font-semibold text-xs sm:text-sm">
+                                                {currencyFormatter.format(clinicProfitThisMonth)} <span className="text-white/80 font-normal">{t('dashboard.monthlyNetProfit') || 'صافي الربح الشهري'}</span>
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -516,9 +549,69 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                     </div>
                 </div>
 
+                {/* Helpful hints (quick summarized cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('scheduler')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 mb-2">
+                            {ClockIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.nextAppointment') || 'Next Appointment'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                            {nextAppointment
+                                ? new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(nextAppointment.startTime))
+                                : (t('dashboard.noUpcomingAppointments') || 'No upcoming appointments')}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            {nextAppointment ? (patients.find(p => p.id === nextAppointment.patientId)?.name || '') : (t('dashboard.schedule') || 'Schedule')}
+                        </p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('reports')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-rose-300 dark:hover:border-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
+                            {AlertIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.pendingPayments') || 'Pending Payments'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{overdueInvoices} {t('dashboard.overdue') || 'Overdue'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.viewDetails') || 'View details'}</p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('inventory')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                            {AlertIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.lowStockItems') || 'Low Stock Items'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{lowStockItems.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.atAGlance') || 'At a glance'}</p>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setCurrentView('labCases')}
+                        className="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+                    >
+                        <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-2">
+                            {CalendarIcon}
+                            <p className="text-xs font-semibold uppercase tracking-wide">{t('dashboard.pendingLabCases') || 'Pending Lab Cases'}</p>
+                        </div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{pendingLabCases.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.atAGlance') || 'At a glance'}</p>
+                    </button>
+                </div>
 
                 {/* 1. Data Visualization Dashboard - Only for Admin */}
-                {isAdmin && (
+                {isAdmin && dashboard.showQuickStats && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         {/* Today's Financial Overview */}
                         <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -570,7 +663,8 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                             </div>
                         </div>
 
-                        {/* Daily Trends */}
+                        {/* Daily Trends - Show when showRevenueChart is enabled */}
+                        {dashboard.showRevenueChart && (
                         <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-700">
                                 <div className="flex items-center justify-between">
@@ -626,10 +720,12 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                 </div>
                             </div>
                         </div>
+                        )}
                     </div>
                 )}
 
-                {/* 2. Upcoming Appointments Section */}
+                {/* 2. Upcoming Appointments Section - Show when showAppointmentsToday is enabled */}
+                {dashboard.showAppointmentsToday && (
                 <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-700">
                         <div className="flex items-center justify-between">
@@ -666,6 +762,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                         </div>
                     </div>
                 </div>
+                )}
 
                 {/* 2.3. Monthly Trends (moved below) - Only for Admin */}
                 {isAdmin && (
@@ -823,6 +920,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                     </div>
                                 </div>
 
+                                {dashboard.showLowStockAlerts && (
                                 <div>
                                     <div className="flex items-center mb-2 sm:mb-3">
                                         <div className="flex-shrink-0">{AlertIcon}</div>
@@ -846,6 +944,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                         )}
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
                     </div>

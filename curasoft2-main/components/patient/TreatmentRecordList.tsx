@@ -45,6 +45,12 @@ const MaterialsIcon = () => (
     </svg>
 );
 
+const ToothIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+);
+
 const TreatmentRecordList: React.FC<{
     patient: Patient;
     clinicData: ClinicData;
@@ -96,6 +102,25 @@ const TreatmentRecordList: React.FC<{
                                                 <span>{dateFormatter.format(new Date(record.treatmentDate))}</span>
                                             </div>
                                         </div>
+                                        {/* Affected Teeth Display */}
+                                        {record.affectedTeeth && record.affectedTeeth.length > 0 && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                                                    <ToothIcon />
+                                                    <span className="text-sm font-medium">{t('addTreatmentRecord.affectedTeeth')}:</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {record.affectedTeeth.map((toothId, index) => (
+                                                        <span 
+                                                            key={index}
+                                                            className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full border border-purple-200 dark:border-purple-800"
+                                                        >
+                                                            {toothId}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="text-right">

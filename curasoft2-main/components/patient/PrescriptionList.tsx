@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Patient, Prescription, PrescriptionItem, Dentist } from '../../types';
+import { Patient, Prescription, PrescriptionItem, Dentist, Permission } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useClinicData } from '../../hooks/useClinicData';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { NotificationType } from '../../types';
 import PrescriptionDetailsModal from './PrescriptionDetailsModal';
 import DeletePrescriptionConfirmationModal from './DeletePrescriptionConfirmationModal';
@@ -105,8 +106,8 @@ const InputField: React.FC<InputFieldProps> = ({
         w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
         focus:ring-2 focus:ring-primary/20 focus:border-primary
         transition-all duration-200 ease-in-out
-        placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200
-        ${icon ? 'pr-10' : ''}
+        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        ${icon ? 'ps-10' : ''}
         ${isDateInput ? 'min-w-[140px] sm:min-w-[160px] text-xs sm:text-sm' : ''}
     `;
 
@@ -152,6 +153,15 @@ const PrescriptionList: React.FC<{
     const { isDark } = useTheme();
     const { clinicInfo, whatsappPrescriptionTemplate } = useClinicData();
     const { addNotification } = useNotification();
+    const auth = useAuth();
+    const hasPermission = (permission: Permission): boolean => {
+        const checkFn = auth?.hasPermission || auth?.checkPermission;
+        return checkFn ? checkFn(permission) : false;
+    };
+    
+    const canAddPrescription = hasPermission(Permission.PRESCRIPTION_CREATE);
+    const canEditPrescription = hasPermission(Permission.PRESCRIPTION_EDIT);
+    const canDeletePrescription = hasPermission(Permission.PRESCRIPTION_DELETE);
     const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
     const [deletingPrescription, setDeletingPrescription] = useState<Prescription | null>(null);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -612,7 +622,7 @@ const PrescriptionList: React.FC<{
                                     placeholder={t('prescriptionList.searchPlaceholder')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-xs sm:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    className="w-full px-3 sm:px-4 py-3 sm:py-3 ps-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-xs sm:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400"
                                 />
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
                                     <SearchIcon />
@@ -653,7 +663,7 @@ const PrescriptionList: React.FC<{
                                         id="dentistId"
                                         value={filters.dentistId}
                                         onChange={(e) => handleFilterChange('dentistId', e.target.value)}
-                                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-xs sm:text-sm text-slate-700 dark:text-slate-200 appearance-none"
+                                        className="w-full px-3 sm:px-4 py-3 sm:py-3 ps-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-xs sm:text-sm text-slate-700 dark:text-slate-200 appearance-none"
                                     >
                                         <option value="">{t('prescriptionList.allDoctors')}</option>
                                         {dentists.map(dentist => (

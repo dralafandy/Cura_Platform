@@ -1,7 +1,5 @@
 import React from 'react';
-import { useClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
-import { ExpenseCategory } from '../../types';
 
 interface FinancialFiltersProps {
   filters: {
@@ -13,7 +11,6 @@ interface FinancialFiltersProps {
 
 const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersChange }) => {
   const { t } = useI18n();
-  const { dentists, suppliers } = useClinicData();
 
   const handleFilterChange = (key: keyof FinancialFiltersProps['filters'], value: string) => {
     onFiltersChange({
@@ -29,15 +26,13 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
     });
   };
 
-  const expenseCategories = Object.values(ExpenseCategory);
-
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-800">{t('financialFilters.title')}</h3>
+        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{t('financialFilters.title')}</h3>
         <button
           onClick={clearFilters}
-          className="text-sm text-slate-600 hover:text-slate-800 underline"
+          className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline"
         >
           {t('financialFilters.clearAll')}
         </button>
@@ -45,7 +40,7 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <label htmlFor="date-preset" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="date-preset" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             {t('financialFilters.dateRange')}
           </label>
           <select
@@ -59,12 +54,13 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
                 case 'today':
                   startDate = endDate = today.toISOString().split('T')[0];
                   break;
-                case 'thisWeek':
+                case 'thisWeek': {
                   const weekStart = new Date(today);
                   weekStart.setDate(today.getDate() - today.getDay());
                   startDate = weekStart.toISOString().split('T')[0];
                   endDate = today.toISOString().split('T')[0];
                   break;
+                }
                 case 'thisMonth':
                   startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
                   endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -74,7 +70,7 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
                   endDate = new Date(today.getFullYear(), 11, 31).toISOString().split('T')[0];
                   break;
                 case 'custom':
-                  // Keep current dates
+                default:
                   break;
               }
 
@@ -83,7 +79,7 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
                 endDate,
               });
             }}
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
           >
             <option value="">{t('financialFilters.selectPreset')}</option>
             <option value="today">{t('financialFilters.today')}</option>
@@ -95,7 +91,7 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
         </div>
 
         <div>
-          <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             {t('financialFilters.startDate')}
           </label>
           <input
@@ -103,12 +99,12 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
             id="start-date"
             value={filters.startDate}
             onChange={(e) => handleFilterChange('startDate', e.target.value)}
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
           />
         </div>
 
         <div>
-          <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             {t('financialFilters.endDate')}
           </label>
           <input
@@ -116,32 +112,31 @@ const FinancialFilters: React.FC<FinancialFiltersProps> = ({ filters, onFiltersC
             id="end-date"
             value={filters.endDate}
             onChange={(e) => handleFilterChange('endDate', e.target.value)}
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
           />
         </div>
       </div>
 
-      {/* Active Filters Display */}
       <div className="mt-4 flex flex-wrap gap-2">
         {filters.startDate && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
             {t('financialFilters.startDate')}: {new Date(filters.startDate).toLocaleDateString()}
             <button
               onClick={() => handleFilterChange('startDate', '')}
-              className="ml-2 text-blue-600 hover:text-blue-800"
+              className="ml-2 text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200"
             >
-              ×
+              x
             </button>
           </span>
         )}
         {filters.endDate && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
             {t('financialFilters.endDate')}: {new Date(filters.endDate).toLocaleDateString()}
             <button
               onClick={() => handleFilterChange('endDate', '')}
-              className="ml-2 text-blue-600 hover:text-blue-800"
+              className="ml-2 text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200"
             >
-              ×
+              x
             </button>
           </span>
         )}

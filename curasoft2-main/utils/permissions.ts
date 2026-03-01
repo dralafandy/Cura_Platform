@@ -17,9 +17,16 @@ import { Permission, UserRole } from '../types';
  * Default permissions for each role
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: Object.values(Permission),
+  [UserRole.ADMIN]: [
+    ...Object.values(Permission),
+    Permission.FINANCE_DISCOUNT_ADD,
+  ],
   
   [UserRole.DOCTOR]: [
+    // Doctor Management
+    Permission.DOCTOR_VIEW,
+    Permission.DOCTOR_EDIT,
+    
     // Patient Management
     Permission.PATIENT_VIEW,
     Permission.PATIENT_CREATE,
@@ -61,6 +68,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   
   [UserRole.ASSISTANT]: [
+    // Doctor Management
+    Permission.DOCTOR_VIEW,
+    
     // Patient Management
     Permission.PATIENT_VIEW,
     Permission.PATIENT_CREATE,
@@ -109,6 +119,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   
   [UserRole.RECEPTIONIST]: [
+    // Doctor Management
+    Permission.DOCTOR_VIEW,
+    
     // Patient Management
     Permission.PATIENT_VIEW,
     Permission.PATIENT_CREATE,
@@ -123,6 +136,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Finance (limited)
     Permission.FINANCE_VIEW,
     Permission.FINANCE_EXPENSES_MANAGE,
+    Permission.FINANCE_PAYMENT_ADD,
     
     // Reports
     Permission.REPORTS_VIEW,
@@ -177,6 +191,12 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
     Permission.FINANCE_INVOICES_MANAGE,
     Permission.FINANCE_ACCOUNTS_VIEW,
     Permission.FINANCE_ACCOUNTS_MANAGE,
+    Permission.FINANCE_PAYMENT_ADD,
+    Permission.FINANCE_PAYMENT_EDIT,
+    Permission.FINANCE_PAYMENT_DELETE,
+    Permission.FINANCE_DISCOUNT_ADD,
+    Permission.FINANCE_DISCOUNT_EDIT,
+    Permission.FINANCE_DISCOUNT_DELETE,
   ],
   'Inventory': [
     Permission.INVENTORY_VIEW,
@@ -220,6 +240,11 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   [Permission.USER_MANAGEMENT_EDIT]: 'Edit Users',
   [Permission.USER_MANAGEMENT_DELETE]: 'Delete Users',
   
+  [Permission.DOCTOR_VIEW]: 'View Doctors',
+  [Permission.DOCTOR_CREATE]: 'Create Doctors',
+  [Permission.DOCTOR_EDIT]: 'Edit Doctors',
+  [Permission.DOCTOR_DELETE]: 'Delete Doctors',
+  
   [Permission.PATIENT_VIEW]: 'View Patients',
   [Permission.PATIENT_CREATE]: 'Create Patients',
   [Permission.PATIENT_EDIT]: 'Edit Patients',
@@ -245,6 +270,12 @@ export const PERMISSION_DISPLAY_NAMES: Record<Permission, string> = {
   [Permission.FINANCE_INVOICES_MANAGE]: 'Manage Invoices',
   [Permission.FINANCE_ACCOUNTS_VIEW]: 'View Accounts',
   [Permission.FINANCE_ACCOUNTS_MANAGE]: 'Manage Accounts',
+  [Permission.FINANCE_PAYMENT_ADD]: 'Add Payments',
+  [Permission.FINANCE_PAYMENT_EDIT]: 'Edit Payments',
+  [Permission.FINANCE_PAYMENT_DELETE]: 'Delete Payments',
+  [Permission.FINANCE_DISCOUNT_ADD]: 'Add Discounts',
+  [Permission.FINANCE_DISCOUNT_EDIT]: 'Edit Discounts',
+  [Permission.FINANCE_DISCOUNT_DELETE]: 'Delete Discounts',
   
   [Permission.INVENTORY_VIEW]: 'View Inventory',
   [Permission.INVENTORY_MANAGE]: 'Manage Inventory',
@@ -436,4 +467,15 @@ export const getRoleColor = (role: UserRole): string => {
     [UserRole.RECEPTIONIST]: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   };
   return colors[role] || 'bg-gray-100 text-gray-800';
+};
+
+/**
+ * Check if a user has a specific permission from custom permissions only (not role-based)
+ * This is useful when you want to check ONLY the permissions set in the user management page
+ */
+export const hasCustomPermission = (
+  customPermissions: Permission[],
+  permission: Permission
+): boolean => {
+  return customPermissions.includes(permission);
 };

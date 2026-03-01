@@ -37,10 +37,11 @@ const EditPaymentModal: React.FC<EditPaymentModalProps> = ({ patientId, payment,
         if (name === 'amount' && parseFloat(newValue as string) !== originalAmount) {
             const treatmentRecord = clinicData.treatmentRecords.find(tr => tr.id === payment.treatmentRecordId);
             if (treatmentRecord) {
-                const treatmentDef = clinicData.treatmentDefinitions.find(td => td.id === treatmentRecord.treatmentDefinitionId);
-                if (treatmentDef) {
+                const recordTotal = Number(treatmentRecord.doctorShare) + Number(treatmentRecord.clinicShare);
+                if (recordTotal > 0) {
                     const amountValue = parseFloat(newValue as string);
-                    const doctorShare = amountValue * treatmentDef.doctorPercentage;
+                    const doctorRatio = Number(treatmentRecord.doctorShare) / recordTotal;
+                    const doctorShare = amountValue * doctorRatio;
                     const clinicShare = amountValue - doctorShare;
                     setFormData(prev => ({ ...prev, clinicShare, doctorShare }));
                 }
@@ -60,10 +61,7 @@ const EditPaymentModal: React.FC<EditPaymentModalProps> = ({ patientId, payment,
 
         // Calculate outstanding balance for the patient (excluding current payment)
         const patientTreatmentRecords = clinicData.treatmentRecords.filter(tr => tr.patientId === patientId);
-        const totalTreatmentCosts = patientTreatmentRecords.reduce((sum, tr) => {
-            const treatmentDef = clinicData.treatmentDefinitions.find(td => td.id === tr.treatmentDefinitionId);
-            return sum + (treatmentDef ? treatmentDef.basePrice : 0);
-        }, 0);
+        const totalTreatmentCosts = patientTreatmentRecords.reduce((sum, tr) => sum + (Number(tr.doctorShare) + Number(tr.clinicShare)), 0);
         const totalPayments = clinicData.payments.filter(p => p.patientId === patientId && p.id !== payment.id).reduce((sum, p) => sum + p.amount, 0);
         const outstandingBalance = totalTreatmentCosts - totalPayments;
 

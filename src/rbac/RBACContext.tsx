@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useMemo, ReactNode, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../auth/AuthContext';
 import { Permission, UserRole } from '../../types';
 import { PermissionManager, createPermissionManager } from './PermissionManager';
 import { 
@@ -31,12 +31,12 @@ interface RBACProviderProps {
 }
 
 export const RBACProvider: React.FC<RBACProviderProps> = ({ children }) => {
-  const { userProfile, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
 
   // Create permission manager instance
   const permissionManager = useMemo(() => {
-    return createPermissionManager(userProfile);
-  }, [userProfile]);
+    return createPermissionManager(user);
+  }, [user]);
 
   // Check single permission
   const hasPermission = useCallback((permission: Permission): boolean => {
@@ -75,12 +75,12 @@ export const RBACProvider: React.FC<RBACProviderProps> = ({ children }) => {
   // Context value
   const value = useMemo<RBACContextType>(() => ({
     // State
-    isReady: !loading,
+    isReady: !isLoading,
     permissions: getEffectivePermissions(),
-    role: userProfile?.role ?? null,
+    role: user?.role ?? null,
     isAdmin,
-    customPermissions: userProfile?.custom_permissions ?? [],
-    overrideMode: userProfile?.override_permissions ?? false,
+    customPermissions: (user as any)?.custom_permissions ?? [],
+    overrideMode: (user as any)?.override_permissions ?? false,
     
     // Actions
     hasPermission,
@@ -90,8 +90,8 @@ export const RBACProvider: React.FC<RBACProviderProps> = ({ children }) => {
     isRole: checkIsRole,
     can: checkCan,
   }), [
-    loading,
-    userProfile,
+    isLoading,
+    user,
     isAdmin,
     hasPermission,
     hasAnyPermission,
@@ -119,7 +119,22 @@ export function useRBAC(): RBACContextType {
   const context = useContext(RBACContext);
   
   if (!context) {
-    throw new Error('useRBAC must be used within an RBACProvider');
+    // Return a default RBAC context instead of throwing an error
+    // This prevents "Cannot read properties of null" errors
+    return {
+      isReady: false,
+      permissions: [],
+      role: null,
+      isAdmin: false,
+      customPermissions: [],
+      overrideMode: false,
+      hasPermission: () => false,
+      hasAnyPermission: () => false,
+      hasAllPermissions: () => false,
+      getEffectivePermissions: () => [],
+      isRole: () => false,
+      can: () => false,
+    };
   }
   
   return context;

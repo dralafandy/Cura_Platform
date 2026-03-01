@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
-import { Patient, Dentist, Supplier } from '../../types';
 import FinancialTable from './FinancialTable';
 
 type AccountType = 'patient' | 'doctor' | 'supplier' | 'clinic';
@@ -258,11 +257,11 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
   return (
     <div className="space-y-6">
       {/* Account Selection */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">{translate('financialAccounts.accountDetails.selectAccount')}</h3>
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+        <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">{translate('financialAccounts.accountDetails.selectAccount')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               {translate('financialAccounts.accountDetails.accountType')}
             </label>
             <select
@@ -271,7 +270,7 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
                 setSelectedAccountType(e.target.value as AccountType);
                 setSelectedEntityId('');
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {accountTypes.map(type => (
                 <option key={type.value} value={type.value}>{type.label}</option>
@@ -279,13 +278,13 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               {translate('financialAccounts.accountDetails.selectEntity')}
             </label>
             <select
               value={selectedEntityId}
               onChange={(e) => setSelectedEntityId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">{translate('financialAccounts.accountDetails.selectEntity')}</option>
               {entities.map(entity => (
@@ -300,9 +299,9 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
      {accountData && (
        <div className="space-y-6">
          {/* Account Summary */}
-         <div className="bg-white p-6 rounded-lg shadow">
+         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-slate-200 dark:border-slate-700">
            <div className="flex justify-between items-center mb-4">
-             <h3 className="text-lg font-semibold">{translate('financialAccounts.accountDetails.accountSummary')}</h3>
+             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{translate('financialAccounts.accountDetails.accountSummary')}</h3>
              {onPrint && (
                <button
                  onClick={() => onPrint(accountData, selectedAccountType)}
@@ -315,24 +314,24 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              <div className="text-center">
                <div className="text-2xl font-bold text-red-600">{currencyFormatter.format(accountData.summary.totalDebit)}</div>
-               <div className="text-sm text-slate-600">{translate('financialAccounts.accountDetails.totalDebit')}</div>
+               <div className="text-sm text-slate-600 dark:text-slate-400">{translate('financialAccounts.accountDetails.totalDebit')}</div>
              </div>
              <div className="text-center">
                <div className="text-2xl font-bold text-green-600">{currencyFormatter.format(accountData.summary.totalCredit)}</div>
-               <div className="text-sm text-slate-600">{translate('financialAccounts.accountDetails.totalCredit')}</div>
+               <div className="text-sm text-slate-600 dark:text-slate-400">{translate('financialAccounts.accountDetails.totalCredit')}</div>
              </div>
              <div className="text-center">
                <div className={`text-2xl font-bold ${accountData.summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                  {currencyFormatter.format(accountData.summary.balance)}
                </div>
-               <div className="text-sm text-slate-600">{translate('financialAccounts.accountDetails.balance')}</div>
+               <div className="text-sm text-slate-600 dark:text-slate-400">{translate('financialAccounts.accountDetails.balance')}</div>
              </div>
            </div>
          </div>
 
          {/* Transactions Table */}
-         <div className="bg-white p-6 rounded-lg shadow">
-           <h3 className="text-lg font-semibold mb-4">{translate('financialAccounts.accountDetails.transactions')}</h3>
+         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-slate-200 dark:border-slate-700">
+           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{translate('financialAccounts.accountDetails.transactions')}</h3>
            {accountData.transactions.length > 0 ? (
              <FinancialTable
                data={accountData.transactions}
@@ -341,7 +340,7 @@ const AccountDetailsTab: React.FC<AccountDetailsTabProps> = ({ filters, currency
                emptyMessage={translate('financialAccounts.accountDetails.noTransactions')}
              />
            ) : (
-             <div className="text-center py-8 text-slate-500">
+             <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                {translate('financialAccounts.accountDetails.noTransactions')}
              </div>
            )}

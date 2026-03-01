@@ -250,7 +250,7 @@ export type FilterOptions = {
 
 export type PatientDetailTab = 'details' | 'chart' | 'treatments' | 'prescriptions' | 'financials' | 'attachments'; // Added 'attachments' tab
 export type DoctorDetailTab = 'details' | 'treatments' | 'financials' | 'schedule';
-export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about';
+export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement';
 
 
 
@@ -551,6 +551,10 @@ export enum Permission {
   // Settings
   SETTINGS_VIEW = 'SETTINGS_VIEW',
   SETTINGS_EDIT = 'SETTINGS_EDIT',
+  CLINIC_BRANCH_VIEW = 'CLINIC_BRANCH_VIEW',
+  CLINIC_BRANCH_CREATE = 'CLINIC_BRANCH_CREATE',
+  CLINIC_BRANCH_EDIT = 'CLINIC_BRANCH_EDIT',
+  CLINIC_BRANCH_DELETE = 'CLINIC_BRANCH_DELETE',
 
   // Notifications
   NOTIFICATIONS_VIEW = 'NOTIFICATIONS_VIEW',

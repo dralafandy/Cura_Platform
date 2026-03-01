@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
-import { UserProfile, UserRole, UserStatus, NotificationType, Permission } from '../types';
+import { UserProfile, UserRole, UserStatus, NotificationType, Permission, Dentist } from '../types';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ToastContainer from './ToastContainer';
 import { useNotification } from '../contexts/NotificationContext';
 import { ROLE_PERMISSIONS, PERMISSION_CATEGORIES, getPermissionDisplayName } from '../utils/permissions';
+
+// Configuration constants
+const USERS_PER_PAGE = 10;
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 100;
 
 
 
@@ -18,6 +23,7 @@ interface UserFormData {
   confirmPassword: string;
   role: UserRole;
   status: UserStatus;
+  dentist_id?: string | null;
 }
 
 interface FormErrors {
@@ -26,10 +32,26 @@ interface FormErrors {
   password?: string;
   newPassword?: string;
   confirmPassword?: string;
+  dentist_id?: string;
 }
 
+// Role badge colors map - single source of truth
+const ROLE_BADGE_COLORS: Record<UserRole, string> = {
+  [UserRole.ADMIN]: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  [UserRole.RECEPTIONIST]: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  [UserRole.DOCTOR]: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  [UserRole.ASSISTANT]: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+};
+
+// Status badge colors map
+const STATUS_BADGE_COLORS: Record<UserStatus, string> = {
+  [UserStatus.ACTIVE]: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  [UserStatus.INACTIVE]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  [UserStatus.SUSPENDED]: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+};
+
 const UserManagement: React.FC = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userProfile, isAdmin: isUserAdmin } = useAuth();
   const { addNotification } = useNotification();
   const { theme } = useTheme();
   
@@ -46,6 +68,7 @@ const UserManagement: React.FC = () => {
   
   // State management
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [dentists, setDentists] = useState<Dentist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -53,6 +76,7 @@ const UserManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
@@ -61,7 +85,10 @@ const UserManagement: React.FC = () => {
   const [customPermissions, setCustomPermissions] = useState<Permission[]>([]);
   const [overridePermissions, setOverridePermissions] = useState(false);
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
-  
+  const [changingRoleFor, setChangingRoleFor] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userId: string | null; type: 'single' | 'bulk' }>({ isOpen: false, userId: null, type: 'single' });
+  const [oauthUnlinkConfirm, setOauthUnlinkConfirm] = useState<{ isOpen: boolean; userId: string | null; provider: string | null }>({ isOpen: false, userId: null, provider: null });
+
   // Form state
 
   const [formData, setFormData] = useState<UserFormData>({
@@ -72,35 +99,100 @@ const UserManagement: React.FC = () => {
     confirmPassword: '',
     role: UserRole.ADMIN,
     status: UserStatus.ACTIVE,
+    dentist_id: null,
   });
   
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const usersPerPage = 10;
+  // Check if user is admin - use userProfile for role info
+  const isAdmin = userProfile?.role === UserRole.ADMIN;
 
-  // Fetch users from database
-  const fetchUsers = useCallback(async () => {
+  const usersPerPage = USERS_PER_PAGE;
+
+  // Unified error handler
+  const handleError = (error: unknown, context: string): string => {
+    const err = error as { message?: string; code?: string };
+    let message = 'An unexpected error occurred';
+    
+    if (err.code === 'PGRST116') message = 'Record not found';
+    else if (err.code === '23505') message = 'Username already exists';
+    else if (err.code === '42501') message = 'Permission denied';
+    else if (err.message?.includes('network')) message = 'Network error. Please check your connection';
+    else if (err.message) message = err.message;
+    
+    console.error(`${context}:`, error);
+    addNotification({ message: `${context}: ${message}`, type: NotificationType.ERROR });
+    return message;
+  };
+
+  // Fetch users from database with server-side pagination
+  const fetchUsers = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase!
+      const from = (page - 1) * usersPerPage;
+      const to = from + usersPerPage - 1;
+      
+      // Build query with filters
+      let query = supabase
         .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, user_id, username, role, status, dentist_id, created_at, updated_at, last_login, oauth_provider, oauth_email, custom_permissions, override_permissions', { count: 'exact' });
+      
+      // Apply search filter
+      if (searchTerm) {
+        query = query.ilike('username', `%${searchTerm}%`);
+      }
+      
+      // Apply role filter
+      if (roleFilter !== 'ALL') {
+        query = query.eq('role', roleFilter);
+      }
+      
+      // Apply status filter
+      if (statusFilter !== 'ALL') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      setUsers(data || []);
+      // Map data to ensure user_id is present (it may be returned as id)
+      const rawData = data || [];
+      const mappedData = rawData.map((user: any) => ({
+        ...user,
+        user_id: user.user_id || user.id
+      }));
+      setUsers(mappedData as UserProfile[]);
+      setTotalUsers(count || 0);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      addNotification({ message: 'Failed to fetch users', type: NotificationType.ERROR });
+      handleError(error, 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, [searchTerm, roleFilter, statusFilter]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchUsers(currentPage);
+  }, [fetchUsers, currentPage]);
+
+  const fetchDentists = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('dentists')
+        .select('id, name, specialty, color')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setDentists((data || []) as Dentist[]);
+    } catch (error) {
+      handleError(error, 'Failed to fetch doctors');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDentists();
+  }, [fetchDentists]);
 
   // Validate form data
   const validateForm = useCallback((): boolean => {
@@ -123,13 +215,15 @@ const UserManagement: React.FC = () => {
         errors.email = 'Email is invalid';
       }
 
-      // Password validation (only for new users)
+      // Password validation (only for new users) - stronger policy
       if (!formData.password) {
         errors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        errors.password = 'Password must be at least 6 characters';
-      } else if (formData.password.length > 100) {
-        errors.password = 'Password must be less than 100 characters';
+      } else if (formData.password.length < MIN_PASSWORD_LENGTH) {
+        errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+      } else if (formData.password.length > MAX_PASSWORD_LENGTH) {
+        errors.password = `Password must be less than ${MAX_PASSWORD_LENGTH} characters`;
+      } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+        errors.password = 'Password must contain uppercase, lowercase, and number';
       }
     }
 
@@ -137,10 +231,12 @@ const UserManagement: React.FC = () => {
     if (editingUser && isResettingPassword) {
       if (!formData.newPassword) {
         errors.newPassword = 'New password is required';
-      } else if (formData.newPassword.length < 6) {
-        errors.newPassword = 'Password must be at least 6 characters';
-      } else if (formData.newPassword.length > 100) {
-        errors.newPassword = 'Password must be less than 100 characters';
+      } else if (formData.newPassword.length < MIN_PASSWORD_LENGTH) {
+        errors.newPassword = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+      } else if (formData.newPassword.length > MAX_PASSWORD_LENGTH) {
+        errors.newPassword = `Password must be less than ${MAX_PASSWORD_LENGTH} characters`;
+      } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
+        errors.newPassword = 'Password must contain uppercase, lowercase, and number';
       }
 
       if (!formData.confirmPassword) {
@@ -191,107 +287,102 @@ const UserManagement: React.FC = () => {
 
   // Create new user
   const handleCreateUser = async () => {
-    // Check if username already exists
-    const { data: existingUser } = await supabase!
-      .from('user_profiles')
-      .select('id')
-      .eq('username', formData.username)
-      .single();
+    // Check if username already exists - let DB handle uniqueness constraint
+    try {
+      // Hash password for storage (using SHA-256 for compatibility with login)
+      const { hashPassword } = await import('../services/userService');
+      const hashedPassword = await hashPassword(formData.password);
 
-    if (existingUser) {
-      throw new Error('Username already exists');
+      // Create user profile with password hash
+      const { data: newUser, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          username: formData.username,
+          role: formData.role,
+          status: formData.status,
+          dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
+          password_hash: hashedPassword,
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        // Handle unique constraint violation
+        if (profileError.code === '23505') {
+          throw new Error('Username already exists');
+        }
+        throw profileError;
+      }
+
+      if (!newUser) throw new Error('Failed to create user profile');
+
+      addNotification({ message: 'User created successfully', type: NotificationType.SUCCESS });
+    } catch (error) {
+      handleError(error, 'Failed to create user');
+      throw error; // Re-throw for form handling
     }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase!.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-    });
-
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('Failed to create auth user');
-
-    // Hash password for direct login
-    const { hashPassword } = await import('../utils/authUtils');
-    const hashedPassword = await hashPassword(formData.password);
-
-    // Create user profile
-    const { error: profileError } = await supabase!
-      .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        user_id: authData.user.id,
-        username: formData.username,
-        role: formData.role,
-        status: formData.status,
-        password_hash: hashedPassword,
-      });
-
-    if (profileError) throw profileError;
-
-    addNotification({ message: 'User created successfully', type: NotificationType.SUCCESS });
   };
 
   // Update existing user
   const handleUpdateUser = async () => {
-    // Check if username is taken by another user
-    const { data: existingUser } = await supabase!
-      .from('user_profiles')
-      .select('id')
-      .eq('username', formData.username)
-      .neq('id', editingUser!.id)
-      .single();
-
-    if (existingUser) {
-      throw new Error('Username already exists');
+    // Prepare update data with proper typing
+    interface UserProfileUpdate {
+      username: string;
+      role: UserRole;
+      status: UserStatus;
+      dentist_id: string | null;
+      updated_at: string;
     }
 
-    // Prepare update data
-    const updateData: any = {
+    if (formData.role === UserRole.DOCTOR && !formData.dentist_id) {
+      errors.dentist_id = 'Please link this user to a doctor profile';
+    }
+    
+    const updateData: UserProfileUpdate = {
       username: formData.username,
       role: formData.role,
       status: formData.status,
+      dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
       updated_at: new Date().toISOString(),
     };
 
     // Update user profile
-    const { error: profileError } = await supabase!
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .update(updateData)
       .eq('id', editingUser!.id);
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      if (profileError.code === '23505') {
+        throw new Error('Username already exists');
+      }
+      throw profileError;
+    }
 
-    // Update password if provided
+    // Update password if provided - only via Supabase Auth (no local hash storage)
     if (isResettingPassword && formData.newPassword) {
-      // Update auth user password
-      const { error: authError } = await supabase!.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         password: formData.newPassword,
       });
 
       if (authError) throw authError;
-
-      // Update password hash in profile
-      const { hashPassword } = await import('../utils/authUtils');
-      const hashedPassword = await hashPassword(formData.newPassword);
-
-      const { error: hashError } = await supabase!
-        .from('user_profiles')
-        .update({ password_hash: hashedPassword })
-        .eq('id', editingUser!.id);
-
-      if (hashError) throw hashError;
     }
 
     addNotification({ message: 'User updated successfully', type: NotificationType.SUCCESS });
   };
 
-  // Handle OAuth unlinking
-  const handleUnlinkOAuth = async (userId: string, provider: string) => {
-    if (!confirm(`Are you sure you want to unlink this ${provider} account?`)) return;
+  // OAuth unlink - triggers confirmation
+  const handleUnlinkOAuthRequest = (userId: string, provider: string) => {
+    setOauthUnlinkConfirm({ isOpen: true, userId, provider });
+  };
+
+  // Confirm OAuth unlink
+  const confirmUnlinkOAuth = async () => {
+    const { userId, provider } = oauthUnlinkConfirm;
+    if (!userId || !provider) return;
     
     try {
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('user_profiles')
         .update({ 
           oauth_provider: null, 
@@ -303,10 +394,11 @@ const UserManagement: React.FC = () => {
       if (error) throw error;
       
       addNotification({ message: `${provider} account unlinked successfully`, type: NotificationType.SUCCESS });
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error unlinking OAuth account:', error);
-      addNotification({ message: 'Failed to unlink OAuth account', type: NotificationType.ERROR });
+      await fetchUsers(currentPage);
+    } catch (error) {
+      handleError(error, 'Failed to unlink OAuth account');
+    } finally {
+      setOauthUnlinkConfirm({ isOpen: false, userId: null, provider: null });
     }
   };
 
@@ -321,41 +413,49 @@ const UserManagement: React.FC = () => {
       confirmPassword: '',
       role: userProfile.role,
       status: userProfile.status || UserStatus.ACTIVE,
+      dentist_id: userProfile.dentist_id || null,
     });
     setIsResettingPassword(false);
     setFormErrors({});
     setShowModal(true);
   };
 
-  // Delete user
-  const handleDelete = async (userId: string) => {
+  // Delete user - triggers confirmation modal
+  const handleDeleteRequest = (userId: string) => {
+    setDeleteConfirm({ isOpen: true, userId, type: 'single' });
+  };
+
+  // Confirm delete user
+  const confirmDelete = async () => {
+    const userId = deleteConfirm.userId;
+    if (!userId) return;
+    
     // Prevent deleting yourself
     if (userId === currentUser?.id) {
       addNotification({ message: 'You cannot delete your own account', type: NotificationType.ERROR });
-      return;
-    }
-
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'single' });
       return;
     }
 
     try {
-      // Delete from user_profiles
-      const { error: profileError } = await supabase!
+      // Soft delete - mark as deleted instead of removing
+      const { error } = await supabase
         .from('user_profiles')
-        .delete()
+        .update({ 
+          status: UserStatus.SUSPENDED,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', userId);
 
-      if (profileError) throw profileError;
-
-      // Note: Deleting from auth.users requires admin privileges
-      // This should be handled by a database trigger or edge function
+      if (error) throw error;
       
       addNotification({ message: 'User deleted successfully', type: NotificationType.SUCCESS });
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      addNotification({ message: 'Failed to delete user', type: NotificationType.ERROR });
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+      await fetchUsers(currentPage);
+    } catch (error) {
+      handleError(error, 'Failed to delete user');
+    } finally {
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'single' });
     }
   };
 
@@ -369,6 +469,7 @@ const UserManagement: React.FC = () => {
       confirmPassword: '',
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      dentist_id: null,
     });
     setIsResettingPassword(false);
     setFormErrors({});
@@ -381,18 +482,25 @@ const UserManagement: React.FC = () => {
     setShowModal(true);
   };
 
-  // Filter users
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  // Memoized filtered users (for client-side when not using server-side)
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+      const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, searchTerm, roleFilter, statusFilter]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const doctorNameById = useMemo(() => {
+    const entries = dentists.map(d => [d.id, d.name] as const);
+    return new Map(entries);
+  }, [dentists]);
+
+  // Pagination - now uses server-side count
+  const totalPages = Math.ceil(totalUsers / usersPerPage);
   const startIndex = (currentPage - 1) * usersPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  const paginatedUsers = users; // Already paginated from server
 
   // Reset page when filters change
   useEffect(() => {
@@ -408,30 +516,39 @@ const UserManagement: React.FC = () => {
     );
   };
 
+  // Select all - selects all CURRENTLY VISIBLE users (paginated)
   const handleSelectAll = () => {
-    if (selectedUsers.length === paginatedUsers.length) {
-      setSelectedUsers([]);
+    const allSelected = selectedUsers.length === paginatedUsers.length;
+    if (allSelected) {
+      // Deselect all visible users
+      setSelectedUsers(prev => prev.filter(id => !paginatedUsers.some(u => u.id === id)));
     } else {
-      setSelectedUsers(paginatedUsers.map(user => user.id));
+      // Select all visible users (union with existing selection)
+      const newSelections = paginatedUsers
+        .map(user => user.id)
+        .filter(id => !selectedUsers.includes(id));
+      setSelectedUsers(prev => [...prev, ...newSelections]);
     }
   };
 
-  // Bulk actions
-  const handleBulkDelete = async () => {
+  // Bulk delete request
+  const handleBulkDeleteRequest = () => {
+    setDeleteConfirm({ isOpen: true, userId: null, type: 'bulk' });
+  };
+
+  // Confirm bulk delete
+  const confirmBulkDelete = async () => {
     // Prevent deleting yourself
     if (selectedUsers.includes(currentUser?.id || '')) {
       addNotification({ message: 'You cannot delete your own account', type: NotificationType.ERROR });
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)? This action cannot be undone.`)) {
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'bulk' });
       return;
     }
 
     try {
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('user_profiles')
-        .delete()
+        .update({ status: UserStatus.SUSPENDED, updated_at: new Date().toISOString() })
         .in('id', selectedUsers);
 
       if (error) throw error;
@@ -441,16 +558,17 @@ const UserManagement: React.FC = () => {
         type: NotificationType.SUCCESS 
       });
       setSelectedUsers([]);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error deleting users:', error);
-      addNotification({ message: 'Failed to delete users', type: NotificationType.ERROR });
+      await fetchUsers(currentPage);
+    } catch (error) {
+      handleError(error, 'Failed to delete users');
+    } finally {
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'bulk' });
     }
   };
 
   const handleBulkStatusChange = async (newStatus: UserStatus) => {
     try {
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('user_profiles')
         .update({ 
           status: newStatus, 
@@ -465,29 +583,15 @@ const UserManagement: React.FC = () => {
         type: NotificationType.SUCCESS 
       });
       setSelectedUsers([]);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error updating users:', error);
-      addNotification({ message: 'Failed to update users', type: NotificationType.ERROR });
+      await fetchUsers(currentPage);
+    } catch (error) {
+      handleError(error, 'Failed to update users');
     }
   };
 
-  // Get role badge color
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case UserRole.ADMIN:
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      case UserRole.RECEPTIONIST:
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-      case UserRole.DOCTOR:
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case UserRole.ASSISTANT:
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case UserRole.RECEPTIONIST:
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
+  // Get role badge color - use the map instead of switch
+  const getRoleBadgeColor = (role: UserRole): string => {
+    return ROLE_BADGE_COLORS[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
   };
 
   // Handle quick role change from dropdown
@@ -498,11 +602,17 @@ const UserManagement: React.FC = () => {
       return;
     }
 
+    // Optimistic update
+    const oldUsers = [...users];
+    setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    setChangingRoleFor(userId);
+
     try {
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('user_profiles')
         .update({ 
           role: newRole,
+          dentist_id: newRole === UserRole.DOCTOR ? undefined : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId);
@@ -514,36 +624,28 @@ const UserManagement: React.FC = () => {
         type: NotificationType.SUCCESS 
       });
       
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error updating role:', error);
-      addNotification({ 
-        message: 'Failed to update role', 
-        type: NotificationType.ERROR 
-      });
+      await fetchUsers(currentPage);
+    } catch (error) {
+      setUsers(oldUsers); // Rollback on error
+      handleError(error, 'Failed to update role');
+    } finally {
+      setChangingRoleFor(null);
     }
   };
 
 
-  // Get status badge color
-  const getStatusBadgeColor = (status: UserStatus) => {
-    switch (status) {
-      case UserStatus.ACTIVE:
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case UserStatus.INACTIVE:
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case UserStatus.SUSPENDED:
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
+  // Get status badge color - use the map instead of switch
+  const getStatusBadgeColor = (status: UserStatus): string => {
+    return STATUS_BADGE_COLORS[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
   };
 
   // Handle opening the edit permissions modal
   const handleEditPermissions = (userProfile: UserProfile) => {
     setEditingPermissionsUser(userProfile);
-    setCustomPermissions(userProfile.custom_permissions || []);
-    setOverridePermissions(userProfile.override_permissions || false);
+    // Ensure custom_permissions is always an array
+    const perms = userProfile.custom_permissions;
+    setCustomPermissions(Array.isArray(perms) ? perms : []);
+    setOverridePermissions(Boolean(userProfile.override_permissions));
     setShowEditPermissionsModal(true);
   };
 
@@ -575,7 +677,7 @@ const UserManagement: React.FC = () => {
     
     setIsSavingPermissions(true);
     try {
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('user_profiles')
         .update({ 
           custom_permissions: customPermissions,
@@ -593,13 +695,9 @@ const UserManagement: React.FC = () => {
       
       setShowEditPermissionsModal(false);
       setEditingPermissionsUser(null);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error('Error saving custom permissions:', error);
-      addNotification({ 
-        message: 'Failed to save custom permissions', 
-        type: NotificationType.ERROR 
-      });
+      await fetchUsers(currentPage);
+    } catch (error) {
+      handleError(error, 'Failed to save custom permissions');
     } finally {
       setIsSavingPermissions(false);
     }
@@ -652,6 +750,17 @@ const UserManagement: React.FC = () => {
     );
   }
 
+  // Access denied for non-admins
+  if (!isAdmin) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <strong>Access Denied:</strong> You do not have permission to access User Management.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="p-6 max-w-7xl mx-auto">
@@ -673,7 +782,9 @@ const UserManagement: React.FC = () => {
             </button>
             <button
               onClick={openCreateModal}
+              disabled={!isAdmin}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!isAdmin ? 'Only admins can create users' : 'Add New User'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -762,7 +873,7 @@ const UserManagement: React.FC = () => {
                   Suspend
                 </button>
                 <button
-                  onClick={handleBulkDelete}
+                  onClick={handleBulkDeleteRequest}
                   className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
                   Delete Selected
@@ -794,6 +905,9 @@ const UserManagement: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Linked Doctor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
@@ -848,15 +962,20 @@ const UserManagement: React.FC = () => {
                       <select
                         value={userProfile.role}
                         onChange={(e) => handleRoleChange(userProfile.id, e.target.value as UserRole)}
-                        disabled={userProfile.id === currentUser?.id}
-                        className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 ${getRoleBadgeColor(userProfile.role)} ${userProfile.id === currentUser?.id ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-80'}`}
-                        title={userProfile.id === currentUser?.id ? 'Cannot change your own role' : 'Click to change role'}
+                        disabled={userProfile.id === currentUser?.id || changingRoleFor === userProfile.id}
+                        className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 ${getRoleBadgeColor(userProfile.role)} ${(userProfile.id === currentUser?.id || changingRoleFor === userProfile.id) ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-80'}`}
+                        title={userProfile.id === currentUser?.id ? 'Cannot change your own role' : changingRoleFor === userProfile.id ? 'Updating...' : 'Click to change role'}
                       >
                         <option value={UserRole.ADMIN}>ADMIN</option>
                         <option value={UserRole.DOCTOR}>DOCTOR</option>
                         <option value={UserRole.ASSISTANT}>ASSISTANT</option>
                         <option value={UserRole.RECEPTIONIST}>RECEPTIONIST</option>
                       </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      {userProfile.role === UserRole.DOCTOR
+                        ? (userProfile.dentist_id ? (doctorNameById.get(userProfile.dentist_id) || 'Unknown Doctor') : 'Not Linked')
+                        : '-'}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -892,7 +1011,7 @@ const UserManagement: React.FC = () => {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(userProfile.id)}
+                          onClick={() => handleDeleteRequest(userProfile.id)}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                           title="Delete user"
                           disabled={userProfile.id === currentUser?.id}
@@ -913,7 +1032,7 @@ const UserManagement: React.FC = () => {
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                Showing {((currentPage - 1) * usersPerPage) + 1} to {Math.min(currentPage * usersPerPage, filteredUsers.length)} of {filteredUsers.length} users
+                Showing {totalUsers > 0 ? ((currentPage - 1) * usersPerPage) + 1 : 0} to {Math.min(currentPage * usersPerPage, totalUsers)} of {totalUsers} users
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1048,6 +1167,7 @@ const UserManagement: React.FC = () => {
                         setFormData({
                           ...formData,
                           role: newRole,
+                          dentist_id: newRole === UserRole.DOCTOR ? formData.dentist_id : null,
                           newPassword: '',
                           confirmPassword: ''
                         });
@@ -1062,6 +1182,34 @@ const UserManagement: React.FC = () => {
                       <option value={UserRole.RECEPTIONIST}>Receptionist</option>
                     </select>
                   </div>
+
+                  {formData.role === UserRole.DOCTOR && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Linked Doctor Profile *
+                      </label>
+                      <select
+                        value={formData.dentist_id || ''}
+                        onChange={(e) => setFormData({ ...formData, dentist_id: e.target.value || null })}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="">Select doctor profile</option>
+                        {dentists.map(doctor => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.name} {doctor.specialty ? `(${doctor.specialty})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        This link is required for doctor custom dashboard and doctor-specific data scope.
+                      </p>
+                      {formErrors.dentist_id && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.dentist_id}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Password Reset Section for Existing Users */}
                   {editingUser && (
@@ -1160,7 +1308,7 @@ const UserManagement: React.FC = () => {
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleUnlinkOAuth(editingUser.id, editingUser.oauth_provider!)}
+                              onClick={() => handleUnlinkOAuthRequest(editingUser.id, editingUser.oauth_provider!)}
                               className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
                             >
                               Unlink
@@ -1446,6 +1594,85 @@ const UserManagement: React.FC = () => {
                     {isSavingPermissions ? 'Saving...' : 'Save Permissions'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm.isOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Confirm Delete
+                </h3>
+                <button
+                  onClick={() => setDeleteConfirm({ isOpen: false, userId: null, type: 'single' })}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                {deleteConfirm.type === 'bulk' 
+                  ? `Are you sure you want to delete ${selectedUsers.length} user(s)? This action cannot be undone.`
+                  : 'Are you sure you want to delete this user? This action cannot be undone.'
+                }
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setDeleteConfirm({ isOpen: false, userId: null, type: 'single' })}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={deleteConfirm.type === 'bulk' ? confirmBulkDelete : confirmDelete}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* OAuth Unlink Confirmation Modal */}
+        {oauthUnlinkConfirm.isOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Confirm Unlink
+                </h3>
+                <button
+                  onClick={() => setOauthUnlinkConfirm({ isOpen: false, userId: null, provider: null })}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Are you sure you want to unlink this {oauthUnlinkConfirm.provider} account?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setOauthUnlinkConfirm({ isOpen: false, userId: null, provider: null })}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmUnlinkOAuth}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Unlink
+                </button>
               </div>
             </div>
           </div>

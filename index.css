@@ -4,7 +4,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* Modern Tech Color System - CSS Variables */
 :root {
@@ -1220,7 +1219,7 @@ input, textarea, select, button {
   .reports-header {
     background: #f8fafc !important;
     -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .kpi-card {
@@ -1265,9 +1264,10 @@ input, textarea, select, button {
     padding: 20px !important;
     margin: -20px -20px 20px -20px !important;
     -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
+
 
 /* Responsive utilities */
 @media (max-width: 640px) {

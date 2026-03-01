@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ClinicData } from '../../hooks/useClinicData';
-import { Patient, DentalChartData, Payment, NotificationType, PatientDetailTab, TreatmentRecord, ToothStatus, Prescription, PrescriptionItem, Dentist, PatientAttachment } from '../../types';
+import { Patient, DentalChartData, Payment, NotificationType, PatientDetailTab, TreatmentRecord, ToothStatus, Prescription, PrescriptionItem, Dentist, PatientAttachment, Permission } from '../../types';
 import DentalChart from '../DentalChartRedesigned';
 import TreatmentRecordList from './TreatmentRecordList';
 import AddTreatmentRecordModal from './AddTreatmentRecordModal';
 import { useI18n } from '../../hooks/useI18n';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import AddPaymentModal from './AddPaymentModal';
 import AddDiscountModal from './AddDiscountModal';
 import { openPrintWindow } from '../../utils/print';
@@ -77,6 +78,7 @@ export const PatientDetailsModal: React.FC<{
 }> = ({ patient, onEdit, onClose, clinicData }) => {
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
+    const { checkPermission, checkCustomPermission } = useAuth();
     const { updatePatient, addTreatmentRecord, addPayment, payments, treatmentRecords, prescriptions, prescriptionItems, addPrescription, updatePrescription, deletePrescription, addPrescriptionItem, updatePrescriptionItem, deletePrescriptionItem, attachments, addAttachment, updateAttachment, deleteAttachment } = clinicData;
 
     const [activeTab, setActiveTab] = useState<PatientDetailTab>('details');
@@ -682,13 +684,15 @@ export const PatientDetailsModal: React.FC<{
                                                 <DollarSignIcon />
                                                 {t('financials.addPayment')}
                                             </button>
-                                            <button
-                                                onClick={() => setIsAddDiscountModalOpen(true)}
-                                                className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 shadow-sm hover:shadow-md"
-                                            >
-                                                <PercentIcon />
-                                                {t('financials.addDiscount')}
-                                            </button>
+                                            {checkCustomPermission(Permission.FINANCE_DISCOUNT_ADD) && (
+                                                <button
+                                                    onClick={() => setIsAddDiscountModalOpen(true)}
+                                                    className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 shadow-sm hover:shadow-md"
+                                                >
+                                                    <PercentIcon />
+                                                    {t('financials.addDiscount')}
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={handlePrintInvoice}
                                                 className="flex items-center gap-2 px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500/50 shadow-sm hover:shadow-md"

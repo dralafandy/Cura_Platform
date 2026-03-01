@@ -1,0 +1,844 @@
+/* ========================================
+   RESPONSIVE DESIGN SYSTEM
+   Curasoft Medical Clinic Management
+   ======================================== */
+
+/* ========================================
+   CSS CUSTOM PROPERTIES - BREAKPOINTS
+   ======================================== */
+:root {
+  /* Mobile-first responsive breakpoints */
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* Mobile-specific spacing */
+  --mobile-space-xs: 0.25rem;
+  --mobile-space-sm: 0.5rem;
+  --mobile-space-md: 0.75rem;
+  --mobile-space-lg: 1rem;
+  --mobile-space-xl: 1.5rem;
+
+  /* Mobile touch targets */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
+
+  /* Mobile border radius */
+  --mobile-radius-sm: 8px;
+  --mobile-radius-md: 12px;
+  --mobile-radius-lg: 16px;
+  --mobile-radius-full: 9999px;
+
+  /* Transitions */
+  --transition-mobile: 200ms ease-out;
+  --transition-tablet: 250ms ease-out;
+}
+
+/* ========================================
+   BASE RESPONSIVE STYLES
+   ======================================== */
+
+/* Mobile-first: default styles are for mobile */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Smooth scrolling with reduced motion support */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   RESPONSIVE DISPLAY UTILITIES
+   ======================================== */
+
+/* Mobile (default) - show on mobile only */
+.mobile-only {
+  display: block !important;
+}
+
+.tablet-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: none !important;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+
+  .tablet-only {
+    display: block !important;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none !important;
+  }
+
+  .tablet-only {
+    display: none !important;
+  }
+
+  .desktop-only {
+    display: block !important;
+  }
+}
+
+/* Hide on specific breakpoints */
+@media (max-width: 767px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-on-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   RESPONSIVE SPACING
+   ======================================== */
+
+/* Mobile padding */
+.mobile-p-2 { padding: 0.5rem; }
+.mobile-p-3 { padding: 0.75rem; }
+.mobile-p-4 { padding: 1rem; }
+.mobile-px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.mobile-px-4 { padding-left: 1rem; padding-right: 1rem; }
+.mobile-py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.mobile-py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+
+/* Mobile margin */
+.mobile-m-0 { margin: 0; }
+.mobile-mt-2 { margin-top: 0.5rem; }
+.mobile-mt-3 { margin-top: 0.75rem; }
+.mobile-mt-4 { margin-top: 1rem; }
+.mobile-mb-2 { margin-bottom: 0.5rem; }
+.mobile-mb-3 { margin-bottom: 0.75rem; }
+.mobile-mb-4 { margin-bottom: 1rem; }
+
+/* Mobile gap */
+.mobile-gap-1 { gap: 0.25rem; }
+.mobile-gap-2 { gap: 0.5rem; }
+.mobile-gap-3 { gap: 0.75rem; }
+.mobile-gap-4 { gap: 1rem; }
+
+/* ========================================
+   RESPONSIVE SIZING
+   ======================================== */
+
+.mobile-w-full { width: 100%; }
+.mobile-h-full { height: 100%; }
+.mobile-min-h-screen { min-height: 100vh; }
+.mobile-max-w-sm { max-width: 24rem; }
+.mobile-max-w-md { max-width: 28rem; }
+.mobile-max-w-lg { max-width: 32rem; }
+
+/* ========================================
+   RESPONSIVE TYPOGRAPHY
+   ======================================== */
+
+/* Mobile font sizes */
+.mobile-text-xs { font-size: 0.75rem; }
+.mobile-text-sm { font-size: 0.875rem; }
+.mobile-text-base { font-size: 1rem; }
+.mobile-text-lg { font-size: 1.125rem; }
+.mobile-text-xl { font-size: 1.25rem; }
+.mobile-text-2xl { font-size: 1.5rem; }
+
+/* Mobile font weights */
+.mobile-font-normal { font-weight: 400; }
+.mobile-font-medium { font-weight: 500; }
+.mobile-font-semibold { font-weight: 600; }
+.mobile-font-bold { font-weight: 700; }
+
+/* Mobile line heights */
+.mobile-leading-tight { line-height: 1.25; }
+.mobile-leading-normal { line-height: 1.5; }
+.mobile-leading-relaxed { line-height: 1.625; }
+
+/* Mobile text alignment */
+.mobile-text-left { text-align: left; }
+.mobile-text-center { text-align: center; }
+.mobile-text-right { text-align: right; }
+
+/* ========================================
+   RESPONSIVE FLEXBOX
+   ======================================== */
+
+.mobile-flex { display: flex; }
+.mobile-flex-col { flex-direction: column; }
+.mobile-flex-wrap { flex-wrap: wrap; }
+.mobile-items-center { align-items: center; }
+.mobile-items-start { align-items: flex-start; }
+.mobile-items-end { align-items: flex-end; }
+.mobile-justify-center { justify-content: center; }
+.mobile-justify-between { justify-content: space-between; }
+.mobile-justify-end { justify-content: flex-end; }
+
+/* ========================================
+   RESPONSIVE GRID
+   ======================================== */
+
+.mobile-grid { display: grid; }
+.mobile-grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.mobile-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (min-width: 640px) {
+  .sm\:mobile-grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ========================================
+   RESPONSIVE POSITIONING
+   ======================================== */
+
+.mobile-relative { position: relative; }
+.mobile-absolute { position: absolute; }
+.mobile-fixed { position: fixed; }
+.mobile-sticky { position: sticky; }
+
+/* Mobile positioning */
+.mobile-inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.mobile-top-0 { top: 0; }
+.mobile-right-0 { right: 0; }
+.mobile-bottom-0 { bottom: 0; }
+.mobile-left-0 { left: 0; }
+
+/* ========================================
+   RESPONSIVE BORDERS
+   ======================================== */
+
+.mobile-border { border-width: 1px; }
+.mobile-border-2 { border-width: 2px; }
+.mobile-border-t { border-top-width: 1px; }
+.mobile-border-b { border-bottom-width: 1px; }
+.mobile-border-l { border-left-width: 1px; }
+.mobile-border-r { border-right-width: 1px; }
+
+/* Mobile border radius */
+.mobile-rounded { border-radius: 0.25rem; }
+.mobile-rounded-sm { border-radius: 0.125rem; }
+.mobile-rounded-md { border-radius: 0.375rem; }
+.mobile-rounded-lg { border-radius: 0.5rem; }
+.mobile-rounded-xl { border-radius: 0.75rem; }
+.mobile-rounded-2xl { border-radius: 1rem; }
+.mobile-rounded-full { border-radius: 9999px; }
+
+/* ========================================
+   RESPONSIVE BACKGROUNDS
+   ======================================== */
+
+.mobile-bg-transparent { background-color: transparent; }
+.mobile-bg-white { background-color: white; }
+.mobile-bg-slate-50 { background-color: #f8fafc; }
+.mobile-bg-slate-100 { background-color: #f1f5f9; }
+.mobile-bg-primary-50 { background-color: #f0fdff; }
+
+/* ========================================
+   RESPONSIVE SHADOWS
+   ======================================== */
+
+.mobile-shadow { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); }
+.mobile-shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+.mobile-shadow-md { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+.mobile-shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+.mobile-shadow-none { box-shadow: none; }
+
+/* ========================================
+   TOUCH-FRIENDLY INTERACTIONS
+   ======================================== */
+
+/* Minimum touch target size */
+.touch-target {
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+}
+
+/* Comfortable touch target */
+.touch-target-comfortable {
+  min-width: var(--touch-target-comfortable);
+  min-height: var(--touch-target-comfortable);
+}
+
+/* Touch-friendly button */
+.touch-button {
+  min-height: var(--touch-target-min);
+  padding: 0.75rem 1rem;
+  border-radius: var(--mobile-radius-md);
+}
+
+/* Active state for touch */
+.touch-active:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* ========================================
+   MOBILE NAVIGATION STYLES
+   ======================================== */
+
+/* Bottom navigation bar */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: white;
+  border-top: 1px solid #e2e8f0;
+  padding: 0.5rem;
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.dark .bottom-nav {
+  background: #1e293b;
+  border-top-color: #334155;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  min-width: 3.5rem;
+  min-height: 3rem;
+  border-radius: var(--mobile-radius-lg);
+  transition: all var(--transition-mobile);
+  color: #64748b;
+  background: transparent;
+}
+
+.bottom-nav-item:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dark .bottom-nav-item:hover {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.bottom-nav-item.active {
+  color: #8b5cf6;
+  background: #f5f3ff;
+}
+
+.dark .bottom-nav-item.active {
+  color: #a78bfa;
+  background: #2e1065;
+}
+
+.bottom-nav-item svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.bottom-nav-item span {
+  font-size: 0.625rem;
+  font-weight: 500;
+  margin-top: 0.125rem;
+}
+
+/* Mobile drawer */
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 20rem;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform var(--transition-tablet);
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-mobile), visibility var(--transition-mobile);
+}
+
+.mobile-drawer-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================
+   MOBILE CARD STYLES
+   ======================================== */
+
+.mobile-card {
+  background: white;
+  border-radius: var(--mobile-radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.dark .mobile-card {
+  background: #1e293b;
+}
+
+.mobile-card-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .mobile-card-header {
+  border-bottom-color: #334155;
+}
+
+.mobile-card-body {
+  padding: 1rem;
+}
+
+.mobile-card-footer {
+  padding: 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.dark .mobile-card-footer {
+  border-top-color: #334155;
+  background: #0f172a;
+}
+
+/* ========================================
+   RESPONSIVE TABLE TO CARD
+   ======================================== */
+
+/* Default: show as cards on mobile */
+@media (max-width: 767px) {
+  .data-card {
+    display: block;
+    background: white;
+    border-radius: var(--mobile-radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+  }
+
+  .dark .data-card {
+    background: #1e293b;
+  }
+
+  .data-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .dark .data-card-header {
+    background: #0f172a;
+    border-bottom-color: #334155;
+  }
+
+  .data-card-body {
+    padding: 1rem;
+  }
+
+  .data-card-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .dark .data-card-row {
+    border-bottom-color: #1e293b;
+  }
+
+  .data-card-row:last-child {
+    border-bottom: none;
+  }
+
+  .data-card-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .data-card-value {
+    font-size: 0.875rem;
+    color: #0f172a;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .dark .data-card-value {
+    color: #f1f5f9;
+  }
+
+  /* Hide table headers on mobile */
+  .table thead {
+    display: none;
+  }
+
+  /* Show table as block on mobile */
+  .table tbody,
+  .table tbody tr,
+  .table tbody td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tbody tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--mobile-radius-md);
+  }
+
+  .dark .table tbody tr {
+    border-color: #334155;
+  }
+
+  .table tbody td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .dark .table tbody td {
+    border-bottom-color: #1e293b;
+  }
+
+  .table tbody td:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ========================================
+   RESPONSIVE FORMS
+   ======================================== */
+
+@media (max-width: 767px) {
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.375rem;
+    color: #374151;
+  }
+
+  .dark .form-label {
+    color: #d1d5db;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: var(--mobile-radius-md);
+    background: white;
+    min-height: var(--touch-target-comfortable);
+  }
+
+  .dark .form-input {
+    background: #1e293b;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+}
+
+/* ========================================
+   RESPONSIVE MODALS
+   ======================================== */
+
+@media (max-width: 767px) {
+  .modal-container {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: var(--mobile-radius-xl) var(--mobile-radius-xl) 0 0;
+    overflow: auto;
+  }
+
+  .modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .modal-footer button {
+    flex: 1;
+  }
+}
+
+/* ========================================
+   RESPONSIVE BUTTONS
+   ======================================== */
+
+@media (max-width: 767px) {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-comfortable);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--mobile-radius-md);
+    transition: all var(--transition-mobile);
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success {
+    width: 100%;
+  }
+
+  .btn-icon {
+    padding: 0.75rem;
+  }
+
+  /* FAB - Floating Action Button */
+  .fab {
+    position: fixed;
+    bottom: 5rem;
+    right: 1rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    z-index: 30;
+  }
+}
+
+/* ========================================
+   RESPONSIVE OVERLAY SCROLLBAR
+   ======================================== */
+
+@media (max-width: 767px) {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollable-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ========================================
+   SAFE AREA INSETS (iPhone X+)
+   ======================================== */
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* ========================================
+   RESPONSIVE ANIMATIONS
+   ======================================== */
+
+/* Slide up animation for mobile */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Mobile animations */
+@media (max-width: 767px) {
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  /* Stagger children animations */
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+}
+
+/* ========================================
+   DARK MODE RESPONSIVE
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .dark .mobile-bg-white { background-color: #1e293b; }
+  .dark .mobile-bg-slate-50 { background-color: #0f172a; }
+  .dark .mobile-bg-slate-100 { background-color: #1e293b; }
+  .dark .mobile-text-white { color: #f9fafb; }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  .mobile-only,
+  .tablet-only,
+  .bottom-nav,
+  .mobile-drawer,
+  .fab {
+    display: none !important;
+  }
+
+  .desktop-only {
+    display: block !important;
+  }
+}

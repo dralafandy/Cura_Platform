@@ -112,7 +112,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       <div ref={containerRef} className="relative mb-4">
         <button
           onClick={toggleSearch}
-          className="w-full p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/50 dark:hover:from-purple-800/40 dark:hover:to-purple-700/30 transition-all duration-300 group border border-purple-200/50 dark:border-purple-700/50 shadow-sm hover:shadow-md"
+          className="w-full p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/50 dark:hover:from-purple-800/40 dark:hover:to-purple-700/30 transition-all duration-300 group border border-purple-200/50 dark:border-purple-700/50 shadow-sm hover:shadow-md touch-manipulation"
           aria-label="Search navigation"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mx-auto text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -167,7 +167,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setIsOpen(true)}
-          className="w-full px-4 py-3 pl-12 bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700 dark:to-slate-600 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 shadow-sm hover:shadow-md"
+          className="w-full px-4 py-3 pl-12 bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700 dark:to-slate-600 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300 shadow-sm hover:shadow-md touch-manipulation input-mobile"
         />
         <svg
           xmlns="http://www.w3.org/2000/svg"

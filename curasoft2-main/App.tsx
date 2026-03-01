@@ -13,12 +13,10 @@ import MobileDrawer from './components/MobileDrawer';
 import { View, Appointment, LabCaseStatus, PatientDetailTab } from './types';
 import { useI18n } from './hooks/useI18n';
 import { useAuth } from './contexts/AuthContext';
-import { Permission } from './types';
-
-
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 
 import LoadingScreen from './components/LoadingScreen';
-
+import AccessDenied from './components/AccessDenied';
 
 // Import newly separated finance components
 import { SuppliersManagement } from './components/finance/SuppliersManagement';
@@ -27,18 +25,26 @@ import LabCaseManagement from './components/finance/LabCaseManagement';
 import ExpensesManagement from './components/finance/ExpensesManagement';
 import TreatmentDefinitionManagement from './components/finance/TreatmentDefinitionManagement';
 import AccountSelectionPage from './components/finance/AccountSelectionPage';
+import InsuranceManagementPage from './components/finance/InsuranceManagementPage';
 import Settings from './components/Settings';
 import { PatientDetailsPanel } from './components/patient/PatientDetailsPanel';
 import TestPatientCards from './TestPatientCards';
 import ReportsPage from './components/reports/ReportsPage';
 import PublicBookingPage from './components/PublicBookingPage';
+import EmployeesManagement from './components/employees/EmployeesManagement';
+import AboutPage from './components/AboutPage';
+import ClinicManagementPage from './components/clinic/ClinicManagementPage';
+
+// Import RBAC for centralized permission management
+import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
+import { Permission } from './types';
 
 
 
 
 
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [selectedPatientInitialTab, setSelectedPatientInitialTab] = useState<PatientDetailTab>('details');
@@ -46,27 +52,10 @@ const App: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { isAdmin, hasPermission, loading: authLoading, userProfile } = useAuth();
-
-  // Helper function to check if user has permission
-  const checkPermission = (permission: Permission): boolean => {
-    if (!userProfile) return false;
-    return hasPermission(permission);
-  };
-
-  // Access denied component
-  const AccessDenied = () => (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-      <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 rounded-lg p-8 max-w-md text-center">
-        <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        <h2 className="text-2xl font-bold text-red-800 dark:text-red-300 mb-2">Access Denied</h2>
-        <p className="text-red-600 dark:text-red-400">You don't have permission to access this page. Please contact your administrator.</p>
-      </div>
-    </div>
-  );
-
+  const { isLoading: authLoading, user } = useAuth();
+  
+  // Use new RBAC system for permission checking
+  const { hasPermission, isReady } = useRBAC();
 
   console.log('App rendering - auth loading:', authLoading);
   console.log('App rendering - clinic data available:', !!clinicData);
@@ -96,84 +85,104 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
       case 'patients':
-        return checkPermission(Permission.PATIENT_VIEW) ? (
+        return hasPermission(Permission.PATIENT_VIEW) ? (
           <PatientList clinicData={clinicData} setCurrentView={setCurrentView} setSelectedPatientId={setSelectedPatientId} />
         ) : <AccessDenied />;
       case 'scheduler':
-        return checkPermission(Permission.APPOINTMENT_VIEW) ? (
+        return hasPermission(Permission.APPOINTMENT_VIEW) ? (
           <Scheduler clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'doctors':
-        return checkPermission(Permission.PATIENT_VIEW) ? (
+        return hasPermission(Permission.PATIENT_VIEW) ? (
           <DoctorList clinicData={clinicData} setCurrentView={setCurrentView} setSelectedDoctorId={setSelectedDoctorId} />
         ) : <AccessDenied />;
+      case 'employees':
+        return hasPermission(Permission.FINANCE_VIEW) ? (
+          <EmployeesManagement />
+        ) : <AccessDenied />;
       case 'suppliers':
-        return checkPermission(Permission.SUPPLIER_VIEW) ? (
+        return hasPermission(Permission.SUPPLIER_VIEW) ? (
           <SuppliersManagement clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'inventory':
-        return checkPermission(Permission.INVENTORY_VIEW) ? (
+        return hasPermission(Permission.INVENTORY_VIEW) ? (
           <InventoryManagement clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'labCases':
-        return checkPermission(Permission.LAB_CASE_VIEW) ? (
+        return hasPermission(Permission.LAB_CASE_VIEW) ? (
           <LabCaseManagement clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'expenses':
-        return checkPermission(Permission.FINANCE_EXPENSES_MANAGE) ? (
+        return hasPermission(Permission.FINANCE_EXPENSES_MANAGE) ? (
           <ExpensesManagement clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'treatmentDefinitions':
-        return checkPermission(Permission.SETTINGS_VIEW) ? (
+        return hasPermission(Permission.TREATMENT_VIEW) ? (
           <TreatmentDefinitionManagement clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'doctorAccounts':
-        return checkPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
+        return hasPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
           <AccountSelectionPage setCurrentView={setCurrentView} />
         ) : <AccessDenied />;
       case 'financialAccounts':
-        return checkPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
+        return hasPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
           <AccountSelectionPage setCurrentView={setCurrentView} />
         ) : <AccessDenied />;
 
       case 'patient-details':
-        if (!checkPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
+        if (!hasPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
         const patient = clinicData.patients.find(p => p.id === selectedPatientId);
         if (!patient) return <div className="text-center py-8">Patient not found.</div>;
         return <PatientDetailsPanel patient={patient} onBack={() => setCurrentView('patients')} onEdit={() => setCurrentView('patients')} clinicData={clinicData} />;
 
       case 'doctor-details':
-        if (!checkPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
-        if (!selectedDoctorId) return <div className="text-center py-8">Doctor not found.</div>;
-        return <DoctorDetailsPage clinicData={clinicData} doctorId={selectedDoctorId} onBack={() => setCurrentView('doctors')} />;
+        if (!hasPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
+        const resolvedDoctorId =
+          selectedDoctorId ||
+          (user as any)?.dentist_id ||
+          clinicData.dentists.find(d => d.name.trim().toLowerCase() === (user?.username || '').trim().toLowerCase())?.id ||
+          null;
+        if (!resolvedDoctorId) return <div className="text-center py-8">Doctor not found.</div>;
+        return <DoctorDetailsPage clinicData={clinicData} doctorId={resolvedDoctorId} onBack={() => setCurrentView('doctors')} />;
 
       case 'settings':
-        return checkPermission(Permission.SETTINGS_VIEW) ? (
+        return hasPermission(Permission.SETTINGS_VIEW) ? (
           <Settings clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'userManagement':
-        return checkPermission(Permission.USER_MANAGEMENT_VIEW) ? (
+        return hasPermission(Permission.USER_MANAGEMENT_VIEW) ? (
           <UserManagement />
         ) : <AccessDenied />;
       case 'test-patient-cards':
         return <TestPatientCards />;
       case 'reports':
-        return checkPermission(Permission.REPORTS_VIEW) ? (
+        return hasPermission(Permission.REPORTS_VIEW) ? (
           <ReportsPage />
+        ) : <AccessDenied />;
+      case 'insuranceUnified':
+        return hasPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
+          <InsuranceManagementPage />
         ) : <AccessDenied />;
       case 'publicBooking':
         return <PublicBookingPage />;
+      case 'about':
+        return <AboutPage />;
+      case 'clinicManagement':
+        return hasPermission(Permission.SETTINGS_EDIT) ? (
+          <ClinicManagementPage />
+        ) : <AccessDenied />;
 
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
     }
-  }, [currentView, clinicData, setCurrentView, isAdmin, selectedPatientId, selectedDoctorId]);
+  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user]);
   
   const viewTitles: Record<View, string> = {
       dashboard: t('sidebar.dashboard'),
       patients: t('patientManagement.title'),
       scheduler: t('appointmentScheduler.title'),
       doctors: t('doctorManagement.title'),
+      employees: t('sidebar.employees'),
       suppliers: t('suppliersManagement.title'),
       inventory: t('inventoryManagement.title'),
       labCases: t('labCasesManagement.title'),
@@ -202,7 +211,9 @@ const App: React.FC = () => {
       'insuranceUnified': t('sidebar.insuranceUnified'),
       'reports': 'Reports',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
-      'pendingReservations': t('adminReservations.title') || 'Pending Reservations'
+      'about': 'عن البرنامج',
+      'pendingReservations': t('adminReservations.title') || 'Pending Reservations',
+      'clinicManagement': 'Clinic & Branch Management'
   }
 
   // Show loading state while auth is loading
@@ -255,6 +266,17 @@ const App: React.FC = () => {
       />
     </div>
 
+  );
+};
+
+// Main App component with RBAC and UserPreferences provider wrappers
+const App: React.FC = () => {
+  return (
+    <RBACProvider>
+      <UserPreferencesProvider>
+        <AppContent />
+      </UserPreferencesProvider>
+    </RBACProvider>
   );
 };
 

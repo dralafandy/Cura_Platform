@@ -63,7 +63,14 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useI18n = () => {
   const context = useContext(I18nContext);
   if (context === undefined) {
-    throw new Error('useI18n must be used within an I18nProvider');
+    // Return default i18n instead of throwing error
+    return {
+      t: (key: string) => key,
+      locale: 'en',
+      setLocale: () => {},
+      dir: 'ltr',
+      direction: 'ltr',
+    };
   }
   return context;
 };
