@@ -1,20 +1,18 @@
-/**
- * Auth Context with Multi-Clinic Support
- * 
- * Features:
- * - Simple, focused authentication
- * - Session management
- * - Permission checking
- * - Multi-clinic/branch support
- * - Clean architecture
+﻿/**
+ * Auth Context with Multi-Clinic Support.
+ *
+ * Security model:
+ * - Source of truth is Supabase Auth session.
+ * - No custom token/session emulation in sessionStorage.
+ * - User profile is loaded from database for RBAC + clinic context.
  */
 
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
+import type { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
-import { Permission, UserRole, UserStatus } from './types'; // Import from auth/types.ts which re-exports from root
-import type { 
-  User, 
-  AuthState, 
+import { Permission, UserRole, UserStatus } from './types';
+import type {
+  User,
   LoginCredentials,
   Clinic,
   ClinicBranch,
@@ -22,18 +20,87 @@ import type {
   ClinicSettings,
   ClinicPermission,
   AuthStateWithClinic,
-  AuthContextTypeWithClinic
+  AuthContextTypeWithClinic,
 } from './types';
 
+type DBUserProfile = {
+  id: string;
+  auth_id?: string | null;
+  username?: string | null;
+  email?: string | null;
+  role?: string | null;
+  status?: string | null;
+  custom_permissions?: Permission[] | null;
+  override_permissions?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+const EMPTY_AUTH_STATE: AuthStateWithClinic = {
+  isAuthenticated: false,
+  isLoading: false,
+  user: null,
+  permissions: [],
+  customPermissions: [],
+  overrideMode: false,
+  role: null,
+  currentClinic: null,
+  currentBranch: null,
+  accessibleClinics: [],
+  clinicSettings: null,
+  isLoadingClinics: false,
+  isSwitchingClinic: false,
+};
+
+const AUTH_OP_TIMEOUT_MS = 12000;
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  return await new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise
+      .then(value => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(error => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+};
+
+const ROLE_VALUES = new Set<string>(Object.values(UserRole));
+const STATUS_VALUES = new Set<string>(Object.values(UserStatus));
+
+const normalizeRole = (role?: string | null): UserRole => {
+  const value = (role || '').toUpperCase();
+  return (ROLE_VALUES.has(value) ? value : UserRole.DOCTOR) as UserRole;
+};
+
+const normalizeStatus = (status?: string | null): UserStatus => {
+  const value = (status || '').toUpperCase();
+  return (STATUS_VALUES.has(value) ? value : UserStatus.ACTIVE) as UserStatus;
+};
+
+const toDate = (value?: string | null): Date => {
+  if (!value) return new Date();
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+};
+
+const usernameFromEmail = (email?: string | null): string => {
+  if (!email) return `user_${Math.random().toString(36).slice(2, 10)}`;
+  const base = email.split('@')[0]?.trim();
+  return base || `user_${Math.random().toString(36).slice(2, 10)}`;
+};
+
 /**
- * Get user permissions from database
- * Handles role permissions, custom permissions, and override mode
+ * Get user permissions from database.
  */
 const fetchUserPermissionsFromDB = async (userId: string): Promise<Permission[]> => {
   if (!supabase) return [];
-  
+
   try {
-    // Get user's full profile including custom permissions
     const { data: user, error: userError } = await supabase
       .from('user_profiles')
       .select('role, custom_permissions, override_permissions')
@@ -41,39 +108,43 @@ const fetchUserPermissionsFromDB = async (userId: string): Promise<Permission[]>
       .single();
 
     if (userError || !user) {
-      console.error('Error fetching user:', userError);
       return [];
     }
 
-    // ADMIN users get all permissions
-    if (user.role === 'ADMIN') {
-      // Import all permissions from types
-      const allPermissions = Object.values(Permission);
-      return allPermissions;
+    const role = normalizeRole(user.role as string);
+
+    if (role === UserRole.ADMIN) {
+      return Object.values(Permission);
     }
 
-    // Get role permissions from role_permissions table
-    const { data: rolePerms } = await supabase
-      .from('role_permissions')
-      .select('permission')
-      .eq('role_name', user.role);
-
-    const rolePermissions: Permission[] = rolePerms?.map(rp => rp.permission) || [];
-
-    // Get custom permissions from user profile
-    const customPermissions: Permission[] = user.custom_permissions || [];
-    
-    // Check if override mode is enabled
+    const customPermissions: Permission[] = (user.custom_permissions || []) as Permission[];
     const overrideMode = user.override_permissions === true;
 
-    // If override mode is enabled, only use custom permissions
     if (overrideMode) {
       return customPermissions;
     }
 
-    // Otherwise, combine role permissions with custom permissions
-    const combinedPermissions = new Set([...rolePermissions, ...customPermissions]);
-    return Array.from(combinedPermissions);
+    const { data: rolePerms, error: byRoleNameError } = await supabase
+      .from('role_permissions')
+      .select('permission')
+      .eq('role_name', role);
+
+    let rolePermissions: Permission[] = [];
+
+    if (!byRoleNameError && rolePerms) {
+      rolePermissions = rolePerms.map((rp: any) => rp.permission as Permission);
+    } else {
+      const { data: roleRow } = await supabase.from('roles').select('id').eq('name', role).maybeSingle();
+      if (roleRow?.id) {
+        const { data: rolePermsById } = await supabase
+          .from('role_permissions')
+          .select('permission')
+          .eq('role_id', roleRow.id);
+        rolePermissions = (rolePermsById || []).map((rp: any) => rp.permission as Permission);
+      }
+    }
+
+    return Array.from(new Set([...rolePermissions, ...customPermissions]));
   } catch (error) {
     console.error('Error fetching permissions:', error);
     return [];
@@ -81,13 +152,12 @@ const fetchUserPermissionsFromDB = async (userId: string): Promise<Permission[]>
 };
 
 /**
- * Fetch user's accessible clinics from database
+ * Fetch user's accessible clinics from database.
  */
 const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[]> => {
   if (!supabase) return [];
-  
+
   try {
-    // First try with clinic_status filter
     let { data, error } = await supabase
       .from('user_clinics_view')
       .select('*')
@@ -98,10 +168,6 @@ const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[
       .order('clinic_name');
 
     if (error) {
-      console.log('Error fetching with clinic_status, trying alternative query:', error.message);
-      
-      // Fallback: Try without clinic_status filter (for older database schemas)
-      // The view might not have clinic_status column in older versions
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('user_clinics_view')
         .select('*')
@@ -109,12 +175,11 @@ const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[
         .eq('access_active', true)
         .order('is_default', { ascending: false })
         .order('clinic_name');
-      
+
       if (fallbackError) {
-        console.error('Error fetching user clinics (fallback):', fallbackError);
         return [];
       }
-      
+
       data = fallbackData;
     }
 
@@ -125,7 +190,7 @@ const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[
       clinicName: row.clinic_name,
       branchId: row.branch_id,
       branchName: row.branch_name,
-      roleAtClinic: row.role_at_clinic as UserRole,
+      roleAtClinic: normalizeRole(row.role_at_clinic),
       customPermissions: row.custom_permissions || [],
       isDefault: row.is_default,
       isActive: row.access_active,
@@ -139,12 +204,9 @@ const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[
   }
 };
 
-/**
- * Fetch clinic details from database
- */
 const fetchClinicFromDB = async (clinicId: string): Promise<Clinic | null> => {
   if (!supabase) return null;
-  
+
   try {
     const { data, error } = await supabase
       .from('clinics')
@@ -154,7 +216,6 @@ const fetchClinicFromDB = async (clinicId: string): Promise<Clinic | null> => {
       .single();
 
     if (error || !data) {
-      console.error('Error fetching clinic:', error);
       return null;
     }
 
@@ -180,18 +241,14 @@ const fetchClinicFromDB = async (clinicId: string): Promise<Clinic | null> => {
       createdBy: data.created_by,
       updatedBy: data.updated_by,
     };
-  } catch (error) {
-    console.error('Error fetching clinic:', error);
+  } catch {
     return null;
   }
 };
 
-/**
- * Fetch branch details from database
- */
 const fetchBranchFromDB = async (branchId: string): Promise<ClinicBranch | null> => {
   if (!supabase) return null;
-  
+
   try {
     const { data, error } = await supabase
       .from('clinic_branches')
@@ -201,7 +258,6 @@ const fetchBranchFromDB = async (branchId: string): Promise<ClinicBranch | null>
       .single();
 
     if (error || !data) {
-      console.error('Error fetching branch:', error);
       return null;
     }
 
@@ -226,34 +282,26 @@ const fetchBranchFromDB = async (branchId: string): Promise<ClinicBranch | null>
       createdBy: data.created_by,
       updatedBy: data.updated_by,
     };
-  } catch (error) {
-    console.error('Error fetching branch:', error);
+  } catch {
     return null;
   }
 };
 
-/**
- * Fetch clinic settings from database
- */
 const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): Promise<ClinicSettings | null> => {
   if (!supabase) return null;
-  
+
   try {
-    let query = supabase
-      .from('clinic_settings')
-      .select('*')
-      .eq('clinic_id', clinicId);
-    
+    let query = supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId);
+
     if (branchId) {
       query = query.eq('branch_id', branchId);
     } else {
       query = query.is('branch_id', null);
     }
-    
+
     const { data, error } = await query.single();
 
     if (error || !data) {
-      console.error('Error fetching clinic settings:', error);
       return null;
     }
 
@@ -267,8 +315,7 @@ const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): P
       createdBy: data.created_by,
       updatedBy: data.updated_by,
     };
-  } catch (error) {
-    console.error('Error fetching clinic settings:', error);
+  } catch {
     return null;
   }
 };
@@ -285,8 +332,7 @@ const isTenantAccessValid = async (userId: string): Promise<boolean> => {
 
     if (profileError || !profile?.tenant_id) return true;
 
-    const { data, error } = await supabase
-      .rpc('get_tenant_info', { p_tenant_id: profile.tenant_id });
+    const { data, error } = await supabase.rpc('get_tenant_info', { p_tenant_id: profile.tenant_id });
 
     if (!error && data && data[0]) {
       return data[0].is_subscription_valid === true;
@@ -315,363 +361,422 @@ const isTenantAccessValid = async (userId: string): Promise<boolean> => {
   }
 };
 
+const mapProfileToUser = (profile: DBUserProfile, authUser: SupabaseUser): User => {
+  const role = normalizeRole(profile.role);
+  const status = normalizeStatus(profile.status);
+
+  return {
+    id: profile.id,
+    email: profile.email || authUser.email,
+    username: profile.username || usernameFromEmail(profile.email || authUser.email),
+    role,
+    status,
+    firstName: undefined,
+    lastName: undefined,
+    phone: undefined,
+    avatar_url: undefined,
+    lastLogin: undefined,
+    createdAt: toDate(profile.created_at),
+    updatedAt: toDate(profile.updated_at),
+  };
+};
+
 const AuthContext = createContext<AuthContextTypeWithClinic | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-/**
- * Auth Provider Component with Multi-Clinic Support
- */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthStateWithClinic>({
-    isAuthenticated: false,
+    ...EMPTY_AUTH_STATE,
     isLoading: true,
-    user: null,
-    permissions: [],
-    customPermissions: [],
-    overrideMode: false,
-    role: null,
-    // Clinic state
-    currentClinic: null,
-    currentBranch: null,
-    accessibleClinics: [],
-    clinicSettings: null,
-    isLoadingClinics: false,
-    isSwitchingClinic: false,
   });
 
-  /**
-   * Initialize auth on mount
-   */
-  useEffect(() => {
-    initializeAuth();
+  const clearAuthState = useCallback(() => {
+    localStorage.removeItem('currentClinicId');
+    localStorage.removeItem('currentBranchId');
+    setAuthState({ ...EMPTY_AUTH_STATE, isLoading: false });
   }, []);
 
-  const initializeAuth = async () => {
-    try {
-      // Try to get current session - support both new and legacy keys
-      let sessionData = sessionStorage.getItem('clinic_auth_session');
-      
-      // Also check for legacy key from LoginPage
-      if (!sessionData) {
-        sessionData = sessionStorage.getItem('clinic_session');
-      }
-      
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
-        
-        // Check if session is valid - support both new format (expiresAt) and legacy format (loginTime)
-        const expiresAt = session.expiresAt || (session.loginTime ? new Date(new Date(session.loginTime).getTime() + 24 * 60 * 60 * 1000).toISOString() : null);
-        const isValid = expiresAt && new Date(expiresAt) > new Date();
-        
-        if (isValid) {
-          // Refresh permissions from database to get latest custom permissions
-          const currentUser = session.user;
-          if (currentUser && currentUser.id && supabase) {
-            try {
-              // Fetch latest user data including custom_permissions
-              const { data: userData } = await supabase
-                .from('user_profiles')
-                .select('role, custom_permissions, override_permissions, tenant_id')
-                .eq('id', currentUser.id)
-                .single();
-              
-              if (userData) {
-                const tenantValid = await isTenantAccessValid(currentUser.id);
-                if (!tenantValid) {
-                  sessionStorage.removeItem('clinic_auth_session');
-                  sessionStorage.removeItem('clinic_session');
-                  setAuthState(prev => ({ ...prev, isLoading: false }));
-                  return;
-                }
+  const ensureUserProfile = useCallback(async (authUser: SupabaseUser): Promise<DBUserProfile | null> => {
+    if (!supabase) return null;
 
-                // Get fresh permissions from database
-                const freshPermissions = await fetchUserPermissionsFromDB(currentUser.id);
-                
-                // Get user's accessible clinics
-                const accessibleClinics = await fetchUserClinicsFromDB(currentUser.id);
-                
-                // Get current clinic from session or use default
-                let currentClinic = session.currentClinic;
-                let currentBranch = session.currentBranch;
-                
-                if (!currentClinic && accessibleClinics.length > 0) {
-                  // Use default clinic or first available
-                  const defaultAccess = accessibleClinics.find(c => c.isDefault) || accessibleClinics[0];
-                  currentClinic = await fetchClinicFromDB(defaultAccess.clinicId);
-                  if (defaultAccess.branchId) {
-                    currentBranch = await fetchBranchFromDB(defaultAccess.branchId);
-                  }
-                }
-                
-                // Get clinic settings
-                const clinicSettings = currentClinic 
-                  ? await fetchClinicSettingsFromDB(currentClinic.id, currentBranch?.id)
-                  : null;
-                
-                // Update session with fresh data
-                session.permissions = freshPermissions;
-                session.user = { ...currentUser, ...userData };
-                session.currentClinic = currentClinic;
-                session.currentBranch = currentBranch;
-                session.clinicSettings = clinicSettings;
-                sessionStorage.setItem('clinic_auth_session', JSON.stringify(session));
-                // Also save to legacy key for backward compatibility with LoginPage
-                sessionStorage.setItem('clinic_session', JSON.stringify(session));
-                
-                setAuthState({
-                  isAuthenticated: true,
-                  isLoading: false,
-                  user: session.user,
-                  permissions: freshPermissions,
-                  customPermissions: userData.custom_permissions || [],
-                  overrideMode: userData.override_permissions || false,
-                  role: userData.role,
-                  token: session.token,
-                  // Clinic state
-                  currentClinic,
-                  currentBranch,
-                  accessibleClinics,
-                  clinicSettings,
-                  isLoadingClinics: false,
-                  isSwitchingClinic: false,
-                });
-                return;
-              } else {
-                // User not found in database - clear invalid session
-                console.warn('User not found in database, clearing session');
-                sessionStorage.removeItem('clinic_auth_session');
-                sessionStorage.removeItem('clinic_session');
-                setAuthState(prev => ({ ...prev, isLoading: false }));
-                return;
-              }
-            } catch (refreshError) {
-              console.error('Error refreshing permissions:', refreshError);
-              // Fall back to session permissions if refresh fails
-            }
-          } else {
-            // User not found in database - clear invalid session
-            console.warn('User not found in database during refresh, clearing session');
-            sessionStorage.removeItem('clinic_auth_session');
-            sessionStorage.removeItem('clinic_session');
-            setAuthState(prev => ({ ...prev, isLoading: false }));
-            return;
-          }
-        } else {
-          sessionStorage.removeItem('clinic_auth_session');
+    const { data: existing, error: selectError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (selectError) {
+      throw selectError;
+    }
+
+    const now = new Date().toISOString();
+
+    if (existing) {
+      const patch: Record<string, unknown> = {};
+      if ((existing as any).auth_id !== authUser.id) patch.auth_id = authUser.id;
+      if (authUser.email && existing.email !== authUser.email) patch.email = authUser.email;
+      if (!existing.username) patch.username = usernameFromEmail(authUser.email);
+
+      if (Object.keys(patch).length > 0) {
+        const { error: updateErr } = await supabase.from('user_profiles').update(patch).eq('id', authUser.id);
+        if (updateErr) {
+          console.warn('Failed to patch profile columns:', updateErr.message);
         }
       }
-    } catch (error) {
-      console.error('Failed to initialize auth:', error);
-    } finally {
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+
+      return {
+        ...(existing as DBUserProfile),
+        ...(patch as Partial<DBUserProfile>),
+      };
     }
-  };
+
+    const basePayload = {
+      id: authUser.id,
+      username: usernameFromEmail(authUser.email),
+      email: authUser.email || null,
+      role: 'DOCTOR',
+      status: 'ACTIVE',
+      created_at: now,
+      updated_at: now,
+    } as Record<string, unknown>;
+
+    const attempts: Record<string, unknown>[] = [
+      { ...basePayload, auth_id: authUser.id },
+      { ...basePayload },
+      {
+        id: authUser.id,
+        username: usernameFromEmail(authUser.email),
+        role: 'DOCTOR',
+        status: 'ACTIVE',
+      },
+    ];
+
+    for (const payload of attempts) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('user_profiles')
+        .insert(payload)
+        .select('*')
+        .maybeSingle();
+
+      if (!insertError && inserted) {
+        return inserted as DBUserProfile;
+      }
+    }
+
+    const { data: fallback } = await supabase.from('user_profiles').select('*').eq('id', authUser.id).maybeSingle();
+    return (fallback as DBUserProfile) || null;
+  }, []);
+
+  const hydrateFromSession = useCallback(
+    async (session: SupabaseSession | null, isActive: () => boolean = () => true) => {
+      if (!isActive()) return;
+
+      if (!supabase || !session?.user) {
+        clearAuthState();
+        return;
+      }
+
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+
+      try {
+        const authUser = session.user;
+        const profile = await ensureUserProfile(authUser);
+
+        if (!profile?.id) {
+          clearAuthState();
+          return;
+        }
+
+        const tenantValid = await isTenantAccessValid(profile.id);
+        if (!tenantValid) {
+          await supabase.auth.signOut();
+          clearAuthState();
+          return;
+        }
+
+        const permissions = await fetchUserPermissionsFromDB(profile.id);
+        const accessibleClinics = await fetchUserClinicsFromDB(profile.id);
+
+        const preferredClinicId = localStorage.getItem('currentClinicId');
+        const preferredBranchId = localStorage.getItem('currentBranchId');
+
+        const selectedAccess =
+          accessibleClinics.find(
+            c => c.clinicId === preferredClinicId && (!preferredBranchId || c.branchId === preferredBranchId),
+          ) ||
+          accessibleClinics.find(c => c.isDefault) ||
+          accessibleClinics[0];
+
+        let currentClinic: Clinic | null = null;
+        let currentBranch: ClinicBranch | null = null;
+
+        if (selectedAccess?.clinicId) {
+          currentClinic = await fetchClinicFromDB(selectedAccess.clinicId);
+          if (selectedAccess.branchId) {
+            currentBranch = await fetchBranchFromDB(selectedAccess.branchId);
+          }
+        }
+
+        const clinicSettings = currentClinic
+          ? await fetchClinicSettingsFromDB(currentClinic.id, currentBranch?.id)
+          : null;
+
+        if (currentClinic?.id) {
+          localStorage.setItem('currentClinicId', currentClinic.id);
+        }
+        if (currentBranch?.id) {
+          localStorage.setItem('currentBranchId', currentBranch.id);
+        } else {
+          localStorage.removeItem('currentBranchId');
+        }
+
+        const role = normalizeRole(profile.role);
+        const status = normalizeStatus(profile.status);
+        const user = mapProfileToUser(
+          {
+            ...profile,
+            role,
+            status,
+          },
+          authUser,
+        );
+
+        if (!isActive()) return;
+
+        setAuthState({
+          isAuthenticated: true,
+          isLoading: false,
+          user,
+          permissions,
+          customPermissions: (profile.custom_permissions || []) as Permission[],
+          overrideMode: profile.override_permissions === true,
+          role,
+          token: session.access_token,
+          currentClinic,
+          currentBranch,
+          accessibleClinics,
+          clinicSettings,
+          isLoadingClinics: false,
+          isSwitchingClinic: false,
+        });
+      } catch (error) {
+        console.error('Failed to hydrate auth state:', error);
+        if (!isActive()) return;
+        clearAuthState();
+      }
+    },
+    [clearAuthState, ensureUserProfile],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const init = async () => {
+      try {
+        if (!supabase) {
+          clearAuthState();
+          return;
+        }
+
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_OP_TIMEOUT_MS,
+          'auth.getSession',
+        );
+        if (error) {
+          throw error;
+        }
+
+        await withTimeout(
+          hydrateFromSession(data.session, () => active),
+          AUTH_OP_TIMEOUT_MS,
+          'hydrateFromSession(init)',
+        );
+      } catch (error) {
+        console.error('Auth init failed:', error);
+        if (!active) return;
+        clearAuthState();
+      }
+    };
+
+    init();
+
+    if (!supabase) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        await withTimeout(
+          hydrateFromSession(session, () => active),
+          AUTH_OP_TIMEOUT_MS,
+          'hydrateFromSession(authChange)',
+        );
+      } catch (error) {
+        console.error('Auth state change hydration failed:', error);
+        if (!active) return;
+        clearAuthState();
+      }
+    });
+
+    return () => {
+      active = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, [clearAuthState, hydrateFromSession]);
+
+  // Guard against indefinite loading due network/auth edge cases.
+  useEffect(() => {
+    if (!authState.isLoading) return;
+
+    const timer = setTimeout(() => {
+      setAuthState(prev => {
+        if (!prev.isLoading) return prev;
+        return { ...prev, isLoading: false };
+      });
+    }, AUTH_OP_TIMEOUT_MS + 3000);
+
+    return () => clearTimeout(timer);
+  }, [authState.isLoading]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
+    if (!supabase) {
+      throw new Error('Database not configured');
+    }
+
     setAuthState(prev => ({ ...prev, isLoading: true }));
-    
+
     try {
-      if (!supabase) {
-        throw new Error('Database not configured');
-      }
+      const identity = credentials.username.trim().toLowerCase();
+      let email = identity;
 
-      // Fetch user from database
-      const { data: users, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('username', credentials.username)
-        .single();
+      if (!identity.includes('@')) {
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .ilike('username', identity)
+          .maybeSingle();
 
-      if (error || !users) {
-        throw new Error('Invalid username or password');
-      }
-
-      const user = users as any;
-
-      const tenantValid = await isTenantAccessValid(user.id);
-      if (!tenantValid) {
-        throw new Error('Trial or subscription has expired. Please upgrade to continue.');
-      }
-
-      // Verify password (in production, use bcrypt verification)
-      if (credentials.password !== user.password_hash) {
-        throw new Error('Invalid username or password');
-      }
-
-      // Get user permissions
-      const permissions = await fetchUserPermissionsFromDB(user.id);
-      
-      // Get user's accessible clinics
-      const accessibleClinics = await fetchUserClinicsFromDB(user.id);
-      
-      // Determine current clinic
-      let currentClinic: Clinic | null = null;
-      let currentBranch: ClinicBranch | null = null;
-      
-      if (accessibleClinics.length > 0) {
-        // Use default clinic or first available
-        const defaultAccess = accessibleClinics.find(c => c.isDefault) || accessibleClinics[0];
-        currentClinic = await fetchClinicFromDB(defaultAccess.clinicId);
-        if (defaultAccess.branchId) {
-          currentBranch = await fetchBranchFromDB(defaultAccess.branchId);
+        if (profileError || !profile?.email) {
+          throw new Error('Invalid username or password');
         }
+
+        email = String(profile.email).toLowerCase();
       }
-      
-      // Get clinic settings
-      const clinicSettings = currentClinic 
-        ? await fetchClinicSettingsFromDB(currentClinic.id, currentBranch?.id)
-        : null;
 
-      // Create session
-      const sessionData = {
-        user: user as User,
-        permissions,
-        token: `token_${user.id}`,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        // Clinic context
-        currentClinic,
-        currentBranch,
-        accessibleClinics,
-        clinicSettings,
-      };
-
-      sessionStorage.setItem('clinic_auth_session', JSON.stringify(sessionData));
-      // Also save to legacy key for backward compatibility
-      sessionStorage.setItem('clinic_session', JSON.stringify(sessionData));
-
-      setAuthState({
-        isAuthenticated: true,
-        isLoading: false,
-        user: user as User,
-        permissions,
-        customPermissions: [],
-        overrideMode: false,
-        role: user.role,
-        token: sessionData.token,
-        // Clinic state
-        currentClinic,
-        currentBranch,
-        accessibleClinics,
-        clinicSettings,
-        isLoadingClinics: false,
-        isSwitchingClinic: false,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: credentials.password,
       });
 
+      if (error || !data.session) {
+        throw new Error(error?.message || 'Invalid username or password');
+      }
+
+      await hydrateFromSession(data.session);
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
-  }, []);
+  }, [hydrateFromSession]);
 
   const logout = useCallback(async () => {
     try {
-      sessionStorage.removeItem('clinic_auth_session');
-      sessionStorage.removeItem('clinic_session');
-      setAuthState({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        permissions: [],
-        customPermissions: [],
-        overrideMode: false,
-        role: null,
-        // Clinic state
-        currentClinic: null,
-        currentBranch: null,
-        accessibleClinics: [],
-        clinicSettings: null,
-        isLoadingClinics: false,
-        isSwitchingClinic: false,
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } finally {
+      clearAuthState();
     }
-  }, []);
+  }, [clearAuthState]);
 
   const refreshSession = useCallback(async () => {
-    // Implement session refresh logic if needed
-  }, []);
+    if (!supabase) {
+      clearAuthState();
+      return;
+    }
 
-  const switchClinic = useCallback(async (clinicId: string, branchId?: string) => {
-    setAuthState(prev => ({ ...prev, isSwitchingClinic: true }));
-    
-    try {
-      if (!supabase) {
-        throw new Error('Database not configured');
-      }
+    const { data } = await supabase.auth.getSession();
+    await hydrateFromSession(data.session);
+  }, [clearAuthState, hydrateFromSession]);
 
-      // Verify user has access to this clinic
-      const hasAccess = authState.accessibleClinics.some(
-        c => c.clinicId === clinicId && (!branchId || c.branchId === branchId)
-      );
-      
-      if (!hasAccess) {
-        throw new Error('You do not have access to this clinic/branch');
-      }
+  const switchClinic = useCallback(
+    async (clinicId: string, branchId?: string) => {
+      setAuthState(prev => ({ ...prev, isSwitchingClinic: true }));
 
-      // Fetch clinic and branch details
-      const clinic = await fetchClinicFromDB(clinicId);
-      if (!clinic) {
-        throw new Error('Clinic not found');
-      }
-
-      let branch: ClinicBranch | null = null;
-      if (branchId) {
-        branch = await fetchBranchFromDB(branchId);
-        if (!branch) {
-          throw new Error('Branch not found');
+      try {
+        if (!supabase) {
+          throw new Error('Database not configured');
         }
+
+        const hasAccess = authState.accessibleClinics.some(
+          c => c.clinicId === clinicId && (!branchId || c.branchId === branchId),
+        );
+
+        if (!hasAccess) {
+          throw new Error('You do not have access to this clinic/branch');
+        }
+
+        const clinic = await fetchClinicFromDB(clinicId);
+        if (!clinic) {
+          throw new Error('Clinic not found');
+        }
+
+        let branch: ClinicBranch | null = null;
+        if (branchId) {
+          branch = await fetchBranchFromDB(branchId);
+          if (!branch) {
+            throw new Error('Branch not found');
+          }
+        }
+
+        const clinicSettings = await fetchClinicSettingsFromDB(clinicId, branchId);
+
+        localStorage.setItem('currentClinicId', clinic.id);
+        if (branch?.id) {
+          localStorage.setItem('currentBranchId', branch.id);
+        } else {
+          localStorage.removeItem('currentBranchId');
+        }
+
+        setAuthState(prev => ({
+          ...prev,
+          currentClinic: clinic,
+          currentBranch: branch,
+          clinicSettings,
+          isSwitchingClinic: false,
+        }));
+      } catch (error) {
+        setAuthState(prev => ({ ...prev, isSwitchingClinic: false }));
+        throw error;
       }
+    },
+    [authState.accessibleClinics],
+  );
 
-      // Fetch clinic settings
-      const clinicSettings = await fetchClinicSettingsFromDB(clinicId, branchId);
-
-      // Update session
-      const sessionData = sessionStorage.getItem('clinic_auth_session');
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
-        session.currentClinic = clinic;
-        session.currentBranch = branch;
-        session.clinicSettings = clinicSettings;
-        sessionStorage.setItem('clinic_auth_session', JSON.stringify(session));
-        // Also save to legacy key for backward compatibility
-        sessionStorage.setItem('clinic_session', JSON.stringify(session));
+  const switchBranch = useCallback(
+    async (branchId: string) => {
+      if (!authState.currentClinic) {
+        throw new Error('No clinic selected');
       }
-
-      // Update state
-      setAuthState(prev => ({
-        ...prev,
-        currentClinic: clinic,
-        currentBranch: branch,
-        clinicSettings,
-        isSwitchingClinic: false,
-      }));
-
-    } catch (error) {
-      console.error('Error switching clinic:', error);
-      setAuthState(prev => ({ ...prev, isSwitchingClinic: false }));
-      throw error;
-    }
-  }, [authState.accessibleClinics]);
-
-  const switchBranch = useCallback(async (branchId: string) => {
-    if (!authState.currentClinic) {
-      throw new Error('No clinic selected');
-    }
-    return switchClinic(authState.currentClinic.id, branchId);
-  }, [authState.currentClinic, switchClinic]);
+      return switchClinic(authState.currentClinic.id, branchId);
+    },
+    [authState.currentClinic, switchClinic],
+  );
 
   const refreshClinics = useCallback(async () => {
     if (!authState.user?.id || !supabase) return;
-    
+
     setAuthState(prev => ({ ...prev, isLoadingClinics: true }));
-    
+
     try {
       const accessibleClinics = await fetchUserClinicsFromDB(authState.user.id);
-      
+
       setAuthState(prev => ({
         ...prev,
         accessibleClinics,
@@ -683,79 +788,111 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authState.user?.id]);
 
-  const hasClinicPermission = useCallback((permission: ClinicPermission): boolean => {
-    // Check if user has the permission in their current clinic context
-    // This is a simplified check - in production, you'd check against the user's
-    // role_at_clinic and custom_permissions for the current clinic
-    return authState.permissions.includes(permission as unknown as Permission);
-  }, [authState.permissions]);
+  const hasClinicPermission = useCallback(
+    (permission: ClinicPermission): boolean => {
+      return authState.permissions.includes(permission as unknown as Permission);
+    },
+    [authState.permissions],
+  );
 
-  const hasClinicAccess = useCallback((clinicId: string): boolean => {
-    return authState.accessibleClinics.some(c => c.clinicId === clinicId && c.isActive);
-  }, [authState.accessibleClinics]);
+  const hasClinicAccess = useCallback(
+    (clinicId: string): boolean => {
+      return authState.accessibleClinics.some(c => c.clinicId === clinicId && c.isActive);
+    },
+    [authState.accessibleClinics],
+  );
 
-  const hasBranchAccess = useCallback((branchId: string): boolean => {
-    return authState.accessibleClinics.some(c => c.branchId === branchId && c.isActive);
-  }, [authState.accessibleClinics]);
+  const hasBranchAccess = useCallback(
+    (branchId: string): boolean => {
+      return authState.accessibleClinics.some(c => c.branchId === branchId && c.isActive);
+    },
+    [authState.accessibleClinics],
+  );
 
-  // Permission helper functions (for backward compatibility)
-  const hasPermission = useCallback((permission: Permission): boolean => {
-    return authState.permissions.includes(permission);
-  }, [authState.permissions]);
+  const hasPermission = useCallback(
+    (permission: Permission): boolean => {
+      return authState.permissions.includes(permission);
+    },
+    [authState.permissions],
+  );
 
-  const hasAnyPermission = useCallback((permissions: Permission[]): boolean => {
-    return permissions.some(p => authState.permissions.includes(p));
-  }, [authState.permissions]);
+  const hasAnyPermission = useCallback(
+    (permissions: Permission[]): boolean => permissions.some(p => authState.permissions.includes(p)),
+    [authState.permissions],
+  );
 
-  const hasAllPermissions = useCallback((permissions: Permission[]): boolean => {
-    return permissions.every(p => authState.permissions.includes(p));
-  }, [authState.permissions]);
+  const hasAllPermissions = useCallback(
+    (permissions: Permission[]): boolean => permissions.every(p => authState.permissions.includes(p)),
+    [authState.permissions],
+  );
 
-  const hasRole = useCallback((role: UserRole): boolean => {
-    return authState.role === role;
-  }, [authState.role]);
+  const hasRole = useCallback((role: UserRole): boolean => authState.role === role, [authState.role]);
 
-  const hasCustomPermission = useCallback((permission: Permission): boolean => {
-    return authState.customPermissions?.includes(permission) || false;
-  }, [authState.customPermissions]);
+  const hasCustomPermission = useCallback(
+    (permission: Permission): boolean => authState.customPermissions?.includes(permission) || false,
+    [authState.customPermissions],
+  );
+
+  const loginWithGoogle = useCallback(async () => {
+    if (!supabase) {
+      throw new Error('Database not configured');
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  }, []);
+
+  const loginWithFacebook = useCallback(async () => {
+    if (!supabase) {
+      throw new Error('Database not configured');
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  }, []);
 
   const value: AuthContextTypeWithClinic = {
-    // Auth Methods
     login,
     logout,
     refreshSession,
-    loginWithGoogle: async () => {
-      // Google OAuth not implemented yet - placeholder
-      throw new Error('Google login not implemented');
-    },
-    loginWithFacebook: async () => {
-      // Facebook OAuth not implemented yet - placeholder
-      throw new Error('Facebook login not implemented');
-    },
-    
-    // Permission Helpers
+    loginWithGoogle,
+    loginWithFacebook,
+
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
     hasRole,
     hasCustomPermission,
-    
-    // Helpers
+
     isAdmin: authState.role?.toUpperCase() === 'ADMIN',
     user: authState.user,
-    userProfile: authState.user, // Alias for backward compatibility
+    userProfile: authState.user,
     isLoading: authState.isLoading,
-    loading: authState.isLoading, // Alias for backward compatibility
-    
-    // Clinic State
+    loading: authState.isLoading,
+
     currentClinic: authState.currentClinic,
     currentBranch: authState.currentBranch,
     accessibleClinics: authState.accessibleClinics,
     clinicSettings: authState.clinicSettings,
     isLoadingClinics: authState.isLoadingClinics,
     isSwitchingClinic: authState.isSwitchingClinic,
-    
-    // Clinic Methods
+
     switchClinic,
     switchBranch,
     refreshClinics,
@@ -764,22 +901,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasBranchAccess,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-/**
- * useAuth Hook
- * Returns the auth context or a default value if used outside AuthProvider
- */
 export const useAuth = (): AuthContextTypeWithClinic => {
   const context = useContext(AuthContext);
   if (!context) {
-    // Return a default context instead of throwing an error
-    // This prevents "Cannot read properties of null" errors
     return {
       login: async () => {},
       loginWithGoogle: async () => {},

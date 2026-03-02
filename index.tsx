@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AuthApp from './AuthApp';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -16,7 +16,6 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <React.StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
         <I18nProvider>
@@ -31,5 +30,5 @@ root.render(
         </I18nProvider>
       </ThemeProvider>
     </ErrorBoundary>
-  </React.StrictMode>
 );
+

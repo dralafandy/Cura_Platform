@@ -454,7 +454,7 @@ export interface CreateTenantInput {
   email: string;
   phone?: string;
   owner_email: string;
-  owner_password: string;
+  owner_password?: string;
 }
 
 export interface CreateClinicInput {

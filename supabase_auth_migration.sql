@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- SUPABASE AUTH MIGRATION
 -- This converts your app from custom auth to Supabase Auth
 -- Enables true clinic-based data isolation with RLS
@@ -19,19 +19,36 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_auth_id ON user_profiles(auth_id);
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_username TEXT;
 BEGIN
-  -- Check if user profile already exists with this email
-  INSERT INTO public.user_profiles (id, username, email, role, status, created_at)
+  -- Never trust role from client metadata; role defaults to DOCTOR.
+  v_username := NULLIF(TRIM(NEW.raw_user_meta_data->>'username'), '');
+  IF v_username IS NULL THEN
+    v_username := NULLIF(SPLIT_PART(COALESCE(NEW.email, ''), '@', 1), '');
+  END IF;
+  IF v_username IS NULL THEN
+    v_username := 'user_' || REPLACE(SUBSTRING(NEW.id::text, 1, 8), '-', '');
+  END IF;
+
+  INSERT INTO public.user_profiles (id, auth_id, username, email, role, status, created_at, updated_at)
   VALUES (
     NEW.id,
-    NEW.raw_user_meta_data->>'username',
+    NEW.id,
+    v_username,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'DOCTOR'),
+    'DOCTOR',
     'ACTIVE',
+    NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
-  
+  ON CONFLICT (id) DO UPDATE
+  SET
+    auth_id = EXCLUDED.auth_id,
+    email = COALESCE(EXCLUDED.email, public.user_profiles.email),
+    username = COALESCE(NULLIF(public.user_profiles.username, ''), EXCLUDED.username),
+    updated_at = NOW();
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -66,7 +83,7 @@ BEGIN
     up.role::TEXT,
     up.status::TEXT
   FROM public.user_profiles up
-  WHERE up.auth_id = auth.uid();
+  WHERE up.auth_id = auth.uid() OR up.id = auth.uid();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -83,7 +100,7 @@ BEGIN
   SELECT DISTINCT uc.clinic_id
   FROM public.user_clinics uc
   WHERE uc.user_id = (
-    SELECT id FROM public.user_profiles WHERE auth_id = auth.uid()
+    SELECT id FROM public.user_profiles WHERE auth_id = auth.uid() OR id = auth.uid() LIMIT 1
   )
   AND uc.access_active = true;
 END;
@@ -100,7 +117,6 @@ DROP POLICY IF EXISTS "patients_clinic_isolation" ON patients;
 CREATE POLICY "patients_clinic_isolation" ON patients
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Patient Attachments
@@ -108,7 +124,6 @@ DROP POLICY IF EXISTS "patient_attachments_clinic_isolation" ON patient_attachme
 CREATE POLICY "patient_attachments_clinic_isolation" ON patient_attachments
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Appointments
@@ -116,7 +131,6 @@ DROP POLICY IF EXISTS "appointments_clinic_isolation" ON appointments;
 CREATE POLICY "appointments_clinic_isolation" ON appointments
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Treatment Records
@@ -124,7 +138,6 @@ DROP POLICY IF EXISTS "treatment_records_clinic_isolation" ON treatment_records;
 CREATE POLICY "treatment_records_clinic_isolation" ON treatment_records
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Payments
@@ -132,7 +145,6 @@ DROP POLICY IF EXISTS "payments_clinic_isolation" ON payments;
 CREATE POLICY "payments_clinic_isolation" ON payments
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Expenses
@@ -140,7 +152,6 @@ DROP POLICY IF EXISTS "expenses_clinic_isolation" ON expenses;
 CREATE POLICY "expenses_clinic_isolation" ON expenses
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Suppliers
@@ -148,7 +159,6 @@ DROP POLICY IF EXISTS "suppliers_clinic_isolation" ON suppliers;
 CREATE POLICY "suppliers_clinic_isolation" ON suppliers
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Supplier Invoices
@@ -156,7 +166,6 @@ DROP POLICY IF EXISTS "supplier_invoices_clinic_isolation" ON supplier_invoices;
 CREATE POLICY "supplier_invoices_clinic_isolation" ON supplier_invoices
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Inventory Items
@@ -164,7 +173,6 @@ DROP POLICY IF EXISTS "inventory_items_clinic_isolation" ON inventory_items;
 CREATE POLICY "inventory_items_clinic_isolation" ON inventory_items
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Treatment Definitions
@@ -172,7 +180,6 @@ DROP POLICY IF EXISTS "treatment_definitions_clinic_isolation" ON treatment_defi
 CREATE POLICY "treatment_definitions_clinic_isolation" ON treatment_definitions
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Dentists
@@ -180,7 +187,6 @@ DROP POLICY IF EXISTS "dentists_clinic_isolation" ON dentists;
 CREATE POLICY "dentists_clinic_isolation" ON dentists
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Lab Cases
@@ -188,7 +194,6 @@ DROP POLICY IF EXISTS "lab_cases_clinic_isolation" ON lab_cases;
 CREATE POLICY "lab_cases_clinic_isolation" ON lab_cases
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Prescriptions
@@ -196,7 +201,6 @@ DROP POLICY IF EXISTS "prescriptions_clinic_isolation" ON prescriptions;
 CREATE POLICY "prescriptions_clinic_isolation" ON prescriptions
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- Employees
@@ -204,16 +208,15 @@ DROP POLICY IF EXISTS "employees_clinic_isolation" ON employees;
 CREATE POLICY "employees_clinic_isolation" ON employees
     FOR ALL USING (
         clinic_id IN (SELECT clinic_id FROM public.get_user_clinics())
-        OR clinic_id IS NULL
     );
 
 -- ============================================================================
 -- STEP 7: Grant permissions
 -- ============================================================================
 
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+-- Avoid broad grants; rely on table-specific grants + RLS.
+GRANT EXECUTE ON FUNCTION public.get_current_user_profile() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_clinics() TO authenticated;
 
 -- ============================================================================
 -- SUCCESS
@@ -236,3 +239,4 @@ BEGIN
     RAISE NOTICE '2. Link existing users to Supabase Auth accounts';
     RAISE NOTICE '========================================================';
 END $$;
+

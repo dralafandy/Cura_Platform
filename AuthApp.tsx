@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import App from './App';
 import LoginPage from './pages/LoginPage';
 import RegisterClinic from './components/RegisterClinic';
@@ -31,38 +31,7 @@ const BackendConfigMessage: React.FC = () => {
 
 const AuthApp: React.FC = () => {
   const { user, loading } = useAuth();
-  const [hasUsers, setHasUsers] = useState<boolean | null>(null);
   const [showClinicRegistration, setShowClinicRegistration] = useState(false);
-
-  useEffect(() => {
-    const checkExistingUsers = async () => {
-      if (!supabase) {
-        setHasUsers(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .limit(1);
-
-        if (error) {
-          if (error.code === 'PGRST116' || error.message.includes('permission denied') || error.message.includes('does not exist')) {
-            setHasUsers(false);
-            return;
-          }
-          throw error;
-        }
-
-        setHasUsers((data?.length || 0) > 0);
-      } catch {
-        setHasUsers(false);
-      }
-    };
-
-    checkExistingUsers();
-  }, []);
 
   if (loading) {
     return (
@@ -83,26 +52,10 @@ const AuthApp: React.FC = () => {
     return <App />;
   }
 
-  if (hasUsers === null) {
-    return (
-      <div className="min-h-screen bg-neutral-light flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600">Checking system setup...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasUsers) {
-    return <RegisterClinic onSuccess={() => setHasUsers(true)} />;
-  }
-
   if (showClinicRegistration) {
     return (
       <RegisterClinic
         onSuccess={() => {
-          setHasUsers(true);
           setShowClinicRegistration(false);
         }}
       />

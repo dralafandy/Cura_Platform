@@ -268,9 +268,15 @@ export const useClinicData = (): ClinicData => {
             if (userClinicIds.length > 0 && ['patients', 'appointments', 'treatment_records', 'payments', 'expenses', 'suppliers', 'inventory_items', 'dentists'].includes(table)) {
                 // For tables with clinic_id, filter by user's accessible clinics
                 query = query.in('clinic_id', userClinicIds);
+            } else if (userClinicIds.length > 0 && table === 'clinics') {
+                // Clinics table uses its own PK id instead of clinic_id
+                query = query.in('id', userClinicIds);
             } else if (userClinicIds.length > 0 && table === 'patient_attachments') {
                 // For patient_attachments, we need to join with patients to filter by clinic
                 // This will be handled separately after fetching
+            } else if (userClinicIds.length === 0 && table === 'clinics') {
+                // Do not expose all clinics when user has no clinic assignment.
+                query = query.limit(0);
             }
             
             return query;

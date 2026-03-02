@@ -60,7 +60,10 @@ const RegisterClinic: React.FC<RegisterClinicProps> = ({ onSuccess }) => {
   const validateStep2 = () => {
     if (!formData.ownerName.trim()) return setError('يرجى إدخال اسم المالك'), false;
     if (!formData.ownerEmail.trim()) return setError('يرجى إدخال بريد المالك'), false;
-    if (!formData.password || formData.password.length < 6) return setError('كلمة المرور لا تقل عن 6 أحرف'), false;
+    if (!formData.password || formData.password.length < 8) return setError('كلمة المرور لا تقل عن 8 أحرف'), false;
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      return setError('كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم'), false;
+    }
     if (formData.password !== formData.confirmPassword) return setError('كلمتا المرور غير متطابقتين'), false;
     if (!formData.agreeTerms) return setError('يجب الموافقة على الشروط والأحكام'), false;
     return true;
@@ -74,19 +77,6 @@ const RegisterClinic: React.FC<RegisterClinicProps> = ({ onSuccess }) => {
     setError(null);
 
     try {
-      const tenantResult = await tenantService.createTenant({
-        name: formData.clinicName,
-        slug: formData.clinicSlug,
-        email: formData.email,
-        phone: formData.phone,
-        owner_email: formData.ownerEmail,
-        owner_password: formData.password,
-      });
-
-      if (!tenantResult.success || !tenantResult.data) {
-        throw new Error(tenantResult.error || 'فشل إنشاء العيادة');
-      }
-
       const ownerEmail = formData.ownerEmail.trim().toLowerCase();
       const ownerUsername = ownerEmail.split('@')[0];
       const firstName = formData.ownerName.split(' ')[0] || '';
@@ -98,8 +88,6 @@ const RegisterClinic: React.FC<RegisterClinicProps> = ({ onSuccess }) => {
         options: {
           data: {
             username: ownerUsername,
-            role: 'ADMIN',
-            status: 'ACTIVE',
             first_name: firstName,
             last_name: lastName,
             full_name: formData.ownerName,
@@ -109,67 +97,42 @@ const RegisterClinic: React.FC<RegisterClinicProps> = ({ onSuccess }) => {
       });
 
       if (authError) {
-        // Avoid orphan tenant if auth user creation fails
-        await supabase.from('tenants').delete().eq('id', tenantResult.data.tenant_id);
-        if (authError.message?.toLowerCase().includes('database error saving new user')) {
-          throw new Error('فشل إنشاء المستخدم في قاعدة البيانات (Trigger/Auth). تأكد من تشغيل migrations الخاصة بالمصادقة ثم أعد المحاولة.');
-        }
-        throw authError;
+        throw new Error(authError.message || 'فشل إنشاء حساب المالك');
       }
-      if (!authData.user) throw new Error('فشل إنشاء حساب المستخدم');
 
-      await supabase
-        .from('users')
-        .update({
-          tenant_id: tenantResult.data.tenant_id,
-          is_owner: true,
-        })
-        .eq('id', authData.user.id);
+      if (!authData.user || (Array.isArray((authData.user as any).identities) && (authData.user as any).identities.length === 0)) {
+        throw new Error('فشل إنشاء حساب المالك. قد يكون البريد مستخدمًا مسبقًا.');
+      }
 
-      // Save profile with schema-compatible fallbacks
-      const profileAttempts = [
-        {
-          id: authData.user.id,
-          user_id: authData.user.id,
-          username: ownerUsername,
+      // Owner promotion RPC requires an authenticated session.
+      if (!authData.session) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: ownerEmail,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          tenant_id: tenantResult.data.tenant_id,
-        },
-        {
-          user_id: authData.user.id,
-          username: ownerUsername,
-          email: ownerEmail,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          tenant_id: tenantResult.data.tenant_id,
-        },
-        {
-          id: authData.user.id,
-          username: ownerUsername,
-          email: ownerEmail,
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          tenant_id: tenantResult.data.tenant_id,
-        },
-      ];
-
-      let profileSaved = false;
-      for (const payload of profileAttempts) {
-        const { error: profileError } = await supabase.from('user_profiles').upsert(payload as any);
-        if (!profileError) {
-          profileSaved = true;
-          break;
+          password: formData.password,
+        });
+        if (signInError || !signInData.session) {
+          throw new Error('تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول أولًا ثم أكمل إعداد العيادة.');
         }
       }
 
-      if (!profileSaved) {
-        console.warn('Could not persist user profile in a compatible schema variant');
+      const tenantResult = await tenantService.createTenant({
+        name: formData.clinicName,
+        slug: formData.clinicSlug,
+        email: formData.email,
+        phone: formData.phone,
+        owner_email: ownerEmail,
+      });
+
+      if (!tenantResult.success || !tenantResult.data) {
+        throw new Error(tenantResult.error || 'فشل إنشاء العيادة');
+      }
+
+      const { error: promoteError } = await supabase.rpc('promote_current_user_to_tenant_owner', {
+        p_tenant_id: tenantResult.data.tenant_id,
+      });
+
+      if (promoteError) {
+        throw new Error(promoteError.message || 'فشل ربط المالك بالعيادة');
       }
 
       if (onSuccess) onSuccess();

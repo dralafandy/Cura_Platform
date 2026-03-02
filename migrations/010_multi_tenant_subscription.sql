@@ -182,4 +182,9 @@ CREATE INDEX IF NOT EXISTS idx_treatment_doctor_percentages_tenant_id ON treatme
 
 -- Treatment Records
 ALTER TABLE treatment_records ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-CREATE INDEX IF NOT EXISTS idx_treatment_records_tenant_id ON
+CREATE INDEX IF NOT EXISTS idx_treatment_records_tenant_id ON treatment_records(tenant_id);
+
+-- NOTE:
+-- This file previously ended with an incomplete SQL statement.
+-- Keep this migration syntactically valid; any additional tenant columns
+-- should be introduced in a follow-up migration file.

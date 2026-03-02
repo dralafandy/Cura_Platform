@@ -38,22 +38,37 @@ export const userService = {
         return { success: false, error: 'Database not configured' };
       }
 
-      // Hash password (in production, use bcrypt)
-      const passwordHash = await hashPassword(input.password);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: String(input.email || '').toLowerCase(),
+        password: input.password,
+        options: {
+          data: {
+            username: input.username,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create auth user');
 
       const { data, error } = await supabase
         .from('user_profiles')
-        .insert({
-          username: input.username,
-          email: input.email,
-          password_hash: passwordHash,
-          first_name: input.firstName,
-          last_name: input.lastName,
-          role: input.role,
-          status: input.status || UserStatus.ACTIVE,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .upsert(
+          {
+            id: authData.user.id,
+            user_id: authData.user.id,
+            auth_id: authData.user.id,
+            username: input.username,
+            email: input.email,
+            first_name: input.firstName,
+            last_name: input.lastName,
+            role: input.role,
+            status: input.status || UserStatus.ACTIVE,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        )
         .select()
         .single();
 
@@ -197,28 +212,29 @@ export const userService = {
         return { success: false, error: 'Database not configured' };
       }
 
-      // Get user
-      const { data: user, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('password_hash')
-        .eq('id', userId)
-        .single();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
 
-      if (fetchError) throw fetchError;
-
-      // Verify old password
-      if (!(await verifyPassword(oldPassword, user.password_hash))) {
-        return { success: false, error: 'Invalid password' };
+      const currentUser = sessionData.session?.user;
+      if (!currentUser || currentUser.id !== userId) {
+        return { success: false, error: 'You can only change your own password from this client.' };
       }
 
-      // Hash new password
-      const newHash = await hashPassword(newPassword);
+      // Re-authenticate user by signing in with current password.
+      const userEmail = currentUser.email;
+      if (!userEmail) {
+        return { success: false, error: 'Current user has no email in auth session.' };
+      }
 
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ password_hash: newHash })
-        .eq('id', userId);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: oldPassword,
+      });
+      if (signInError) {
+        return { success: false, error: 'Invalid current password' };
+      }
 
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
 
       return { success: true };
@@ -524,21 +540,4 @@ export const auditService = {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-/**
- * Hash password (simple implementation - use bcrypt in production)
- */
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Verify password
- */
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
-}
+// Password hashing/verification are intentionally removed from client-side auth service.

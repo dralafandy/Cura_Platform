@@ -44,38 +44,32 @@ export interface UserServiceResponse<T> {
   error?: string;
 }
 
+const getCurrentAuthUserId = async (): Promise<string | null> => {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.auth.getUser();
+  if (error) return null;
+  return data.user?.id ?? null;
+};
+
+const getSelfScopeFilter = (authUserId: string): string => `id.eq.${authUserId},auth_id.eq.${authUserId}`;
+
 // ============================================================================
 // Password Hashing Utility
 // ============================================================================
 
 /**
- * Simple password hashing using SHA-256 (for demo purposes)
- * In production, use bcrypt or similar with salt
+ * Deprecated: password hashes must not be generated client-side.
+ * Supabase Auth handles password hashing server-side.
  */
-export const hashPassword = async (password: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+export const hashPassword = async (_password: string): Promise<string> => {
+  throw new Error('Client-side password hashing is disabled. Use Supabase Auth.');
 };
 
 /**
- * Verify password against hash
- * Supports multiple hash formats for backward compatibility
+ * Deprecated: password verification must happen through Supabase Auth.
  */
-export const verifyPassword = async (password: string, hash: string): Promise<boolean> => {
-  if (!hash) return false;
-  
-  // Try SHA-256 (new format)
-  const passwordHash = await hashPassword(password);
-  if (passwordHash === hash) return true;
-  
-  // Try direct comparison (for plain text passwords during development)
-  if (password === hash) return true;
-  
-  // If hash starts with $2b$ or $2a$, it's likely bcrypt (not supported in browser)
-  // Return false for unsupported formats
+export const verifyPassword = async (_password: string, _hash: string): Promise<boolean> => {
   return false;
 };
 
@@ -93,9 +87,15 @@ export const getAllUsers = async (): Promise<UserServiceResponse<UserProfile[]>>
       return { success: false, error: 'Supabase client not initialized' };
     }
 
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
+      .or(getSelfScopeFilter(authUserId))
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -115,11 +115,19 @@ export const getUserById = async (id: string): Promise<UserServiceResponse<UserP
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', id)
+      .or(getSelfScopeFilter(authUserId))
       .single();
 
     if (error) throw error;
@@ -140,11 +148,16 @@ export const getUserByUsername = async (username: string): Promise<UserServiceRe
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .ilike('username', username.toLowerCase())
+      .or(getSelfScopeFilter(authUserId))
       .single();
 
     if (error) throw error;
@@ -161,58 +174,11 @@ export const getUserByUsername = async (username: string): Promise<UserServiceRe
  * Create new user
  */
 export const createUser = async (request: CreateUserRequest): Promise<UserServiceResponse<UserProfile>> => {
-  try {
-    if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
-    }
-
-    // Check if username already exists
-    const { data: existingUser } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .ilike('username', request.username.toLowerCase())
-      .single();
-
-    if (existingUser) {
-      return { success: false, error: 'Username already exists' };
-    }
-
-    // Create auth user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: request.email,
-      password: request.password,
-    });
-
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('Failed to create auth user');
-
-    // Hash password for direct login
-    const passwordHash = await hashPassword(request.password);
-
-    // Create user profile
-    const { data: newUser, error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        user_id: authData.user.id,
-        username: request.username,
-        role: request.role,
-        status: request.status || UserStatus.ACTIVE,
-        password_hash: passwordHash,
-      })
-      .select()
-      .single();
-
-    if (profileError) throw profileError;
-
-    // Log activity
-    await logActivity(newUser.id, 'user_created', `User ${request.username} created with role ${request.role}`);
-
-    return { success: true, data: newUser };
-  } catch (error: any) {
-    console.error('Error creating user:', error);
-    return { success: false, error: error.message || 'Failed to create user' };
-  }
+  void request;
+  return {
+    success: false,
+    error: 'Creating additional users is disabled while account isolation is active.',
+  };
 };
 
 /**
@@ -222,6 +188,14 @@ export const updateUser = async (request: UpdateUserRequest): Promise<UserServic
   try {
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
+    }
+
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (request.id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
     }
 
     // Check if username is being changed and if it already exists
@@ -253,6 +227,7 @@ export const updateUser = async (request: UpdateUserRequest): Promise<UserServic
       .from('user_profiles')
       .update(updateData)
       .eq('id', request.id)
+      .or(getSelfScopeFilter(authUserId))
       .select()
       .single();
 
@@ -276,18 +251,27 @@ export const deleteUser = async (id: string): Promise<UserServiceResponse<void>>
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     // Get user info before deletion for logging
     const { data: user } = await supabase
       .from('user_profiles')
       .select('username')
       .eq('id', id)
+      .or(getSelfScopeFilter(authUserId))
       .single();
 
     const { error } = await supabase
       .from('user_profiles')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .or(getSelfScopeFilter(authUserId));
 
     if (error) throw error;
 
@@ -309,11 +293,19 @@ export const updateUserStatus = async (id: string, status: UserStatus): Promise<
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .or(getSelfScopeFilter(authUserId))
       .select()
       .single();
 
@@ -337,11 +329,19 @@ export const updateUserRole = async (id: string, role: UserRole): Promise<UserSe
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')
       .update({ role, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .or(getSelfScopeFilter(authUserId))
       .select()
       .single();
 
@@ -369,6 +369,13 @@ export const updateUserPermissions = async (
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')
@@ -378,6 +385,7 @@ export const updateUserPermissions = async (
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .or(getSelfScopeFilter(authUserId))
       .select()
       .single();
 
@@ -401,11 +409,19 @@ export const updateLastLogin = async (id: string): Promise<UserServiceResponse<v
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (id !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { error } = await supabase
       .from('user_profiles')
       .update({ last_login: new Date().toISOString() })
-      .eq('id', id);
+      .eq('id', id)
+      .or(getSelfScopeFilter(authUserId));
 
     if (error) throw error;
 
@@ -460,6 +476,13 @@ export const getUserActivityLogs = async (userId: string): Promise<UserServiceRe
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (userId !== authUserId) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { data, error } = await supabase
       .from('user_activity_logs')
@@ -487,6 +510,13 @@ export const bulkDeleteUsers = async (ids: string[]): Promise<UserServiceRespons
   try {
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
+    }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (ids.some((id) => id !== authUserId)) {
+      return { success: false, error: 'Access denied: self-only scope' };
     }
 
     const { error, count } = await supabase
@@ -519,6 +549,13 @@ export const bulkUpdateUserStatus = async (
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    const authUserId = await getCurrentAuthUserId();
+    if (!authUserId) {
+      return { success: false, error: 'Authentication required' };
+    }
+    if (ids.some((id) => id !== authUserId)) {
+      return { success: false, error: 'Access denied: self-only scope' };
+    }
 
     const { error, count } = await supabase
       .from('user_profiles')
@@ -538,3 +575,4 @@ export const bulkUpdateUserStatus = async (
     return { success: false, error: error.message || 'Failed to update user status' };
   }
 };
+

@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { useI18n } from '../hooks/useI18n';
-import { UserRole, UserStatus } from '../types';
 
 // Reusable Input Field Component
 interface InputFieldProps {
@@ -202,46 +200,6 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
   );
 };
 
-// Admin Setup Key
-const ADMIN_SETUP_KEY = 'curasoft-admin-2024';
-
-const isTenantSubscriptionValid = async (tenantId?: string | null): Promise<boolean> => {
-  if (!tenantId || !supabase) return true;
-
-  try {
-    const { data, error } = await supabase
-      .rpc('get_tenant_info', { p_tenant_id: tenantId });
-
-    if (!error && data && data[0]) {
-      return data[0].is_subscription_valid === true;
-    }
-  } catch (err) {
-    console.error('Tenant RPC validation error:', err);
-  }
-
-  try {
-    const { data: tenant, error } = await supabase
-      .from('tenants')
-      .select('subscription_status, trial_end_date, subscription_end_date')
-      .eq('id', tenantId)
-      .single();
-
-    if (error || !tenant) return true;
-
-    const today = new Date().toISOString().split('T')[0];
-    if (tenant.subscription_status === 'TRIAL') {
-      return !!tenant.trial_end_date && tenant.trial_end_date >= today;
-    }
-    if (tenant.subscription_status === 'ACTIVE') {
-      return !tenant.subscription_end_date || tenant.subscription_end_date >= today;
-    }
-    return false;
-  } catch (err) {
-    console.error('Tenant fallback validation error:', err);
-    return true;
-  }
-};
-
 interface LoginPageProps {
   onRequestClinicRegistration?: () => void;
 }
@@ -251,11 +209,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
-  const [mounted, setMounted] = useState(false);
   
   // Registration state
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -265,88 +221,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
-  const [adminSetupKey, setAdminSetupKey] = useState('');
-  const [showAdminKeyField, setShowAdminKeyField] = useState(false);
   
-  const { loginWithGoogle, loginWithFacebook } = useAuth();
-  const { t } = useI18n();
+  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Handle Supabase Auth session changes
-  useEffect(() => {
-    if (!supabase) return;
-    
-    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Create or update user profile
-        await handleAuthSession(session);
-      }
-    });
-
-    return () => {
-      data?.subscription?.unsubscribe();
-    };
-  }, []);
-
-  // Handle auth session - create/update user profile
-  const handleAuthSession = async (session: any) => {
-    try {
-      const user = session.user;
-      
-      // Check if user profile exists
-      const { data: existingProfile } = await supabase!
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (!existingProfile) {
-        // Create new user profile
-        const { error: profileError } = await supabase!
-          .from('user_profiles')
-          .insert({
-            id: user.id,
-            auth_id: user.id,
-            email: user.email,
-            username: user.email?.split('@')[0] || 'user',
-            role: 'DOCTOR',
-            status: 'ACTIVE',
-          });
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-        }
-      }
-
-      // Set session in storage
-      const { data: profile } = await supabase!
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        const subscriptionValid = await isTenantSubscriptionValid(profile.tenant_id);
-        if (!subscriptionValid) {
-          await supabase.auth.signOut();
-          sessionStorage.removeItem('clinic_session');
-          setError('انتهت الفترة التجريبية او الاشتراك. يرجى ترقية الخطة للمتابعة.');
-          return;
-        }
-
-        sessionStorage.setItem('clinic_session', JSON.stringify({
-          user: profile,
-          loginTime: new Date().toISOString(),
-        }));
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Error handling auth session:', err);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,32 +232,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
 
     try {
       if (!email.trim()) {
-        throw new Error('Email is required');
+        throw new Error('Email or username is required');
       }
       if (!password) {
         throw new Error('Password is required');
       }
 
-      if (!supabase) {
-        throw new Error('Database not configured');
-      }
-
-      // Use Supabase Auth for login
-      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
+      await login({
+        username: email.trim(),
+        password,
       });
 
-      if (supabaseError) {
-        throw new Error(supabaseError.message || 'Invalid email or password');
-      }
-
-      if (!data.user) {
-        throw new Error('Login failed. Please try again.');
-      }
-
       setError(null);
-      // Session will be handled by onAuthStateChange
 
     } catch (err: any) {
       console.error('Login error:', err);
@@ -450,8 +313,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
       if (!regPassword) {
         throw new Error('Password is required');
       }
-      if (regPassword.length < 6) {
-        throw new Error('Password must be at least 6 characters');
+      if (regPassword.length < 8) {
+        throw new Error('Password must be at least 8 characters');
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(regPassword)) {
+        throw new Error('Password must include uppercase, lowercase, and number');
       }
       if (regPassword !== regConfirmPassword) {
         throw new Error('Passwords do not match');
@@ -461,56 +327,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
         throw new Error('Database not configured');
       }
 
-      // Check if admin key is valid
-      let isAdmin = false;
-      if (adminSetupKey.trim() === ADMIN_SETUP_KEY) {
-        isAdmin = true;
-      } else if (adminSetupKey.trim()) {
-        throw new Error('Invalid admin setup key');
-      }
-
-      // Check if email already exists in profiles (client-safe)
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', regEmail.toLowerCase())
-        .maybeSingle();
-
-      if (existingProfile) {
-        throw new Error('Email already registered. Please login instead.');
-      }
-
       // Sign up with Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: regEmail.toLowerCase(),
+        email: regEmail.trim().toLowerCase(),
         password: regPassword,
         options: {
           data: {
-            username: regEmail.split('@')[0],
-            role: isAdmin ? 'ADMIN' : 'DOCTOR',
-          }
-        }
+            username: regEmail.trim().split('@')[0],
+          },
+        },
       });
 
       if (signUpError) {
         throw new Error(signUpError.message || 'Registration failed');
       }
 
-      if (!data.user) {
+      if (!data.user || (Array.isArray((data.user as any).identities) && (data.user as any).identities.length === 0)) {
         throw new Error('Registration failed. Please try again.');
-      }
-
-      // Update user role in user_profiles after creation
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({ 
-          role: isAdmin ? 'ADMIN' : 'DOCTOR',
-          username: regEmail.split('@')[0],
-        })
-        .eq('id', data.user.id);
-
-      if (profileError) {
-        console.error('Error updating user role:', profileError);
       }
 
       // Registration successful
@@ -520,7 +353,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
       setRegEmail('');
       setRegPassword('');
       setRegConfirmPassword('');
-      setAdminSetupKey('');
       
       // Switch to login mode after 3 seconds
       setTimeout(() => {
@@ -571,12 +403,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
             <form onSubmit={handleSubmit} className="space-y-5">
               <InputField
                 id="email"
-                label="Email"
-                type="email"
+                label="Email or Username"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                autoComplete="email"
+                placeholder="Enter your email or username"
+                autoComplete="username"
                 required
                 icon={
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -627,7 +459,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
                 type={regShowPassword ? 'text' : 'password'}
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Create a password (min 6 characters)"
+                placeholder="Create a password (min 8 characters, A-z, 0-9)"
                 autoComplete="new-password"
                 required
                 showPasswordToggle
@@ -643,25 +475,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onRequestClinicRegistration }) =>
                 autoComplete="new-password"
                 required
               />
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setShowAdminKeyField(!showAdminKeyField)}
-                  className="text-sm text-cyan-600 dark:text-cyan-400"
-                >
-                  {showAdminKeyField ? 'Hide' : 'Register as Admin'}
-                </button>
-              </div>
-              {showAdminKeyField && (
-                <InputField
-                  id="admin-key"
-                  label="Admin Setup Key"
-                  type="text"
-                  value={adminSetupKey}
-                  onChange={(e) => setAdminSetupKey(e.target.value)}
-                  placeholder="Enter admin key"
-                />
-              )}
               <button
                 type="submit"
                 disabled={regLoading}

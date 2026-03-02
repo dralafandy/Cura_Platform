@@ -1,10 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import './styles/responsive.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+بيا
 /* Modern Tech Color System - CSS Variables */
 :root {
   /* Accessibility - Transition Duration (can be overridden by JS) */
@@ -1535,6 +1536,3 @@ input, textarea, select, button {
 .high-contrast textarea {
   border-width: 2px !important;
 }
-
-/* Global responsive utilities and mobile behavior */
-@import './styles/responsive.css';

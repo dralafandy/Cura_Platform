@@ -54,6 +54,10 @@ const UserManagement: React.FC = () => {
   const { user: currentUser, userProfile, isAdmin: isUserAdmin } = useAuth();
   const { addNotification } = useNotification();
   const { theme } = useTheme();
+  const currentUserId = currentUser?.id ?? null;
+
+  // Account-isolation mode: each signed-in user can only access their own profile.
+  const SELF_ONLY_MODE = true;
   
   // Check if supabase is available
   if (!supabase) {
@@ -110,6 +114,17 @@ const UserManagement: React.FC = () => {
 
   const usersPerPage = USERS_PER_PAGE;
 
+  const isSelfTarget = useCallback((targetUserId?: string | null): boolean => {
+    return Boolean(currentUserId && targetUserId && targetUserId === currentUserId);
+  }, [currentUserId]);
+
+  const notifySelfOnlyViolation = useCallback((actionLabel: string) => {
+    addNotification({
+      message: `${actionLabel} is restricted to your own account only.`,
+      type: NotificationType.ERROR,
+    });
+  }, [addNotification]);
+
   // Unified error handler
   const handleError = (error: unknown, context: string): string => {
     const err = error as { message?: string; code?: string };
@@ -130,13 +145,18 @@ const UserManagement: React.FC = () => {
   const fetchUsers = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
+      if (!currentUserId) {
+        setUsers([]);
+        setTotalUsers(0);
+        return;
+      }
       const from = (page - 1) * usersPerPage;
       const to = from + usersPerPage - 1;
       
       // Build query with filters
       let query = supabase
         .from('user_profiles')
-        .select('id, user_id, username, role, status, dentist_id, created_at, updated_at, last_login, custom_permissions, override_permissions', { count: 'exact' });
+        .select('id, user_id, auth_id, username, email, role, status, dentist_id, created_at, updated_at, last_login, custom_permissions, override_permissions', { count: 'exact' });
       
       // Apply search filter
       if (searchTerm) {
@@ -151,6 +171,10 @@ const UserManagement: React.FC = () => {
       // Apply status filter
       if (statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
+      }
+
+      if (SELF_ONLY_MODE) {
+        query = query.or(`id.eq.${currentUserId},auth_id.eq.${currentUserId}`);
       }
       
       const { data, error, count } = await query
@@ -171,7 +195,7 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [currentUserId, searchTerm, roleFilter, statusFilter, usersPerPage]);
 
   useEffect(() => {
     fetchUsers(currentPage);
@@ -179,16 +203,21 @@ const UserManagement: React.FC = () => {
 
   const fetchDentists = useCallback(async () => {
     try {
+      if (!currentUserId) {
+        setDentists([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('dentists')
         .select('id, name, specialty, color')
+        .eq('user_id', currentUserId)
         .order('name', { ascending: true });
       if (error) throw error;
       setDentists((data || []) as Dentist[]);
     } catch (error) {
       handleError(error, 'Failed to fetch doctors');
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     fetchDentists();
@@ -246,6 +275,10 @@ const UserManagement: React.FC = () => {
       }
     }
 
+    if (formData.role === UserRole.DOCTOR && !formData.dentist_id) {
+      errors.dentist_id = 'Please link this user to a doctor profile';
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }, [formData, editingUser, isResettingPassword]);
@@ -287,34 +320,77 @@ const UserManagement: React.FC = () => {
 
   // Create new user
   const handleCreateUser = async () => {
-    // Check if username already exists - let DB handle uniqueness constraint
+    if (SELF_ONLY_MODE) {
+      throw new Error('Creating additional users is disabled while account isolation is active.');
+    }
+
     try {
-      // Hash password for storage (using SHA-256 for compatibility with login)
-      const { hashPassword } = await import('../services/userService');
-      const hashedPassword = await hashPassword(formData.password);
+      const currentSession = await supabase.auth.getSession();
+      const currentAccessToken = currentSession.data.session?.access_token;
+      const currentRefreshToken = currentSession.data.session?.refresh_token;
+      const currentUserId = currentSession.data.session?.user?.id;
 
-      // Create user profile with password hash
-      const { data: newUser, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          username: formData.username,
-          role: formData.role,
-          status: formData.status,
-          dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
-          password_hash: hashedPassword,
-        })
-        .select()
-        .single();
+      const email = formData.email.trim().toLowerCase();
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username.trim(),
+          },
+        },
+      });
 
-      if (profileError) {
-        // Handle unique constraint violation
-        if (profileError.code === '23505') {
-          throw new Error('Username already exists');
-        }
-        throw profileError;
+      if (authError) {
+        throw new Error(authError.message || 'Failed to create auth user');
       }
 
-      if (!newUser) throw new Error('Failed to create user profile');
+      if (!authData.user || (Array.isArray((authData.user as any).identities) && (authData.user as any).identities.length === 0)) {
+        throw new Error('Failed to create user. Email may already be registered.');
+      }
+
+      const profilePayload = {
+        id: authData.user.id,
+        auth_id: authData.user.id,
+        user_id: authData.user.id,
+        email,
+        username: formData.username.trim(),
+        role: formData.role,
+        status: formData.status,
+        dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update(profilePayload)
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        const { error: upsertError } = await supabase
+          .from('user_profiles')
+          .upsert(profilePayload, { onConflict: 'id' });
+        if (upsertError) {
+          if (upsertError.code === '23505') {
+            throw new Error('Username already exists');
+          }
+          throw upsertError;
+        }
+      }
+
+      // If signUp switched the current session, restore the admin session.
+      if (
+        authData.session &&
+        currentAccessToken &&
+        currentRefreshToken &&
+        currentUserId &&
+        authData.user.id !== currentUserId
+      ) {
+        await supabase.auth.setSession({
+          access_token: currentAccessToken,
+          refresh_token: currentRefreshToken,
+        });
+      }
 
       addNotification({ message: 'User created successfully', type: NotificationType.SUCCESS });
     } catch (error) {
@@ -325,6 +401,11 @@ const UserManagement: React.FC = () => {
 
   // Update existing user
   const handleUpdateUser = async () => {
+    if (!isSelfTarget(editingUser?.id)) {
+      notifySelfOnlyViolation('Updating users');
+      return;
+    }
+
     // Prepare update data with proper typing
     interface UserProfileUpdate {
       username: string;
@@ -334,10 +415,6 @@ const UserManagement: React.FC = () => {
       updated_at: string;
     }
 
-    if (formData.role === UserRole.DOCTOR && !formData.dentist_id) {
-      errors.dentist_id = 'Please link this user to a doctor profile';
-    }
-    
     const updateData: UserProfileUpdate = {
       username: formData.username,
       role: formData.role,
@@ -359,13 +436,23 @@ const UserManagement: React.FC = () => {
       throw profileError;
     }
 
-    // Update password if provided - only via Supabase Auth (no local hash storage)
+    // Admin-side password reset: send secure reset email to target account.
     if (isResettingPassword && formData.newPassword) {
-      const { error: authError } = await supabase.auth.updateUser({
-        password: formData.newPassword,
+      const targetEmail = (editingUser as any)?.email as string | undefined;
+      if (!targetEmail) {
+        throw new Error('Cannot reset password: target user has no email.');
+      }
+
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+        redirectTo: `${window.location.origin}/`,
       });
 
       if (authError) throw authError;
+
+      addNotification({
+        message: `Password reset email sent to ${targetEmail}`,
+        type: NotificationType.SUCCESS,
+      });
     }
 
     addNotification({ message: 'User updated successfully', type: NotificationType.SUCCESS });
@@ -380,6 +467,11 @@ const UserManagement: React.FC = () => {
   const confirmUnlinkOAuth = async () => {
     const { userId, provider } = oauthUnlinkConfirm;
     if (!userId || !provider) return;
+    if (!isSelfTarget(userId)) {
+      notifySelfOnlyViolation('Unlinking OAuth');
+      setOauthUnlinkConfirm({ isOpen: false, userId: null, provider: null });
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -404,6 +496,11 @@ const UserManagement: React.FC = () => {
 
   // Edit user
   const handleEdit = (userProfile: UserProfile) => {
+    if (!isSelfTarget(userProfile.id)) {
+      notifySelfOnlyViolation('Editing users');
+      return;
+    }
+
     setEditingUser(userProfile);
     setFormData({
       username: userProfile.username,
@@ -429,6 +526,11 @@ const UserManagement: React.FC = () => {
   const confirmDelete = async () => {
     const userId = deleteConfirm.userId;
     if (!userId) return;
+    if (!isSelfTarget(userId)) {
+      notifySelfOnlyViolation('Deleting users');
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'single' });
+      return;
+    }
     
     // Prevent deleting yourself
     if (userId === currentUser?.id) {
@@ -477,6 +579,14 @@ const UserManagement: React.FC = () => {
 
   // Open create modal
   const openCreateModal = () => {
+    if (SELF_ONLY_MODE) {
+      addNotification({
+        message: 'Creating additional users is disabled while account isolation is active.',
+        type: NotificationType.WARNING,
+      });
+      return;
+    }
+
     setEditingUser(null);
     resetForm();
     setShowModal(true);
@@ -538,6 +648,12 @@ const UserManagement: React.FC = () => {
 
   // Confirm bulk delete
   const confirmBulkDelete = async () => {
+    if (SELF_ONLY_MODE) {
+      notifySelfOnlyViolation('Bulk delete');
+      setDeleteConfirm({ isOpen: false, userId: null, type: 'bulk' });
+      return;
+    }
+
     // Prevent deleting yourself
     if (selectedUsers.includes(currentUser?.id || '')) {
       addNotification({ message: 'You cannot delete your own account', type: NotificationType.ERROR });
@@ -567,6 +683,11 @@ const UserManagement: React.FC = () => {
   };
 
   const handleBulkStatusChange = async (newStatus: UserStatus) => {
+    if (SELF_ONLY_MODE) {
+      notifySelfOnlyViolation('Bulk status update');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_profiles')
@@ -596,6 +717,11 @@ const UserManagement: React.FC = () => {
 
   // Handle quick role change from dropdown
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    if (!isSelfTarget(userId)) {
+      notifySelfOnlyViolation('Changing roles');
+      return;
+    }
+
     // Prevent changing your own role
     if (userId === currentUser?.id) {
       addNotification({ message: 'You cannot change your own role', type: NotificationType.ERROR });
@@ -641,6 +767,11 @@ const UserManagement: React.FC = () => {
 
   // Handle opening the edit permissions modal
   const handleEditPermissions = (userProfile: UserProfile) => {
+    if (!isSelfTarget(userProfile.id)) {
+      notifySelfOnlyViolation('Editing permissions');
+      return;
+    }
+
     setEditingPermissionsUser(userProfile);
     // Ensure custom_permissions is always an array
     const perms = userProfile.custom_permissions;
@@ -674,6 +805,10 @@ const UserManagement: React.FC = () => {
   // Handle saving custom permissions
   const handleSaveCustomPermissions = async () => {
     if (!editingPermissionsUser) return;
+    if (!isSelfTarget(editingPermissionsUser.id)) {
+      notifySelfOnlyViolation('Saving permissions');
+      return;
+    }
     
     setIsSavingPermissions(true);
     try {
@@ -780,19 +915,27 @@ const UserManagement: React.FC = () => {
               </svg>
               View Permissions
             </button>
-            <button
-              onClick={openCreateModal}
-              disabled={!isAdmin}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!isAdmin ? 'Only admins can create users' : 'Add New User'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add New User
-            </button>
+            {!SELF_ONLY_MODE && (
+              <button
+                onClick={openCreateModal}
+                disabled={!isAdmin}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!isAdmin ? 'Only admins can create users' : 'Add New User'}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add New User
+              </button>
+            )}
           </div>
         </div>
+
+        {SELF_ONLY_MODE && (
+          <div className={`${theme === 'dark' ? 'bg-amber-900/20 border-amber-700 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'} border rounded-lg p-4 mb-6`}>
+            Account isolation is enabled. You can view and manage only your own user profile.
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
@@ -849,7 +992,7 @@ const UserManagement: React.FC = () => {
         </div>
 
         {/* Bulk Actions */}
-        {selectedUsers.length > 0 && (
+        {!SELF_ONLY_MODE && selectedUsers.length > 0 && (
           <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-4 mb-6`}>
             <div className="flex flex-wrap items-center gap-4">
               <span className="text-sm font-medium">{selectedUsers.length} user(s) selected</span>
@@ -894,6 +1037,7 @@ const UserManagement: React.FC = () => {
                       type="checkbox"
                       checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
                       onChange={handleSelectAll}
+                      disabled={SELF_ONLY_MODE}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
@@ -931,6 +1075,7 @@ const UserManagement: React.FC = () => {
                         type="checkbox"
                         checked={selectedUsers.includes(userProfile.id)}
                         onChange={() => handleSelectUser(userProfile.id)}
+                        disabled={SELF_ONLY_MODE}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </td>

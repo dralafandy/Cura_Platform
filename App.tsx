@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+﻿import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import PatientList from './components/PatientList';
 import Dashboard from './components/Dashboard';
@@ -38,7 +38,6 @@ import ClinicManagementPage from './components/clinic/ClinicManagementPage';
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
 import { Permission } from './types';
-import { AuthProvider } from './contexts/AuthContext';
 
 
 
@@ -212,7 +211,7 @@ const AppContent: React.FC = () => {
       'insuranceUnified': t('sidebar.insuranceUnified'),
       'reports': 'Reports',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
-      'about': 'عن البرنامج',
+      'about': 'ط¹ظ† ط§ظ„ط¨ط±ظ†ط§ظ…ط¬',
       'pendingReservations': t('adminReservations.title') || 'Pending Reservations',
       'clinicManagement': 'Clinic & Branch Management'
   }
@@ -273,14 +272,13 @@ const AppContent: React.FC = () => {
 // Main App component with Auth, RBAC and UserPreferences provider wrappers
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <RBACProvider>
-        <UserPreferencesProvider>
-          <AppContent />
-        </UserPreferencesProvider>
-      </RBACProvider>
-    </AuthProvider>
+    <RBACProvider>
+      <UserPreferencesProvider>
+        <AppContent />
+      </UserPreferencesProvider>
+    </RBACProvider>
   );
 };
 
 export default App;
+
