@@ -218,18 +218,14 @@ export const PatientDetailsModal: React.FC<{
                     continue;
                 }
 
-                // Get public URL
-                const { data: { publicUrl } } = supabase!.storage
-                    .from('patient-attachments')
-                    .getPublicUrl(filePath);
-
                 const attachmentData = {
                     patientId: patient.id,
                     filename: fileName,
                     originalFilename: file.name,
                     fileType: file.type,
                     fileSize: file.size,
-                    fileUrl: publicUrl,
+                    // Store object path; signed URL is resolved at read-time.
+                    fileUrl: filePath,
                     description: description
                 };
 

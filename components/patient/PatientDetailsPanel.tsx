@@ -278,11 +278,6 @@ export const PatientDetailsPanel: React.FC<{
                     continue;
                 }
 
-                // Get public URL
-                const { data: { publicUrl } } = supabase!.storage
-                    .from('patient-attachments')
-                    .getPublicUrl(filePath);
-
                 const now = new Date().toISOString();
                 const attachmentData = {
                     patientId: patient.id,
@@ -290,7 +285,8 @@ export const PatientDetailsPanel: React.FC<{
                     originalFilename: file.name,
                     fileType: file.type,
                     fileSize: file.size,
-                    fileUrl: publicUrl,
+                    // Store object path; signed URL is resolved at read-time.
+                    fileUrl: filePath,
                     description: description,
                     uploadedBy: user.id, // Use the authenticated user's ID
                     createdAt: now,

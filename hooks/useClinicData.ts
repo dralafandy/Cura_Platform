@@ -259,6 +259,47 @@ export const useClinicData = (): ClinicData => {
         return { clinicId: context.clinicId, branchId: context.branchId };
     }, [getActiveClinicContext, addNotification]);
 
+    const normalizePatientAttachmentPath = useCallback((rawUrl?: string | null): string => {
+        if (!rawUrl) return '';
+        const value = String(rawUrl).trim();
+        if (!value) return '';
+
+        const publicMarker = '/storage/v1/object/public/patient-attachments/';
+        const signedMarker = '/storage/v1/object/sign/patient-attachments/';
+
+        if (/^https?:\/\//i.test(value)) {
+            const publicIdx = value.indexOf(publicMarker);
+            const signedIdx = value.indexOf(signedMarker);
+            if (publicIdx >= 0) {
+                return decodeURIComponent(value.substring(publicIdx + publicMarker.length).split('?')[0]).replace(/^\/+/, '');
+            }
+            if (signedIdx >= 0) {
+                return decodeURIComponent(value.substring(signedIdx + signedMarker.length).split('?')[0]).replace(/^\/+/, '');
+            }
+            // External URL (keep as-is for backward compatibility).
+            return value;
+        }
+
+        return value.replace(/^\/+/, '');
+    }, []);
+
+    const resolvePatientAttachmentUrl = useCallback(async (rawUrl?: string | null): Promise<string> => {
+        if (!supabase || !rawUrl) return rawUrl || '';
+        const objectPath = normalizePatientAttachmentPath(rawUrl);
+        if (!objectPath) return rawUrl || '';
+        if (/^https?:\/\//i.test(objectPath)) return objectPath;
+
+        const { data, error } = await supabase.storage
+            .from('patient-attachments')
+            .createSignedUrl(objectPath, 60 * 60);
+
+        if (!error && data?.signedUrl) {
+            return data.signedUrl;
+        }
+
+        return rawUrl;
+    }, [supabase, normalizePatientAttachmentPath]);
+
     const fetchData = useCallback(async () => {
         if (!user || !supabase) {
             console.log('Cannot fetch data - user or supabase not available:', { user, supabase });
@@ -280,12 +321,47 @@ export const useClinicData = (): ClinicData => {
             'patient_attachments', 'clinics', 'treatment_doctor_percentages'
         ];
 
+        const userOwnedTables = new Set<string>([
+            'patients',
+            'dentists',
+            'appointments',
+            'suppliers',
+            'inventory_items',
+            'expenses',
+            'treatment_definitions',
+            'treatment_records',
+            'lab_cases',
+            'payments',
+            'supplier_invoices',
+            'doctor_payments',
+            'prescriptions',
+            'prescription_items',
+            'patient_attachments',
+            'treatment_doctor_percentages',
+        ]);
+
+        const clinicScopedTables = new Set<string>([
+            'patients',
+            'appointments',
+            'treatment_records',
+            'payments',
+            'expenses',
+            'suppliers',
+            'inventory_items',
+            'dentists',
+        ]);
+
         // Build queries with clinic filtering where applicable
         const queries = tables.map((table: string) => {
             let query = supabase!.from(table).select('*');
+
+            // Strict self isolation: always scope user-owned tables to current auth user.
+            if (userOwnedTables.has(table)) {
+                query = query.eq('user_id', user.id);
+            }
             
             // Filter by clinic_id for tables that have it
-            if (userClinicIds.length > 0 && ['patients', 'appointments', 'treatment_records', 'payments', 'expenses', 'suppliers', 'inventory_items', 'dentists'].includes(table)) {
+            if (userClinicIds.length > 0 && clinicScopedTables.has(table)) {
                 // For tables with clinic_id, filter by user's accessible clinics
                 query = query.in('clinic_id', userClinicIds);
             } else if (userClinicIds.length > 0 && table === 'clinics') {
@@ -613,20 +689,29 @@ export const useClinicData = (): ClinicData => {
         }
         if (patientAttachmentsRes.data) {
             console.log('Setting attachments data:', patientAttachmentsRes.data.length);
-            const formattedAttachments = patientAttachmentsRes.data.map((attachment: any) => ({
-                id: attachment.id,
-                patientId: attachment.patient_id,
-                filename: attachment.filename,
-                originalFilename: attachment.original_filename,
-                fileType: attachment.file_type,
-                fileSize: attachment.file_size,
-                fileUrl: attachment.file_url,
-                thumbnailUrl: attachment.thumbnail_url,
-                description: attachment.description,
-                uploadedBy: attachment.uploaded_by,
-                createdAt: attachment.created_at,
-                updatedAt: attachment.updated_at
-            }));
+            const formattedAttachments = await Promise.all(
+                patientAttachmentsRes.data.map(async (attachment: any) => {
+                    const fileUrl = await resolvePatientAttachmentUrl(attachment.file_url);
+                    const thumbnailUrl = attachment.thumbnail_url
+                        ? await resolvePatientAttachmentUrl(attachment.thumbnail_url)
+                        : attachment.thumbnail_url;
+
+                    return {
+                        id: attachment.id,
+                        patientId: attachment.patient_id,
+                        filename: attachment.filename,
+                        originalFilename: attachment.original_filename,
+                        fileType: attachment.file_type,
+                        fileSize: attachment.file_size,
+                        fileUrl,
+                        thumbnailUrl,
+                        description: attachment.description,
+                        uploadedBy: attachment.uploaded_by,
+                        createdAt: attachment.created_at,
+                        updatedAt: attachment.updated_at
+                    };
+                })
+            );
             setAttachments(formattedAttachments);
         }
         
@@ -657,7 +742,7 @@ export const useClinicData = (): ClinicData => {
             console.log('All data fetched successfully');
         }
         setIsLoading(false);
-    }, [user, addNotification]);
+    }, [user, addNotification, getUserClinicIds, resolvePatientAttachmentUrl]);
 
     useEffect(() => {
         if (supabase) {
@@ -2238,8 +2323,8 @@ export const useClinicData = (): ClinicData => {
             original_filename: attachment.originalFilename,
             file_type: attachment.fileType,
             file_size: attachment.fileSize,
-            file_url: attachment.fileUrl,
-            thumbnail_url: attachment.thumbnailUrl,
+            file_url: normalizePatientAttachmentPath(attachment.fileUrl),
+            thumbnail_url: normalizePatientAttachmentPath(attachment.thumbnailUrl) || null,
             description: attachment.description || null,
             uploaded_by: validUserId,
             user_id: validUserId,
@@ -2254,20 +2339,20 @@ export const useClinicData = (): ClinicData => {
             addNotification(error.message, NotificationType.ERROR);
         } else if (newData) {
             console.log('Successfully added attachment:', newData);
-            const newAttachments = newData.map((a: any) => ({
+            const newAttachments = await Promise.all(newData.map(async (a: any) => ({
                 id: a.id,
                 patientId: a.patient_id,
                 filename: a.filename,
                 originalFilename: a.original_filename,
                 fileType: a.file_type,
                 fileSize: a.file_size,
-                fileUrl: a.file_url,
-                thumbnailUrl: a.thumbnail_url,
+                fileUrl: await resolvePatientAttachmentUrl(a.file_url),
+                thumbnailUrl: a.thumbnail_url ? await resolvePatientAttachmentUrl(a.thumbnail_url) : a.thumbnail_url,
                 description: a.description,
                 uploadedBy: a.uploaded_by,
                 createdAt: a.created_at,
                 updatedAt: a.updated_at
-            }));
+            })));
             setAttachments((prev: PatientAttachment[]) => [...prev, ...newAttachments]);
             addNotification('Attachment added successfully', NotificationType.SUCCESS);
         }
@@ -2301,8 +2386,8 @@ export const useClinicData = (): ClinicData => {
             original_filename: originalFilename,
             file_type: fileType,
             file_size: fileSize,
-            file_url: fileUrl,
-            thumbnail_url: thumbnailUrl,
+            file_url: normalizePatientAttachmentPath(fileUrl),
+            thumbnail_url: normalizePatientAttachmentPath(thumbnailUrl) || null,
             description: description || null,
             uploaded_by: validUserId
         };
@@ -2316,7 +2401,15 @@ export const useClinicData = (): ClinicData => {
             addNotification(error.message, NotificationType.ERROR);
         } else {
             console.log(`Successfully updated attachment for id: ${id}`);
-            setAttachments((prev: PatientAttachment[]) => prev.map((item: PatientAttachment) => (item.id === id ? attachment : item)));
+            const updatedAttachment: PatientAttachment = {
+                ...attachment,
+                fileUrl: await resolvePatientAttachmentUrl(supabaseData.file_url),
+                thumbnailUrl: supabaseData.thumbnail_url
+                    ? await resolvePatientAttachmentUrl(supabaseData.thumbnail_url)
+                    : attachment.thumbnailUrl,
+                uploadedBy: validUserId
+            };
+            setAttachments((prev: PatientAttachment[]) => prev.map((item: PatientAttachment) => (item.id === id ? updatedAttachment : item)));
             addNotification('Attachment updated successfully', NotificationType.SUCCESS);
         }
     };

@@ -1,3 +1,12 @@
+-- DEPRECATED - DO NOT RUN
+--
+-- This legacy script can create permissive RLS policies that leak data across
+-- tenants/users. Use hardened migrations under `migrations/` only.
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Deprecated script blocked: use migrations/012/020/023 hardened RLS migrations.';
+END $$;
+
 -- ============================================================================
 -- AUTO-FIX RLS POLICIES - Handles missing columns automatically
 -- ============================================================================

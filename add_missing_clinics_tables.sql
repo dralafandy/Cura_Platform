@@ -1,3 +1,12 @@
+-- DEPRECATED - DO NOT RUN
+--
+-- This legacy script recreates clinic tables and grants permissive access that
+-- can break tenant isolation. Use hardened migrations under `migrations/` only.
+DO $$
+BEGIN
+  RAISE EXCEPTION 'Deprecated script blocked: use migrations/016+ and migrations/023_lockdown_data_isolation.sql';
+END $$;
+
 -- ============================================================================
 -- Add Missing Clinics Tables
 -- This migration adds the clinics, clinic_branches, user_clinics tables

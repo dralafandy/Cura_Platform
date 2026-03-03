@@ -93,6 +93,10 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS rls_insert ON public.user_clinics';
     EXECUTE 'DROP POLICY IF EXISTS rls_update ON public.user_clinics';
     EXECUTE 'DROP POLICY IF EXISTS rls_delete ON public.user_clinics';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinics_select_scoped ON public.user_clinics';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinics_insert_admin ON public.user_clinics';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinics_update_admin ON public.user_clinics';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinics_delete_admin ON public.user_clinics';
     EXECUTE 'DROP POLICY IF EXISTS user_clinics_select_self_only ON public.user_clinics';
     EXECUTE 'DROP POLICY IF EXISTS user_clinics_insert_self_only ON public.user_clinics';
     EXECUTE 'DROP POLICY IF EXISTS user_clinics_update_self_only ON public.user_clinics';
@@ -122,6 +126,10 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS rls_insert ON public.user_clinic_access';
     EXECUTE 'DROP POLICY IF EXISTS rls_update ON public.user_clinic_access';
     EXECUTE 'DROP POLICY IF EXISTS rls_delete ON public.user_clinic_access';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_select_scoped ON public.user_clinic_access';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_insert_admin ON public.user_clinic_access';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_update_admin ON public.user_clinic_access';
+    EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_delete_admin ON public.user_clinic_access';
     EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_select_self_only ON public.user_clinic_access';
     EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_insert_self_only ON public.user_clinic_access';
     EXECUTE 'DROP POLICY IF EXISTS user_clinic_access_update_self_only ON public.user_clinic_access';
@@ -148,4 +156,3 @@ END
 $$;
 
 COMMIT;
-
