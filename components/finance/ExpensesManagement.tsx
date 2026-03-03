@@ -472,9 +472,9 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
 
             {/* Controls */}
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex flex-wrap gap-3 md:gap-4 mb-4">
                     {/* Search */}
-                    <div className="flex-1 min-w-[200px]">
+                    <div className="w-full md:flex-1 md:min-w-[200px]">
                         <div className="relative">
                             <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -490,19 +490,19 @@ const ExpensesManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData }
                     </div>
 
                     {/* Date Range Filter */}
-                    <div className="flex items-center gap-2 min-w-[260px]">
+                    <div className="w-full md:w-auto flex flex-col sm:flex-row sm:items-center gap-2 md:min-w-[260px]">
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
+                            className="w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
                         />
                         <span className="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{t('financialFilters.from')} - {t('financialFilters.to')}</span>
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
+                            className="w-full sm:w-auto px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200 text-sm"
                         />
                     </div>
 

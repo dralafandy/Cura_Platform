@@ -220,7 +220,7 @@ const AppContent: React.FC = () => {
   if (authLoading) {
     console.log('Showing loading state - auth still loading');
     return (
-      <div className="bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen flex items-center justify-center">
+      <div className="bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-slate-600 dark:text-slate-400">Loading...</p>
@@ -238,10 +238,10 @@ const AppContent: React.FC = () => {
   console.log('Rendering main app content');
 
   return (
-    <div className="bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen">
-      <div className="md:flex">
+    <div className="app-shell bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh]">
+      <div className="md:flex min-h-screen min-h-[100dvh]">
         <Sidebar currentView={currentView} setCurrentView={setCurrentView} clinicData={clinicData} />
-        <div className="flex-1 flex flex-col w-full print:block">
+        <div className="flex-1 flex flex-col min-w-0 w-full print:block">
             {/* Header - Modern with user profile, notifications, and page context */}
             <Header 
               currentView={currentView} 
@@ -250,7 +250,7 @@ const AppContent: React.FC = () => {
               isMobileDrawerOpen={isMobileDrawerOpen}
               setIsMobileDrawerOpen={setIsMobileDrawerOpen}
             />
-            <main className="flex-1 bg-neutral dark:bg-slate-900 p-4 pb-6 md:p-6 print:p-0 print:block">
+            <main className="app-main flex-1 min-w-0 bg-neutral dark:bg-slate-900 p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6 print:p-0 print:block">
               {renderView()}
             </main>
         </div>

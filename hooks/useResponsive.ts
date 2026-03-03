@@ -153,7 +153,8 @@ export const useBreakpoint = (breakpoint: Breakpoint): boolean => {
 
 // Hook for mobile-only view
 export const useIsMobile = (): boolean => {
-  return useBreakpoint('md');
+  const isMdAndUp = useBreakpoint('md');
+  return !isMdAndUp;
 };
 
 // Hook for tablet-only view

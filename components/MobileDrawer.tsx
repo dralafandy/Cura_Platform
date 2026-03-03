@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Permission } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useAuth } from '../contexts/AuthContext';
@@ -237,6 +237,30 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     },
   ];
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prevPosition = body.style.position;
+    const prevTop = body.style.top;
+    const prevWidth = body.style.width;
+    const prevOverflow = body.style.overflow;
+
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+
+    return () => {
+      body.style.position = prevPosition;
+      body.style.top = prevTop;
+      body.style.width = prevWidth;
+      body.style.overflow = prevOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -249,7 +273,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
       />
       
       {/* Drawer panel - slides from left - Enhanced with glassmorphism and better shadows */}
-      <div className="fixed inset-y-0 left-0 w-80 max-w-[90vw] text-slate-800 dark:text-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 border-r border-slate-200/70 dark:border-slate-700/60 backdrop-blur-xl z-50 md:hidden transform transition-transform duration-300 ease-out overflow-y-auto">
+      <div className="fixed inset-y-0 left-0 w-80 max-w-[90vw] text-slate-800 dark:text-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 border-r border-slate-200/70 dark:border-slate-700/60 backdrop-blur-xl z-50 md:hidden transform transition-transform duration-300 ease-out overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
 
         {/* Header with enhanced gradient background */}
         <div className="relative overflow-hidden px-5 py-6 border-b border-violet-200/60 dark:border-violet-800/60 bg-gradient-to-br from-violet-400 via-fuchsia-400 to-indigo-500">

@@ -90,12 +90,12 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
         <button
           onClick={() => setIsOpen(!isOpen)}
           disabled={isLoadingClinics || isSwitchingClinic}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
         >
           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
-          <span className="max-w-[150px] truncate">
+          <span className="max-w-[72px] sm:max-w-[150px] truncate">
             {isSwitchingClinic ? 'Switching...' : currentBranch?.name || currentClinic?.name || 'Select Clinic'}
           </span>
           <svg className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +104,7 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
         </button>
 
         {isOpen && (
-          <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 py-2">
+          <div className="absolute top-full right-0 mt-2 w-[min(18rem,calc(100vw-1rem))] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 py-2">
             <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Your Clinics
@@ -192,7 +192,7 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+        <div className="absolute top-full right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -306,4 +306,3 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
 };
 
 export default ClinicSelector;
-

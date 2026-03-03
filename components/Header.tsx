@@ -398,7 +398,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Right: Theme, Language, Notifications & User - Enhanced */}
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
@@ -427,7 +427,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 
                 {isLangMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-36 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-2 w-36 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <button
                       onClick={() => {
                         setLocale('ar');
@@ -463,7 +463,10 @@ const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Clinic Selector */}
-              <ClinicSelector variant="compact" />
+              <ClinicSelector
+                variant="compact"
+                className="w-[44vw] max-w-[170px] sm:w-auto sm:max-w-none"
+              />
 
               {/* Notification Bell - Enhanced */}
               <div className="relative group">
@@ -479,7 +482,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="group relative flex items-center w-full sm:w-auto p-2.5 rounded-2xl bg-gradient-to-r from-violet-100 to-fuchsia-50 dark:from-violet-900/35 dark:to-indigo-900/30 border border-violet-200/80 dark:border-violet-700/70 hover:from-violet-200 hover:to-fuchsia-100 dark:hover:from-violet-800/45 dark:hover:to-indigo-800/40 transition-all duration-200"
+                  className="group relative flex items-center w-auto p-2 sm:p-2.5 rounded-2xl bg-gradient-to-r from-violet-100 to-fuchsia-50 dark:from-violet-900/35 dark:to-indigo-900/30 border border-violet-200/80 dark:border-violet-700/70 hover:from-violet-200 hover:to-fuchsia-100 dark:hover:from-violet-800/45 dark:hover:to-indigo-800/40 transition-all duration-200 max-w-[44vw] sm:max-w-none"
                   aria-label={locale === 'ar' ? 'قائمة المستخدم' : 'User menu'}
                   aria-expanded={isUserMenuOpen}
                 >
@@ -489,7 +492,7 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                   
                   {/* User info - identical to sidebar */}
-                  <div className="ms-3 flex-1 min-w-0">
+                  <div className="ms-2 sm:ms-3 hidden sm:flex flex-1 min-w-0">
                     <div className="flex flex-col">
                       <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">{userProfile?.username || t('sidebar.drAdmin')}</p>
                       <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">{userProfile?.role || (isAdmin ? 'Admin' : 'User')}</p>
@@ -497,14 +500,14 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                   
                   {/* Chevron for dropdown - smaller size */}
-                  <div className={`ms-2 p-1 rounded-full transition-all duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`}>
+                  <div className={`hidden sm:block ms-2 p-1 rounded-full transition-all duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`}>
                     <ChevronDownIcon className="h-2.5 w-2.5 text-slate-500 dark:text-slate-400" />
                   </div>
                 </button>
 
                 {/* User Dropdown - Modern Glassmorphism Card */}
                 {isUserMenuOpen && (
-                  <div className="absolute left-0 mt-3 w-72 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-slate-400/20 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-700/50 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 overflow-hidden">
+                  <div className="absolute right-0 mt-3 w-72 max-w-[calc(100vw-1rem)] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-slate-400/20 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-700/50 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 overflow-hidden">
 
                     {/* Decorative top gradient bar */}
                     <div className={`h-1.5 w-full bg-gradient-to-r ${getRoleColor()}`}></div>
