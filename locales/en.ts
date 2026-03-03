@@ -119,6 +119,7 @@
   "sidebar.group.settings": "Settings",
   "sidebar.group.userManagement": "User Management",
   "sidebar.userManagement": "User Management",
+  "sidebar.clinicManagement": "Clinic & Branches",
   "sidebar.drAdmin": "Dr. Admin",
   "sidebar.clinicManager": "Clinic Manager",
   "sidebar.adminProfile": "Admin Profile",

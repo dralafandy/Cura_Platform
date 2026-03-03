@@ -119,6 +119,7 @@ export const arTranslations = {
   "sidebar.group.settings": "الإعدادات",
   "sidebar.group.userManagement": "إدارة المستخدمين",
   "sidebar.userManagement": "إدارة المستخدمين",
+  "sidebar.clinicManagement": "إدارة العيادات والفروع",
   "sidebar.drAdmin": "د. مدير",
   "sidebar.clinicManager": "مدير العيادة",
   "sidebar.adminProfile": "ملف المدير الشخصي",
