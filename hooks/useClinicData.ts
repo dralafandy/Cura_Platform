@@ -360,9 +360,12 @@ export const useClinicData = (): ClinicData => {
                 query = query.eq('user_id', user.id);
             }
             
-            // Filter by clinic_id for tables that have it
-            if (userClinicIds.length > 0 && clinicScopedTables.has(table)) {
-                // For tables with clinic_id, filter by user's accessible clinics
+            // Filter by clinic_id: use currentClinic for active clinic isolation
+            if (currentClinic?.id && clinicScopedTables.has(table)) {
+                // For active clinic, filter by current clinic only
+                query = query.eq('clinic_id', currentClinic.id);
+            } else if (userClinicIds.length > 0 && clinicScopedTables.has(table)) {
+                // Fallback: if no currentClinic, use accessible clinics
                 query = query.in('clinic_id', userClinicIds);
             } else if (userClinicIds.length > 0 && table === 'clinics') {
                 // Clinics table uses its own PK id instead of clinic_id
@@ -742,13 +745,13 @@ export const useClinicData = (): ClinicData => {
             console.log('All data fetched successfully');
         }
         setIsLoading(false);
-    }, [user, addNotification, getUserClinicIds, resolvePatientAttachmentUrl]);
+    }, [user, addNotification, getUserClinicIds, resolvePatientAttachmentUrl, currentClinic, currentBranch]);
 
     useEffect(() => {
-        if (supabase) {
+        if (supabase && currentClinic) {
             fetchData();
         }
-    }, [fetchData]);
+    }, [fetchData, currentClinic]);
 
     // Load clinic settings from localStorage
     useEffect(() => {
