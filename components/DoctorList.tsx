@@ -293,42 +293,42 @@ const DoctorDetailsModal: React.FC<{
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-purple-200/50 dark:border-purple-700/50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92dvh] flex flex-col overflow-hidden border border-purple-200/50 dark:border-purple-700/50">
                 {/* Enhanced Gradient Header with Doctor Avatar */}
-                <header className="relative p-6 border-b border-purple-100 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 via-white to-amber-50 dark:from-purple-900/30 dark:via-slate-800 dark:to-amber-900/20">
+                <header className="relative p-4 sm:p-6 border-b border-purple-100 dark:border-purple-700/50 bg-gradient-to-br from-purple-50 via-white to-amber-50 dark:from-purple-900/30 dark:via-slate-800 dark:to-amber-900/20">
                     {/* Decorative elements */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-200/30 to-amber-200/30 rounded-full blur-2xl"></div>
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-amber-200/30 to-purple-200/30 rounded-full blur-2xl"></div>
 
-                    <div className="relative flex items-center gap-4">
+                    <div className="relative flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
                         {/* Doctor Avatar */}
-                        <div className={`w-20 h-20 rounded-2xl ${doctor.color} flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700`}>
+                        <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl ${doctor.color} flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg ring-4 ring-white dark:ring-slate-700 shrink-0`}>
                             {doctor.name.charAt(0)}
                         </div>
-                        <div className="flex-1">
-                            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{doctor.name}</h2>
-                            <p className="text-base text-purple-600 dark:text-purple-400 flex items-center gap-1 mt-1">
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-xl sm:text-3xl font-bold text-slate-800 dark:text-white truncate">{doctor.name}</h2>
+                            <p className="text-sm sm:text-base text-purple-600 dark:text-purple-400 flex items-center gap-1 mt-1 truncate">
                                 <BriefcaseIcon />
                                 {doctor.specialty}
                             </p>
-                            <div className="flex items-center gap-4 mt-2">
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2">
+                                <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                     <span className="font-semibold text-purple-600 dark:text-purple-400">{doctorTreatmentRecords.length}</span> {t('doctorDetails.treatments')}
                                 </span>
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                     <span className="font-semibold text-blue-600 dark:text-blue-400">{quickStats.upcomingAppointments}</span> {t('doctorDetails.upcomingAppointments')}
                                 </span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             {!isEditing && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 text-sm font-semibold shadow-lg shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200"
+                                    className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 text-sm font-semibold shadow-lg shadow-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200"
                                 >
                                     <EditIcon />
-                                    <span>{t('common.edit')}</span>
+                                    <span className="hidden sm:inline">{t('common.edit')}</span>
                                 </button>
                             )}
                             <button
@@ -368,10 +368,10 @@ const DoctorDetailsModal: React.FC<{
                     </ul>
                 </nav>
 
-                <main className="p-6 overflow-y-auto flex-1 bg-gradient-to-br from-slate-50 to-purple-50/30 dark:from-slate-900 dark:to-purple-900/10">
+                <main className="p-4 sm:p-6 overflow-y-auto flex-1 bg-gradient-to-br from-slate-50 to-purple-50/30 dark:from-slate-900 dark:to-purple-900/10">
                     {/* Quick Stats Dashboard - Always visible */}
                     {!isEditing && (
-                        <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                             <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden hover:shadow-xl transition-shadow">
                                 <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
                                 <div className="relative z-10">
@@ -1148,17 +1148,17 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-amber-50/30 dark:from-slate-900 dark:via-purple-900/10 dark:to-amber-900/10 p-4 md:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-amber-50/30 dark:from-slate-900 dark:via-purple-900/10 dark:to-amber-900/10 p-3 sm:p-4 md:p-6 overflow-x-hidden">
             <div className="max-w-7xl mx-auto">
                 {/* Enhanced Header */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-purple-200/50 dark:border-purple-700/50 shadow-xl mb-6 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border border-purple-200/50 dark:border-purple-700/50 shadow-xl mb-6 relative overflow-hidden">
                     {/* Decorative gradient bar at top */}
                     <div className="absolute left-0 top-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-purple-500 to-purple-700"></div>
                     {/* Decorative circles */}
                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-purple-200/30 to-amber-200/30 rounded-full blur-3xl"></div>
                     <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-amber-200/30 to-purple-200/30 rounded-full blur-3xl"></div>
 
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 min-w-0">
                         <div>
                             <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
                                 <span className="bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">DOCTORS</span>
@@ -1173,10 +1173,10 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                 )}
                             </p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 font-semibold shadow-lg shadow-purple-500/30 transition-all duration-200 hover:scale-105 active:scale-95"
+                                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 font-semibold shadow-lg shadow-purple-500/30 transition-all duration-200 hover:scale-105 active:scale-95 flex-1 md:flex-none"
                             >
                                 <AddUserIcon />
                                 {t('doctorList.addNewDoctor')}
@@ -1189,7 +1189,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                 </div>
 
                 {/* Quick Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
                     <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group cursor-pointer">
                         <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all"></div>
                         <div className="relative z-10">
@@ -1222,7 +1222,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
 
                 {/* Search and Filter Bar */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-purple-100/50 dark:border-purple-700/50 p-4 mb-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
                         {/* Search Input */}
                         <div className="flex-1 relative">
                             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -1248,7 +1248,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                         {/* Filter Toggle */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                            className={`w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                                 showFilters || activeFiltersCount > 0
                                     ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
                                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
@@ -1264,7 +1264,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                         </button>
 
                         {/* Sort Dropdown */}
-                        <div className="relative">
+                        <div className="relative w-full lg:w-auto">
                             <select
                                 value={`${sortBy}-${sortOrder}`}
                                 onChange={(e) => {
@@ -1272,7 +1272,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                                     setSortBy(sort as 'name' | 'balance' | 'treatments');
                                     setSortOrder(order as 'asc' | 'desc');
                                 }}
-                                className="appearance-none ps-10 pl-4 py-3 bg-slate-100 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200 cursor-pointer"
+                                className="w-full lg:w-auto appearance-none ps-10 pl-4 py-3 bg-slate-100 dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-slate-800 dark:text-slate-200 transition-all duration-200 cursor-pointer"
                             >
                                 <option value="name-asc">{t('common.sortByNameAsc') || 'Name (A-Z)'}</option>
                                 <option value="name-desc">{t('common.sortByNameDesc') || 'Name (Z-A)'}</option>
@@ -1287,7 +1287,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                         </div>
 
                         {/* View Mode Toggle */}
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+                        <div className="w-full lg:w-auto flex items-center justify-center gap-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
                             <button
                                 onClick={() => setViewMode('grid')}
                                 className={`p-2 rounded-lg transition-all duration-200 ${
@@ -1331,9 +1331,9 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
                         <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-700">
                             <div className="flex flex-wrap gap-3">
                                 {/* Status Filter */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                     <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('common.status') || 'Status'}:</span>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {[
                                             { value: 'all', label: t('common.all') || 'All' },
                                             { value: 'hasBalance', label: t('common.hasBalance') || 'Has Balance' },
@@ -1454,14 +1454,14 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
 
                                         {/* Next Appointment Info */}
                                         <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-amber-50 dark:from-purple-900/20 dark:to-amber-900/10 rounded-xl border border-purple-100 dark:border-purple-700">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <CalendarIcon />
-                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                                         {nextAppointment ? `${t('doctorDetails.next')}: ${new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(nextAppointment.startTime)}` : t('dashboard.noUpcomingAppointments')}
                                                     </span>
                                                 </div>
-                                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                                <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
                                                     {lastTreatment ? `${t('doctorDetails.last')}: ${new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' }).format(new Date(lastTreatment.treatmentDate))}` : t('doctorDetails.noRecentTreatments')}
                                                 </span>
                                             </div>

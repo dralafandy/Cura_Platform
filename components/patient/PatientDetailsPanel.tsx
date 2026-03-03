@@ -340,35 +340,37 @@ export const PatientDetailsPanel: React.FC<{
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 overflow-x-hidden">
             {/* Header */}
             <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-4">
+                    <div className="flex justify-between items-center h-16 min-w-0 gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                             <button 
                                 onClick={onBack} 
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300 shrink-0"
                             >
-                                <BackIcon /> {t('common.back')}
+                                <BackIcon />
+                                <span className="hidden sm:inline">{t('common.back')}</span>
                             </button>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-600 rounded-xl flex items-center justify-center shadow-md">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-primary-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
                                     <span className="text-white font-bold text-lg">
                                         {patient.name.charAt(0).toUpperCase()}
                                     </span>
                                 </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">{patient.name}</h1>
+                                <div className="min-w-0">
+                                    <h1 className="text-base sm:text-xl font-bold text-slate-800 dark:text-white truncate">{patient.name}</h1>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={() => setShowEditModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-600 text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-600 text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                             >
-                                <EditIcon /> {t('common.edit')}
+                                <EditIcon />
+                                <span className="hidden sm:inline">{t('common.edit')}</span>
                             </button>
                         </div>
                     </div>
@@ -378,7 +380,7 @@ export const PatientDetailsPanel: React.FC<{
             {/* Navigation Tabs */}
             <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-16 z-20 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <ul className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 overflow-x-auto scrollbar-minimal">
+                    <ul className="flex flex-nowrap gap-1 sm:gap-2 overflow-x-auto scrollbar-minimal">
                         {tabs.map(({ key, label, icon: Icon }) => (
                             <li key={key}>
                                 <button
@@ -399,7 +401,7 @@ export const PatientDetailsPanel: React.FC<{
             </nav>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
                 <div className="animate-fade-in">
                     {activeTab === 'details' && (
                         <div className="space-y-6">
@@ -738,18 +740,18 @@ export const PatientDetailsPanel: React.FC<{
                                         <div className="space-y-3">
                                             {/* Display payments first */}
                                             {patientPayments.map(payment => (
-                                                <div key={payment.id} className="bg-slate-50 dark:bg-slate-600 p-4 rounded-xl border border-slate-200 dark:border-slate-500 flex justify-between items-center transition-all duration-200 hover:shadow-sm">
-                                                    <div className="flex-1">
+                                                <div key={payment.id} className="bg-slate-50 dark:bg-slate-600 p-4 rounded-xl border border-slate-200 dark:border-slate-500 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-all duration-200 hover:shadow-sm">
+                                                    <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-lg">{t('financials.payment')}</span>
-                                                            <span className="text-sm text-slate-500 dark:text-slate-400">{t(`paymentMethod.${payment.method}`)}</span>
+                                                            <span className="text-sm text-slate-500 dark:text-slate-400 truncate">{t(`paymentMethod.${payment.method}`)}</span>
                                                         </div>
                                                         <p className="text-sm text-slate-600 dark:text-slate-300">
                                                             {dateFormatter.format(new Date(payment.date))}
                                                             {payment.notes && <span className="ml-2 pl-2 border-l border-slate-300 dark:border-slate-500 text-slate-500 dark:text-slate-400">{payment.notes}</span>}
                                                         </p>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-3 self-end sm:self-auto">
                                                         <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{currencyFormatter.format(payment.amount)}</span>
                                                         <button
                                                             onClick={() => handleEditPayment(payment)}
@@ -773,18 +775,18 @@ export const PatientDetailsPanel: React.FC<{
                                             {patientTreatmentRecords.map(record => {
                                                 const treatmentDef = clinicData.treatmentDefinitions.find(td => td.id === record.treatmentDefinitionId);
                                                 return (
-                                                    <div key={record.id} className="bg-slate-50 dark:bg-slate-600 p-4 rounded-xl border border-slate-200 dark:border-slate-500 flex justify-between items-center transition-all duration-200 hover:shadow-sm">
-                                                        <div className="flex-1">
+                                                    <div key={record.id} className="bg-slate-50 dark:bg-slate-600 p-4 rounded-xl border border-slate-200 dark:border-slate-500 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-all duration-200 hover:shadow-sm">
+                                                        <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-lg">{t('financials.charge')}</span>
-                                                                <span className="font-medium text-slate-800 dark:text-white">{treatmentDef?.name || t('common.unknownTreatment')}</span>
+                                                                <span className="font-medium text-slate-800 dark:text-white truncate">{treatmentDef?.name || t('common.unknownTreatment')}</span>
                                                             </div>
                                                             <p className="text-sm text-slate-600 dark:text-slate-300">
                                                                 {dateFormatter.format(new Date(record.treatmentDate))}
                                                                 {record.notes && <span className="ml-2 pl-2 border-l border-slate-300 dark:border-slate-500 text-slate-500 dark:text-slate-400">{record.notes.slice(0, 50)}{t('common.ellipsis')}</span>}
                                                             </p>
                                                         </div>
-                                                        <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{currencyFormatter.format(record.doctorShare + record.clinicShare)}</span>
+                                                        <span className="font-bold text-blue-600 dark:text-blue-400 text-lg self-end sm:self-auto">{currencyFormatter.format(record.doctorShare + record.clinicShare)}</span>
                                                     </div>
                                                 );
                                             })}

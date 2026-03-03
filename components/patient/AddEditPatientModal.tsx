@@ -120,12 +120,12 @@ interface FormSectionProps {
 }
 
 const FormSection: React.FC<FormSectionProps> = ({ title, icon, children, className = '', isDark = false }) => (
-    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
+    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
                 {icon}
             </div>
-            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
         </div>
         {children}
     </div>
@@ -349,13 +349,13 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
     ];
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className={`px-6 py-4 flex justify-between items-center flex-shrink-0 ${isDark ? 'bg-gradient-to-r from-slate-800 to-slate-900' : 'bg-gradient-to-r from-primary to-primary-dark'}`}>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <header className={`px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-shrink-0 ${isDark ? 'bg-gradient-to-r from-slate-800 to-slate-900' : 'bg-gradient-to-r from-primary to-primary-dark'}`}>
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 min-w-0">
                         <UserIcon />
-                        {patient ? t('addPatientModal.editTitle') : t('addPatientModal.title')}
+                        <span className="truncate">{patient ? t('addPatientModal.editTitle') : t('addPatientModal.title')}</span>
                     </h2>
                     <button
                         onClick={onClose}
@@ -373,7 +373,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`
-                                flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200
+                                flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200
                                 ${activeTab === tab.id
                                     ? `text-primary border-b-2 ${isDark ? 'bg-slate-800 border-primary-400' : 'bg-white border-primary'}`
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -384,13 +384,13 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                 {tab.icon}
                             </span>
 
-                            {tab.label}
+                            <span className="hidden sm:inline">{tab.label}</span>
                         </button>
                     ))}
                 </div>
 
                 {/* Form Content */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6">
                     {/* Basic Info Tab */}
                     {activeTab === 'basic' && (
                         <div className="space-y-5 animate-fadeIn">
@@ -786,8 +786,8 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                 </form>
 
                 {/* Footer */}
-                <footer className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0">
-                    <div className="flex gap-2">
+                <footer className="px-4 sm:px-6 py-3 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0">
+                    <div className="flex gap-2 justify-center sm:justify-start">
                         {tabs.map((tab, index) => (
                             <button
                                 key={tab.id}
@@ -802,11 +802,11 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         ))}
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="w-full sm:w-auto flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                         <button
                             type="button"
                             onClick={onClose}
-                            className={`px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center gap-2 shadow-sm ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-600 bg-slate-100 border-slate-300 hover:bg-slate-200 focus:ring-slate-300'}`}
+                            className={`w-full sm:w-auto px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center justify-center gap-2 shadow-sm ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-600 bg-slate-100 border-slate-300 hover:bg-slate-200 focus:ring-slate-300'}`}
                         >
                             <CloseIcon />
                             {t('common.cancel')}
@@ -815,7 +815,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         <button
                             type="submit"
                             onClick={handleSubmit}
-                            className={`px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 ${isDark ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/30 focus:ring-primary-400' : 'bg-primary hover:bg-primary-dark shadow-primary/30 focus:ring-primary-light focus:ring-offset-2'}`}
+                            className={`w-full sm:w-auto px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 ${isDark ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/30 focus:ring-primary-400' : 'bg-primary hover:bg-primary-dark shadow-primary/30 focus:ring-primary-light focus:ring-offset-2'}`}
                         >
                             {patient ? 'تحديث البيانات' : t('addPatientModal.savePatient')}
                         </button>

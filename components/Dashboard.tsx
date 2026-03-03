@@ -473,7 +473,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-2 sm:p-4 md:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-2 sm:p-4 md:p-6 overflow-x-hidden">
             <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
                 {/* Page Header - Enhanced Gold + Purple Design */}
                 <div className="relative overflow-hidden bg-gradient-to-br from-amber-400 via-purple-500 to-purple-700 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl p-4 sm:p-6 md:p-8 text-white">
@@ -959,7 +959,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                 </h2>
                             </div>
                             <div className="p-3 sm:p-6">
-                                <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-3">
                                     <button
                                         onClick={() => setCurrentView('patients')}
                                         className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg sm:rounded-xl transition-colors border border-slate-200 dark:border-slate-600 hover:border-emerald-200 dark:hover:border-emerald-700 group active:scale-95"

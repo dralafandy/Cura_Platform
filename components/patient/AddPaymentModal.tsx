@@ -211,15 +211,15 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
     const quickAmounts = [100, 200, 500, 1000, 2000];
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92dvh] sm:max-h-[95vh] flex flex-col border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {/* Header */}
-                <header className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10">
-                    <div className="flex items-center gap-3">
+                <header className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         <div className="p-2 bg-primary/10 rounded-xl text-primary">
                             <MoneyIcon />
                         </div>
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('addPaymentModal.title')}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-white truncate">{t('addPaymentModal.title')}</h2>
                     </div>
                     <button 
                         onClick={onClose} 
@@ -230,25 +230,26 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                     </button>
                 </header>
 
-                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-800/30">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="overflow-y-auto flex-1">
                     {/* Financial Summary Card */}
-                    <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200 dark:border-slate-700">
+                    <div className="p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-3">
                             <InfoIcon />
                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">ملخص الحساب المالي</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="bg-white dark:bg-slate-700 p-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">إجمالي الرسوم</p>
-                                <p className="text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(financialSummary.totalTreatmentCosts)}</p>
+                                <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(financialSummary.totalTreatmentCosts)}</p>
                             </div>
                             <div className="bg-white dark:bg-slate-700 p-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">إجمالي المدفوع</p>
-                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(financialSummary.totalPayments)}</p>
+                                <p className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(financialSummary.totalPayments)}</p>
                             </div>
                             <div className={`p-3 rounded-xl shadow-sm border ${financialSummary.outstandingBalance > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'}`}>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">المتبقي</p>
-                                <p className={`text-lg font-bold ${financialSummary.outstandingBalance > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                <p className={`text-base sm:text-lg font-bold ${financialSummary.outstandingBalance > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                     {formatCurrency(Math.abs(financialSummary.outstandingBalance))}
                                 </p>
                             </div>
@@ -267,7 +268,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                         </div>
                     </div>
 
-                    <div className="p-5 space-y-5">
+                    <div className="p-4 sm:p-5 space-y-5">
                         {/* Amount Section */}
                         <div className="space-y-3">
                             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -309,7 +310,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                     <button
                                         type="button"
                                         onClick={handlePayFullBalance}
-                                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-all duration-200"
+                                        className="w-full sm:w-auto px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900 transition-all duration-200"
                                     >
                                         دفع المبلغ كاملاً ({formatCurrency(financialSummary.outstandingBalance)})
                                     </button>
@@ -320,12 +321,12 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                         {/* Insurance Section */}
                         {patientInsurance && (
                             <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                                    <div className="flex items-center gap-2 min-w-0">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                         </svg>
-                                        <span className="font-semibold text-blue-800 dark:text-blue-200">تأمين: {patientInsurance.insurance_company_name}</span>
+                                        <span className="font-semibold text-blue-800 dark:text-blue-200 truncate">تأمين: {patientInsurance.insurance_company_name}</span>
                                     </div>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -340,16 +341,16 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                 
                                 {useInsurance && (
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-1">
                                             <span className="text-blue-600 dark:text-blue-400">نسبة التغطية:</span>
                                             <span className="font-semibold text-blue-800 dark:text-blue-200">{patientInsurance.coverage_percentage}%</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-1">
                                             <span className="text-blue-600 dark:text-blue-400">رقم البوليصة:</span>
                                             <span className="font-semibold text-blue-800 dark:text-blue-200">{patientInsurance.policy_number || '-'}</span>
                                         </div>
                                         <div className="border-t border-blue-200 dark:border-blue-700 pt-3 mt-3">
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div className="bg-white dark:bg-slate-800 p-3 rounded-lg">
                                                     <p className="text-xs text-slate-500 dark:text-slate-400">تغطية التأمين</p>
                                                     <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatCurrency(insuranceCoverageAmount)}</p>
@@ -380,7 +381,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                         key={method}
                                         type="button"
                                         onClick={() => setFormData(prev => ({ ...prev, method }))}
-                                        className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                                        className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
                                             formData.method === method
                                                 ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-md'
                                                 : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
@@ -389,7 +390,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                         <div className={`p-2 rounded-lg ${paymentMethodConfig[method]?.color || 'bg-slate-500'} text-white`}>
                                             {paymentMethodConfig[method]?.icon || <WalletIcon />}
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 text-center leading-snug">
                                             {paymentMethodConfig[method]?.label || method}
                                         </span>
                                     </button>
@@ -474,19 +475,20 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                             </div>
                         </div>
                     </div>
+                    </div>
 
                     {/* Footer */}
-                    <footer className="p-5 flex justify-end gap-3 flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                    <footer className="p-4 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                         <button 
                             type="button" 
                             onClick={onClose} 
-                            className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 text-slate-700 dark:text-slate-200 font-medium transition-all duration-200"
+                            className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 text-slate-700 dark:text-slate-200 font-medium transition-all duration-200"
                         >
                             {t('common.cancel')}
                         </button>
                         <button 
                             type="submit" 
-                            className="px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-lg shadow-primary/25 font-medium transition-all duration-200 flex items-center gap-2"
+                            className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-lg shadow-primary/25 font-medium transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             <MoneyIcon />
                             {t('addPaymentModal.savePayment')}

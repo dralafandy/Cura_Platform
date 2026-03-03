@@ -30,12 +30,12 @@ interface FormSectionProps {
 }
 
 const FormSection: React.FC<FormSectionProps> = ({ title, icon, children, className = '', isDark = false }) => (
-    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
+    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
                 {icon}
             </div>
-            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
         </div>
         {children}
     </div>
@@ -256,26 +256,27 @@ export const PatientDetailsModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-40 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-                <header className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex justify-between items-center flex-shrink-0 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-40 p-3 sm:p-4" aria-modal="true" role="dialog">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+                <header className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 flex justify-between items-center flex-shrink-0 shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center shrink-0">
                             <span className="text-primary dark:text-primary-light font-bold text-lg">
                                 {patient.name.charAt(0).toUpperCase()}
                             </span>
                         </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">{patient.name}</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{t('patientDetails.patientId')}: {patient.id.slice(-8)}</p>
+                        <div className="min-w-0">
+                            <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-white truncate">{patient.name}</h2>
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">{t('patientDetails.patientId')}: {patient.id.slice(-8)}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                         <button
                             onClick={onEdit}
-                            className="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 focus:ring-offset-2 dark:focus:ring-offset-slate-800"
+                            className="flex items-center px-3 sm:px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 focus:ring-offset-2 dark:focus:ring-offset-slate-800"
                         >
-                            <EditIcon /> {t('common.edit')}
+                            <EditIcon />
+                            <span className="hidden sm:inline">{t('common.edit')}</span>
                         </button>
                         <button
                             onClick={onClose}
@@ -288,7 +289,7 @@ export const PatientDetailsModal: React.FC<{
                 </header>
 
                 <nav className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0 shadow-sm">
-                    <ul className="-mb-px flex space-x-1 rtl:space-x-reverse overflow-x-auto px-4 scrollbar-minimal">
+                    <ul className="-mb-px flex space-x-1 rtl:space-x-reverse overflow-x-auto px-2 sm:px-4 scrollbar-minimal">
                         {(() => {
                             const { isReceptionist } = usePermissions();
                             const allTabs = [
@@ -304,7 +305,7 @@ export const PatientDetailsModal: React.FC<{
                             <li key={key}>
                                 <button
                                     onClick={() => setActiveTab(key as PatientDetailTab)}
-                                    className={`inline-flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 ${
+                                    className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium rounded-t-lg transition-all duration-200 ${
                                         activeTab === key
                                             ? 'bg-primary text-white shadow-md'
                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -318,7 +319,7 @@ export const PatientDetailsModal: React.FC<{
                     </ul>
                 </nav>
 
-                <main className="p-6 overflow-y-auto flex-1 bg-neutral dark:bg-slate-900 scrollbar-modern">
+                <main className="p-4 sm:p-6 overflow-y-auto flex-1 bg-neutral dark:bg-slate-900 scrollbar-modern">
                     {activeTab === 'details' && (
                         <div className="space-y-6">
                             {/* Personal Information Card */}
