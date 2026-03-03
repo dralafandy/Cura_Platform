@@ -68,9 +68,13 @@ const CloseIcon = () => (
 );
 
 const InsuranceManagementPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, currentClinic, accessibleClinics } = useAuth();
   const { t } = useI18n();
   const { clinicInfo } = useClinicData();
+  const activeClinicId = useMemo(
+    () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+    [currentClinic, accessibleClinics]
+  );
   const [tab, setTab] = useState<Tab>('companies');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,25 +217,26 @@ const InsuranceManagementPage: React.FC = () => {
   };
 
   const saveCompany = async () => {
-    if (!supabase || !user?.id || !companyForm.name?.trim()) return;
-    const payload = { user_id: user.id, name: companyForm.name.trim(), phone: companyForm.phone || null, email: companyForm.email || null };
+    if (!supabase || !user?.id || !activeClinicId || !companyForm.name?.trim()) return;
+    const payload = { user_id: user.id, clinic_id: activeClinicId, name: companyForm.name.trim(), phone: companyForm.phone || null, email: companyForm.email || null };
     const q = companyForm.id ? supabase.from('insurance_companies').update(payload).eq('id', companyForm.id) : supabase.from('insurance_companies').insert([payload]);
     const { error: saveError } = await q; if (saveError) { setError(saveError.message); return; }
     setCompanyForm({ name: '' }); await load();
   };
   
   const saveAccount = async () => {
-    if (!supabase || !user?.id || !accountForm.account_name?.trim() || !accountForm.insurance_company_id) return;
-    const payload = { user_id: user.id, insurance_company_id: accountForm.insurance_company_id, account_name: accountForm.account_name.trim(), balance: Number(accountForm.balance || 0), status: accountForm.status || 'ACTIVE' };
+    if (!supabase || !user?.id || !activeClinicId || !accountForm.account_name?.trim() || !accountForm.insurance_company_id) return;
+    const payload = { user_id: user.id, clinic_id: activeClinicId, insurance_company_id: accountForm.insurance_company_id, account_name: accountForm.account_name.trim(), balance: Number(accountForm.balance || 0), status: accountForm.status || 'ACTIVE' };
     const q = accountForm.id ? supabase.from('insurance_accounts').update(payload).eq('id', accountForm.id) : supabase.from('insurance_accounts').insert([payload]);
     const { error: saveError } = await q; if (saveError) { setError(saveError.message); return; }
     setAccountForm({ insurance_company_id: '', account_name: '', balance: 0, status: 'ACTIVE' }); await load();
   };
   
   const saveTxn = async () => {
-    if (!supabase || !user?.id || !txnForm.insurance_account_id || !txnForm.transaction_date) return;
+    if (!supabase || !user?.id || !activeClinicId || !txnForm.insurance_account_id || !txnForm.transaction_date) return;
     const payload = { 
       user_id: user.id, 
+      clinic_id: activeClinicId,
       insurance_account_id: txnForm.insurance_account_id, 
       transaction_type: txnForm.transaction_type || 'DEBIT', 
       amount: Number(txnForm.amount || 0), 
@@ -245,9 +250,10 @@ const InsuranceManagementPage: React.FC = () => {
   };
   
   const savePatientLink = async () => {
-    if (!supabase || !user?.id || !patientLinkForm.patient_id || !patientLinkForm.insurance_company_id) return;
+    if (!supabase || !user?.id || !activeClinicId || !patientLinkForm.patient_id || !patientLinkForm.insurance_company_id) return;
     const payload = { 
       user_id: user.id, 
+      clinic_id: activeClinicId,
       patient_id: patientLinkForm.patient_id, 
       insurance_company_id: patientLinkForm.insurance_company_id, 
       coverage_percentage: Number(patientLinkForm.coverage_percentage || 0),
@@ -261,9 +267,10 @@ const InsuranceManagementPage: React.FC = () => {
   };
   
   const saveTreatmentLink = async () => {
-    if (!supabase || !user?.id || !treatmentLinkForm.treatment_record_id || !treatmentLinkForm.insurance_company_id) return;
+    if (!supabase || !user?.id || !activeClinicId || !treatmentLinkForm.treatment_record_id || !treatmentLinkForm.insurance_company_id) return;
     const payload = { 
       user_id: user.id, 
+      clinic_id: activeClinicId,
       treatment_record_id: treatmentLinkForm.treatment_record_id, 
       insurance_company_id: treatmentLinkForm.insurance_company_id, 
       claim_amount: Number(treatmentLinkForm.claim_amount || 0), 

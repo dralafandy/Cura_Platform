@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../hooks/useI18n';
@@ -19,7 +19,11 @@ interface PatientInsuranceLink {
 
 const PatientInsuranceLinkPage: React.FC = () => {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, currentClinic, accessibleClinics } = useAuth();
+  const activeClinicId = useMemo(
+    () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+    [currentClinic, accessibleClinics]
+  );
   const [patientInsuranceLinks, setPatientInsuranceLinks] = useState<PatientInsuranceLink[]>([]);
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [insuranceCompanies, setInsuranceCompanies] = useState<{ id: string; name: string }[]>([]);
@@ -133,12 +137,13 @@ const PatientInsuranceLinkPage: React.FC = () => {
   };
 
   const handleSaveLink = async () => {
-    if (!currentLink || !supabase || !user?.id) return;
+    if (!currentLink || !supabase || !user?.id || !activeClinicId) return;
 
     try {
       const linkToSave = {
         ...currentLink,
         user_id: user.id,
+        clinic_id: activeClinicId,
         expiry_date: currentLink.expiry_date === '' ? null : currentLink.expiry_date
       };
 

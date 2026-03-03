@@ -42,11 +42,15 @@ const today = new Date().toISOString().slice(0, 10);
 const monthNow = today.slice(0, 7);
 
 const EmployeesManagement: React.FC = () => {
-  const { user } = useAuth();
+  const { user, currentClinic, accessibleClinics } = useAuth();
   const { locale, direction } = useI18n();
   const isAr = locale === 'ar';
   const tr = (ar: string, en: string) => (isAr ? ar : en);
   const align = direction === 'rtl' ? 'text-right' : 'text-left';
+  const activeClinicId = useMemo(
+    () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+    [currentClinic, accessibleClinics]
+  );
 
   const [tab, setTab] = useState<'employees' | 'attendance' | 'compensation'>('employees');
   const [loading, setLoading] = useState(true);
@@ -208,7 +212,7 @@ const EmployeesManagement: React.FC = () => {
 
   const saveEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !employeeForm.full_name.trim()) return;
+    if (!user || !activeClinicId || !employeeForm.full_name.trim()) return;
     const payload = {
       ...employeeForm,
       base_salary: Number(employeeForm.base_salary || 0),
@@ -217,6 +221,7 @@ const EmployeesManagement: React.FC = () => {
       position_title: employeeForm.position_title || null,
       dentist_id: employeeForm.dentist_id || null,
       user_id: user.id,
+      clinic_id: activeClinicId,
     };
     const { error: err } = editingEmployeeId
       ? await supabase.from('employees').update(payload).eq('id', editingEmployeeId)
@@ -248,13 +253,14 @@ const EmployeesManagement: React.FC = () => {
 
   const addAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !attendanceForm.employee_id) return;
+    if (!user || !activeClinicId || !attendanceForm.employee_id) return;
     const status = attendanceForm.status === 'PRESENT' && attendanceForm.check_in_time && attendanceForm.check_in_time > '09:15' ? 'LATE' : attendanceForm.status;
     const { error: err } = await supabase.from('employee_attendance').upsert(
       {
         ...attendanceForm,
         status,
         user_id: user.id,
+        clinic_id: activeClinicId,
         check_in_time: attendanceForm.check_in_time || null,
         check_out_time: attendanceForm.check_out_time || null,
         notes: attendanceForm.notes || null,
@@ -269,12 +275,13 @@ const EmployeesManagement: React.FC = () => {
 
   const addCompensation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !compForm.employee_id || !compForm.amount) return;
+    if (!user || !activeClinicId || !compForm.employee_id || !compForm.amount) return;
     const { error: err } = await supabase.from('employee_compensations').insert({
       ...compForm,
       amount: Number(compForm.amount),
       notes: compForm.notes || null,
       user_id: user.id,
+      clinic_id: activeClinicId,
     });
     if (err) return setError(err.message);
     setCompForm({ employee_id: '', entry_date: today, entry_type: 'SALARY', amount: '', notes: '' });
@@ -306,7 +313,7 @@ const EmployeesManagement: React.FC = () => {
   };
 
   const autoMarkPresent = async () => {
-    if (!user) return;
+    if (!user || !activeClinicId) return;
     setWorking(true);
     setError(null);
 
@@ -322,6 +329,7 @@ const EmployeesManagement: React.FC = () => {
         status: 'PRESENT' as AttendanceStatus,
         notes: tr('تسجيل تلقائي', 'Auto marked'),
         user_id: user.id,
+        clinic_id: activeClinicId,
       }));
 
     if (!rows.length) {

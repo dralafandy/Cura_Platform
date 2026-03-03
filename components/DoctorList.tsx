@@ -957,7 +957,11 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
     const { dentists, addDoctor, updateDoctor, treatmentRecords, doctorPayments, appointments, patients } = clinicData;
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
-    const { userProfile, user } = useAuth();
+    const { userProfile, user, currentClinic, accessibleClinics } = useAuth();
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [doctorToPrint, setDoctorToPrint] = useState<Dentist | null>(null);
     const [linkedDentistIds, setLinkedDentistIds] = useState<Set<string>>(new Set());
@@ -1084,7 +1088,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
     };
 
     const loadLinkedEmployees = useCallback(async () => {
-        if (!user?.id || !supabase) return;
+        if (!user?.id || !supabase || !activeClinicId) return;
         const { data, error } = await supabase
             .from('employees')
             .select('dentist_id')
@@ -1094,7 +1098,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
         if (error) return;
         const ids = new Set((data || []).map((r: any) => r.dentist_id).filter(Boolean));
         setLinkedDentistIds(ids);
-    }, [user?.id]);
+    }, [user?.id, activeClinicId]);
 
     useEffect(() => {
         loadLinkedEmployees();
@@ -1118,6 +1122,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
             base_salary: 0,
             status: 'ACTIVE',
             user_id: user.id,
+            clinic_id: activeClinicId,
             dentist_id: doctor.id,
         });
 

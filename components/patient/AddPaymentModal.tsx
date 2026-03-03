@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Payment, Permission } from '../../types';
 import { ClinicData } from '../../hooks/useClinicData';
 import { useI18n } from '../../hooks/useI18n';
@@ -32,7 +32,11 @@ interface AddPaymentModalProps {
 const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData, onClose, onAdd }) => {
     const { t } = useI18n();
     const { addNotification } = useNotification();
-    const { checkPermission, user } = useAuth();
+    const { checkPermission, user, currentClinic, accessibleClinics } = useAuth();
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
     const [formData, setFormData] = useState<Omit<Payment, 'id'> & { paymentReceiptImageUrl?: string }>({
         patientId,
         date: new Date().toISOString().split('T')[0],
@@ -168,7 +172,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
         onAdd(formData);
         
         // Create insurance claim if using insurance
-        if (useInsurance && patientInsurance && insuranceCoverageAmount > 0 && supabase && user?.id) {
+        if (useInsurance && patientInsurance && insuranceCoverageAmount > 0 && supabase && user?.id && activeClinicId) {
             try {
                 await supabase
                     .from('treatment_insurance_link')
@@ -178,7 +182,8 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                         claim_amount: insuranceCoverageAmount,
                         claim_status: 'PENDING',
                         claim_date: formData.date,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinicId
                     });
                 addNotification({ 
                     message: `تم إنشاء مطالبة تأمين بقيمة ${formatCurrency(insuranceCoverageAmount)}`, 

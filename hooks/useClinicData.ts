@@ -110,7 +110,7 @@ export interface ClinicData {
 }
 
 export const useClinicData = (): ClinicData => {
-    const { user, isAdmin } = useAuth();
+    const { user, isAdmin, currentClinic, currentBranch, accessibleClinics } = useAuth();
     const { addNotification } = useNotification();
     
     const [patients, setPatients] = useState<Patient[]>([]);
@@ -140,12 +140,9 @@ export const useClinicData = (): ClinicData => {
         email: ''
     });
     const [clinics, setClinics] = useState<Clinic[]>([]);
-    
-    // Derive clinicId from user
-    const clinicId = user?.id;
-    
+
     console.log('useClinicData - user:', user);
-    console.log('useClinicData - clinicId:', clinicId);
+    console.log('useClinicData - currentClinicId:', currentClinic?.id || null);
     const [whatsappMessageTemplate, setWhatsappMessageTemplate] = useState<string>(
         'مرحباً {patientName}، هذا تذكير من عيادة {clinicName} لطب الأسنان بموعدك يوم {appointmentDate} الساعة {appointmentTime}. نتطلع لرؤيتك.{doctorName}'
     );
@@ -238,6 +235,29 @@ export const useClinicData = (): ClinicData => {
             return [];
         }
     }, [user, supabase]);
+
+    const getActiveClinicContext = useCallback(async (): Promise<{ clinicId: string | null; branchId: string | null }> => {
+        if (currentClinic?.id) {
+            return { clinicId: currentClinic.id, branchId: currentBranch?.id || null };
+        }
+
+        const defaultAccess = accessibleClinics.find(c => c.isDefault) || accessibleClinics[0];
+        if (defaultAccess?.clinicId) {
+            return { clinicId: defaultAccess.clinicId, branchId: defaultAccess.branchId || null };
+        }
+
+        const userClinicIds = await getUserClinicIds();
+        return { clinicId: userClinicIds[0] || null, branchId: null };
+    }, [currentClinic, currentBranch, accessibleClinics, getUserClinicIds]);
+
+    const requireActiveClinic = useCallback(async (resourceLabel: string): Promise<{ clinicId: string; branchId: string | null } | null> => {
+        const context = await getActiveClinicContext();
+        if (!context.clinicId) {
+            addNotification(`Cannot add ${resourceLabel}: no active clinic is assigned to your account`, NotificationType.ERROR);
+            return null;
+        }
+        return { clinicId: context.clinicId, branchId: context.branchId };
+    }, [getActiveClinicContext, addNotification]);
 
     const fetchData = useCallback(async () => {
         if (!user || !supabase) {
@@ -658,8 +678,13 @@ export const useClinicData = (): ClinicData => {
     // Generic helper for adding data
     const addData = async <T extends { id: string }>(table: string, data: Partial<T>, setState: React.Dispatch<React.SetStateAction<T[]>>): Promise<void> => {
         if (!user || !supabase) return;
-        console.log(`Adding data to table: ${table}`, { data, user_id: user.id });
-        const { data: newData, error } = await supabase.from(table).insert({ ...data, user_id: user.id }).select();
+        const activeClinic = await getActiveClinicContext();
+        const insertPayload: Record<string, unknown> = { ...data, user_id: user.id };
+        if (activeClinic.clinicId) {
+            insertPayload.clinic_id = activeClinic.clinicId;
+        }
+        console.log(`Adding data to table: ${table}`, insertPayload);
+        const { data: newData, error } = await supabase.from(table).insert(insertPayload).select();
         if (error) {
             console.error(`Error adding data to ${table}:`, error);
             addNotification({
@@ -830,12 +855,15 @@ export const useClinicData = (): ClinicData => {
     // Doctor Payment Management
     const addDoctorPayment = async (payment: Omit<DoctorPayment, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('doctor payment');
+        if (!activeClinic) return;
 
         const paymentData = {
             dentist_id: payment.dentistId,
             amount: payment.amount,
             date: payment.date,
-            notes: payment.notes || null
+            notes: payment.notes || null,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding doctor payment with data:', paymentData);
@@ -887,6 +915,8 @@ export const useClinicData = (): ClinicData => {
             addNotification('User not authenticated', NotificationType.ERROR);
             return;
         }
+        const activeClinic = await requireActiveClinic('patient');
+        if (!activeClinic) return;
 
         const patientData = {
             name: patient.name,
@@ -906,7 +936,8 @@ export const useClinicData = (): ClinicData => {
             emergency_contact_phone: patient.emergencyContactPhone || null,
             dental_chart: createEmptyChart(),
             images: patient.images || [],
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('User ID:', user.id);
@@ -989,15 +1020,10 @@ export const useClinicData = (): ClinicData => {
     const addDoctor = async (doctor: Omit<Dentist, 'id'>) => {
         if (!user || !supabase) return;
 
-        const userClinicIds = await getUserClinicIds();
-        const clinicId = userClinicIds[0];
+        const activeClinic = await requireActiveClinic('doctor');
+        if (!activeClinic) return;
 
-        if (!clinicId) {
-            addNotification('لا يمكن إضافة طبيب: المستخدم غير مرتبط بأي عيادة', NotificationType.ERROR);
-            return;
-        }
-
-        const payload = { ...doctor, user_id: user.id, clinic_id: clinicId };
+        const payload = { ...doctor, user_id: user.id, clinic_id: activeClinic.clinicId };
         console.log('Adding doctor with data:', payload);
         const { data: newData, error } = await supabase.from('dentists').insert(payload).select();
         if (error) {
@@ -1016,6 +1042,8 @@ export const useClinicData = (): ClinicData => {
     // Appointment Management
     const addAppointment = async (appointment: Omit<Appointment, 'id' | 'reminderSent' | 'userId' | 'createdAt' | 'updatedAt'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('appointment');
+        if (!activeClinic) return;
 
         const { patientId, dentistId, startTime, endTime, reminderTime, reason, status } = appointment;
         const supabaseData = {
@@ -1026,7 +1054,8 @@ export const useClinicData = (): ClinicData => {
             start_time: startTime,
             end_time: endTime,
             reminder_time: reminderTime,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding appointment with data:', JSON.stringify(supabaseData, null, 2));
@@ -1104,6 +1133,8 @@ export const useClinicData = (): ClinicData => {
     // Treatment Record Management
     const addTreatmentRecord = async (patientId: string, record: Omit<TreatmentRecord, 'id' | 'patientId'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('treatment record');
+        if (!activeClinic) return;
 
         const { dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, affectedTeeth } = record;
         const treatmentDef = treatmentDefinitions.find(td => td.id === treatmentDefinitionId);
@@ -1123,7 +1154,8 @@ export const useClinicData = (): ClinicData => {
             clinic_share: Number(clinicShare) || 0,
             affected_teeth: affectedTeeth || [],
             total_treatment_cost: totalTreatmentCost,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding treatment record with data:', supabaseData);
@@ -1190,6 +1222,8 @@ export const useClinicData = (): ClinicData => {
     // Payment Management
     const addPayment = async (payment: Omit<Payment, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('payment');
+        if (!activeClinic) return;
 
         // Debug logging to identify the issue
         console.log('addPayment called with method:', payment.method);
@@ -1237,7 +1271,8 @@ export const useClinicData = (): ClinicData => {
             clinic_share: clinicShare,
             doctor_share: doctorShare,
             payment_receipt_image_url: payment.paymentReceiptImageUrl || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
 
@@ -1316,6 +1351,8 @@ export const useClinicData = (): ClinicData => {
     // Financial & Inventory Management
     const addSupplier = async (s: Omit<Supplier, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('supplier');
+        if (!activeClinic) return;
 
         const supplierData = {
             name: s.name,
@@ -1323,7 +1360,8 @@ export const useClinicData = (): ClinicData => {
             phone: s.phone || null,
             email: s.email || null,
             type: s.type,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding supplier with data:', supplierData);
@@ -1344,6 +1382,8 @@ export const useClinicData = (): ClinicData => {
     };
     const addInventoryItem = async (i: Omit<InventoryItem, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('inventory item');
+        if (!activeClinic) return;
 
         const inventoryData = {
             name: i.name,
@@ -1353,7 +1393,8 @@ export const useClinicData = (): ClinicData => {
             unit_cost: Number(i.unitCost) || 0,
             min_stock_level: Number(i.minStockLevel) || 0,
             expiry_date: i.expiryDate || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding inventory item with data:', JSON.stringify(inventoryData, null, 2));
@@ -1408,6 +1449,8 @@ export const useClinicData = (): ClinicData => {
 
     const addExpense = async (e: Omit<Expense, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('expense');
+        if (!activeClinic) return;
 
         const expenseData = {
             date: e.date,
@@ -1418,7 +1461,8 @@ export const useClinicData = (): ClinicData => {
             supplier_invoice_id: e.supplierInvoiceId || null,
             method: e.method || null,
             expense_receipt_image_url: e.expenseReceiptImageUrl || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding expense with data:', expenseData);
@@ -1469,6 +1513,8 @@ export const useClinicData = (): ClinicData => {
 
     const addTreatmentDefinition = async (d: Omit<TreatmentDefinition, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('treatment definition');
+        if (!activeClinic) return;
 
         const treatmentData = {
             name: d.name,
@@ -1476,7 +1522,8 @@ export const useClinicData = (): ClinicData => {
             base_price: Number(d.basePrice) || 0,
             doctor_percentage: Number(d.doctorPercentage) || 0,
             clinic_percentage: Number(d.clinicPercentage) || 0,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding treatment definition with data:', treatmentData);
@@ -1531,6 +1578,8 @@ export const useClinicData = (): ClinicData => {
             addNotification('Only admin can update custom doctor percentages', NotificationType.ERROR);
             return;
         }
+        const activeClinic = await requireActiveClinic('custom treatment percentage');
+        if (!activeClinic) return;
 
         const doctorPercentage = Number(data.doctorPercentage) || 0;
         const clinicPercentage = Number(data.clinicPercentage) || 0;
@@ -1548,7 +1597,8 @@ export const useClinicData = (): ClinicData => {
             dentist_id: data.dentistId,
             doctor_percentage: doctorPercentage,
             clinic_percentage: clinicPercentage,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         const { data: upserted, error } = await supabase
@@ -1614,6 +1664,8 @@ export const useClinicData = (): ClinicData => {
 
     const addLabCase = async (lc: Omit<LabCase, 'id'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('lab case');
+        if (!activeClinic) return;
 
         const labCaseData = {
             patient_id: lc.patientId,
@@ -1625,7 +1677,8 @@ export const useClinicData = (): ClinicData => {
             status: lc.status,
             lab_cost: Number(lc.labCost) || 0,
             notes: lc.notes || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding lab case with data:', labCaseData);
@@ -1684,6 +1737,8 @@ export const useClinicData = (): ClinicData => {
 
     const addSupplierInvoice = async (i: Omit<SupplierInvoice, 'id' | 'payments'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('supplier invoice');
+        if (!activeClinic) return;
 
         const invoiceData = {
             supplier_id: i.supplierId,
@@ -1694,7 +1749,8 @@ export const useClinicData = (): ClinicData => {
             status: i.status,
             items: i.items || [],
             payments: [],
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding supplier invoice with data:', invoiceData);
@@ -1801,13 +1857,16 @@ export const useClinicData = (): ClinicData => {
     // Prescription Management
     const addPrescription = async (prescription: Omit<Prescription, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('prescription');
+        if (!activeClinic) return;
 
         const prescriptionData = {
             patient_id: prescription.patientId,
             dentist_id: prescription.dentistId,
             prescription_date: prescription.prescriptionDate,
             notes: prescription.notes || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding prescription with data:', prescriptionData);
@@ -1862,6 +1921,8 @@ export const useClinicData = (): ClinicData => {
     // Prescription Item Management
     const addPrescriptionItem = async (prescriptionId: string, item: Omit<PrescriptionItem, 'id' | 'prescriptionId' | 'userId' | 'createdAt' | 'updatedAt'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('prescription item');
+        if (!activeClinic) return;
 
         const itemData = {
             prescription_id: prescriptionId,
@@ -1869,7 +1930,8 @@ export const useClinicData = (): ClinicData => {
             dosage: item.dosage || null,
             quantity: item.quantity,
             instructions: item.instructions || null,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding prescription item with data:', itemData);
@@ -1924,6 +1986,8 @@ export const useClinicData = (): ClinicData => {
     // Attachment Management
     const addAttachment = async (attachment: Omit<PatientAttachment, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('patient attachment');
+        if (!activeClinic) return;
 
         const systemUserId = '00000000-0000-0000-0000-000000000001';
         let validUserId = user.id;
@@ -1954,7 +2018,8 @@ export const useClinicData = (): ClinicData => {
             thumbnail_url: attachment.thumbnailUrl,
             description: attachment.description || null,
             uploaded_by: validUserId,
-            user_id: validUserId
+            user_id: validUserId,
+            clinic_id: activeClinic.clinicId
         };
 
         console.log('Adding attachment with data:', attachmentData);
@@ -2228,6 +2293,8 @@ export const useClinicData = (): ClinicData => {
     const restoreData = async (data: Partial<Omit<ClinicData, 'restoreData'>>) => {
         console.warn("Restoring from local file will not sync to the cloud.");
         if (!user || !supabase) return;
+        const activeClinic = await requireActiveClinic('restored records');
+        if (!activeClinic) return;
 
         try {
             const tables = [
@@ -2245,7 +2312,8 @@ export const useClinicData = (): ClinicData => {
                     const patientData = {
                         ...patient,
                         id: patient.id.startsWith('sample-') ? undefined : patient.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('patients').insert(patientData);
                 }
@@ -2255,7 +2323,8 @@ export const useClinicData = (): ClinicData => {
                     const dentistData = {
                         ...dentist,
                         id: dentist.id.startsWith('sample-') ? undefined : dentist.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('dentists').insert(dentistData);
                 }
@@ -2272,7 +2341,8 @@ export const useClinicData = (): ClinicData => {
                         reminder_time: reminderTime,
                         reminder_sent: reminderSent || false,
                         id: appointment.id.startsWith('sample-') ? undefined : appointment.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('appointments').insert(appointmentData);
                 }
@@ -2282,7 +2352,8 @@ export const useClinicData = (): ClinicData => {
                     const supplierData = {
                         ...supplier,
                         id: supplier.id.startsWith('sample-') ? undefined : supplier.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('suppliers').insert(supplierData);
                 }
@@ -2292,7 +2363,8 @@ export const useClinicData = (): ClinicData => {
                     const itemData = {
                         ...item,
                         id: item.id.startsWith('sample-') ? undefined : item.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('inventory_items').insert(itemData);
                 }
@@ -2302,7 +2374,8 @@ export const useClinicData = (): ClinicData => {
                     const expenseData = {
                         ...expense,
                         id: expense.id.startsWith('sample-') ? undefined : expense.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('expenses').insert(expenseData);
                 }
@@ -2312,7 +2385,8 @@ export const useClinicData = (): ClinicData => {
                     const defData = {
                         ...def,
                         id: def.id.startsWith('sample-') ? undefined : def.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('treatment_definitions').insert(defData);
                 }
@@ -2322,7 +2396,8 @@ export const useClinicData = (): ClinicData => {
                     const recordData = {
                         ...record,
                         id: record.id.startsWith('sample-') ? undefined : record.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('treatment_records').insert(recordData);
                 }
@@ -2332,7 +2407,8 @@ export const useClinicData = (): ClinicData => {
                     const labCaseData = {
                         ...labCase,
                         id: labCase.id.startsWith('sample-') ? undefined : labCase.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('lab_cases').insert(labCaseData);
                 }
@@ -2342,7 +2418,8 @@ export const useClinicData = (): ClinicData => {
                     const paymentData = {
                         ...payment,
                         id: payment.id.startsWith('sample-') ? undefined : payment.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('payments').insert(paymentData);
                 }
@@ -2353,7 +2430,8 @@ export const useClinicData = (): ClinicData => {
                     const invoiceData = {
                         ...invoiceRest,
                         id: invoice.id.startsWith('sample-') ? undefined : invoice.id,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinic.clinicId
                     };
                     await supabase.from('supplier_invoices').insert(invoiceData);
                 }
@@ -2403,3 +2481,4 @@ export const useClinicData = (): ClinicData => {
         isLoading
     };
 };
+
