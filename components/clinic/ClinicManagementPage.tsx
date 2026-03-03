@@ -162,6 +162,12 @@ const ClinicManagementPage: React.FC = () => {
     return false;
   };
 
+  const isUserClinicUserFkError = (message?: string | null) => {
+    const m = (message || '').toLowerCase();
+    if (m.includes('user_clinics_user_id_fkey')) return true;
+    return m.includes('user_clinics') && m.includes('foreign key') && m.includes('user_id');
+  };
+
   const notifyError = (fallback: string, raw?: string | null) => {
     const details = raw ? `${fallback}: ${raw}` : fallback;
     addNotification({ message: details, type: NotificationType.ERROR });
@@ -169,6 +175,12 @@ const ClinicManagementPage: React.FC = () => {
 
   const detectAccessTable = useCallback(async (): Promise<AccessTable> => {
     if (!supabase) return 'user_clinics';
+
+    // Prefer modern table first when both schemas coexist.
+    const modern = await supabase.from('user_clinic_access').select('id').limit(1);
+    if (!modern.error) {
+      return 'user_clinic_access';
+    }
 
     const primary = await supabase.from('user_clinics').select('id').limit(1);
     if (!primary.error) {
@@ -182,6 +194,85 @@ const ClinicManagementPage: React.FC = () => {
 
     return 'user_clinics';
   }, []);
+
+  const resolveAssignmentUserId = useCallback(
+    async (table: AccessTable, inputUserId: string): Promise<string> => {
+      if (!supabase || !inputUserId) return inputUserId;
+
+      const rpc = await supabase.rpc('resolve_actor_id_for_fk', {
+        p_table_name: table,
+        p_column_name: 'user_id',
+        p_uid: inputUserId,
+      });
+
+      if (!rpc.error && typeof rpc.data === 'string' && rpc.data) {
+        return rpc.data;
+      }
+
+      if (table === 'user_clinic_access') {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .or(`id.eq.${inputUserId},auth_id.eq.${inputUserId}`)
+          .maybeSingle();
+        if ((profile as { id?: string } | null)?.id) {
+          return (profile as { id: string }).id;
+        }
+      }
+
+      return inputUserId;
+    },
+    [],
+  );
+
+  const ensureUsersRow = useCallback(
+    async (inputUserId: string): Promise<string | null> => {
+      if (!supabase || !inputUserId) return null;
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id,username,email,role,status')
+        .or(`id.eq.${inputUserId},auth_id.eq.${inputUserId}`)
+        .maybeSingle();
+
+      const resolvedId = ((profile as any)?.id as string | undefined) || inputUserId;
+
+      const existing = await supabase.from('users').select('id').eq('id', resolvedId).maybeSingle();
+      if (!existing.error && existing.data?.id) {
+        return resolvedId;
+      }
+
+      const email = ((profile as any)?.email as string | null | undefined) || user?.email || null;
+      const username =
+        ((profile as any)?.username as string | null | undefined) ||
+        (email ? email.split('@')[0] : `user_${resolvedId.slice(0, 8)}`);
+      const role = (((profile as any)?.role as string | null | undefined) || UserRole.DOCTOR).toUpperCase();
+      const status = (((profile as any)?.status as string | null | undefined) || 'ACTIVE').toUpperCase();
+
+      const attempts: Record<string, unknown>[] = [
+        { id: resolvedId, email },
+        { id: resolvedId, username, email },
+        { id: resolvedId, username, email, password_hash: 'OAUTH_MANAGED' },
+        { id: resolvedId, username, email, password_hash: 'OAUTH_MANAGED', role, status },
+        { id: resolvedId },
+      ];
+
+      for (const payload of attempts) {
+        const { error } = await supabase.from('users').insert(payload);
+        if (!error) {
+          return resolvedId;
+        }
+      }
+
+      const finalCheck = await supabase.from('users').select('id').eq('id', resolvedId).maybeSingle();
+      if (!finalCheck.error && finalCheck.data?.id) {
+        return resolvedId;
+      }
+
+      return null;
+    },
+    [user?.email],
+  );
 
   const fetchCurrentUserTenant = useCallback(async () => {
     if (!supabase || !user?.id) {
@@ -471,8 +562,10 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     const createdClinic = insert.data as ClinicRow;
+    let assignmentUserId = await resolveAssignmentUserId(accessTable, user.id);
+
     const assignmentPayload: Record<string, unknown> = {
-      user_id: user.id,
+      user_id: assignmentUserId,
       clinic_id: createdClinic.id,
       role_at_clinic: 'ADMIN',
     };
@@ -485,7 +578,18 @@ const ClinicManagementPage: React.FC = () => {
       assignmentPayload.is_default = true;
     }
 
-    const assignmentResult = await supabase.from(accessTable).insert(assignmentPayload);
+    let assignmentResult = await supabase.from(accessTable).insert(assignmentPayload);
+
+    // Legacy schema fallback: user_clinics may FK to public.users(id) and miss current user row.
+    if (assignmentResult.error && accessTable === 'user_clinics' && isUserClinicUserFkError(assignmentResult.error.message)) {
+      const ensuredUsersId = await ensureUsersRow(assignmentUserId);
+      if (ensuredUsersId) {
+        assignmentUserId = await resolveAssignmentUserId(accessTable, ensuredUsersId);
+        assignmentPayload.user_id = assignmentUserId;
+        assignmentResult = await supabase.from(accessTable).insert(assignmentPayload);
+      }
+    }
+
     if (assignmentResult.error && !isRlsError(assignmentResult.error.message)) {
       notifyError('Clinic created but owner assignment failed', assignmentResult.error.message);
     }
@@ -662,8 +766,10 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     setSaving(true);
+    let assignmentUserId = await resolveAssignmentUserId(accessTable, assignmentForm.user_id);
+
     const payload: Record<string, unknown> = {
-      user_id: assignmentForm.user_id,
+      user_id: assignmentUserId,
       clinic_id: selectedClinicId,
       branch_id: assignmentForm.branch_id || null,
       role_at_clinic: assignmentForm.role_at_clinic,
@@ -678,9 +784,19 @@ const ClinicManagementPage: React.FC = () => {
       payload.custom_permissions = [];
     }
 
-    const { error } = await supabase.from(accessTable).insert(payload);
-    if (error) {
-      notifyError('Failed to assign user', error.message);
+    let result = await supabase.from(accessTable).insert(payload);
+
+    if (result.error && accessTable === 'user_clinics' && isUserClinicUserFkError(result.error.message)) {
+      const ensuredUsersId = await ensureUsersRow(assignmentUserId);
+      if (ensuredUsersId) {
+        assignmentUserId = await resolveAssignmentUserId(accessTable, ensuredUsersId);
+        payload.user_id = assignmentUserId;
+        result = await supabase.from(accessTable).insert(payload);
+      }
+    }
+
+    if (result.error) {
+      notifyError('Failed to assign user', result.error.message);
       setSaving(false);
       return;
     }
