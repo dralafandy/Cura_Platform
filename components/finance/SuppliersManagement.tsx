@@ -596,7 +596,7 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
     onDataRefresh?: () => void;
 }> = ({ supplier, onClose, clinicData, onDataRefresh }) => {
     const { t, locale } = useI18n();
-    const { supplierInvoices, addSupplierInvoice, updateSupplierInvoice, paySupplierInvoice, expenses } = clinicData;
+    const { supplierInvoices, addSupplierInvoice, updateSupplierInvoice, expenses } = clinicData;
     const { addNotification } = useNotification();
     const [modalState, setModalState] = useState<{ type: 'add_invoice' | 'edit_invoice' | null; data?: any }>({ type: null });
     
@@ -711,19 +711,6 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
         }
     };
 
-    const handlePayRemaining = (invoice: SupplierInvoice) => {
-        const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-        const balance = invoice.amount - totalPaid;
-        if (balance > 0 && window.confirm(t('invoices.confirmPayRemaining', { amount: currencyFormatter.format(balance) }))) {
-            paySupplierInvoice(invoice);
-            addNotification({
-                message: t('notifications.paymentRecorded'),
-                type: NotificationType.SUCCESS
-            });
-            if (onDataRefresh) onDataRefresh();
-        }
-    };
-
     const handlePrintFinancialStatement = () => {
         openPrintWindow(t('supplierStatement.financialTitle'), <SupplierStatement supplier={supplier} clinicData={clinicData} />);
     };
@@ -799,6 +786,9 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                               <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-violet-500 bg-clip-text text-transparent">{t('suppliers.invoicesLabel')}</h3>
                               <button onClick={() => setModalState({ type: 'add_invoice'})} className="flex items-center bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-3 py-1 rounded-lg hover:from-cyan-600 hover:to-violet-600 text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-300"><AddIcon /> {t('suppliers.addInvoiceButton')}</button>
                          </div>
+                        <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2">
+                            {t('invoices.payFromExpensesOnlyHint')}
+                        </p>
                         <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-cyan-100 dark:border-cyan-700 space-y-3">
                             {relatedInvoices.length > 0 ? relatedInvoices.map(inv => {
                                 const totalPaid = inv.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -861,7 +851,12 @@ const SupplierDetailsAndInvoicesModal: React.FC<{
                                                         </button>
                                                     );
                                                 })()}
-                                        {balance > 0 && <button onClick={() => handlePayRemaining(inv)} className="flex items-center gap-1 text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-2 py-1 rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-sm"><CheckCircleIcon />{t('invoices.payRemaining')}</button>}
+                                        {balance > 0 && (
+                                            <span className="flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-700">
+                                                <CheckCircleIcon />
+                                                {t('invoices.payFromExpensesOnly')}
+                                            </span>
+                                        )}
                                         <button onClick={() => setModalState({ type: 'edit_invoice', data: inv })} className="flex items-center gap-1 text-sm bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-2 py-1 rounded-lg hover:from-cyan-600 hover:to-violet-600 transition-all duration-200 shadow-sm"><EditIcon />{t('common.edit')}</button>
                                         <button onClick={() => handleDeleteInvoice(inv)} className="flex items-center gap-1 text-sm bg-gradient-to-r from-rose-500 to-rose-600 text-white px-2 py-1 rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all duration-200 shadow-sm"><DeleteIcon />{t('common.delete')}</button>
                                     </div>

@@ -191,6 +191,12 @@ export const PatientDetailsModal: React.FC<{
             return;
         }
 
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            addNotification('Upload requires an active Supabase session. Please sign in again.', NotificationType.ERROR);
+            return;
+        }
+
         // Process each file
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -200,7 +206,7 @@ export const PatientDetailsModal: React.FC<{
                 // Upload to Supabase Storage
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-                const filePath = `patient-attachments/${patient.id}/${fileName}`;
+                const filePath = `${patient.id}/${fileName}`;
 
                 const { data: uploadData, error: uploadError } = await supabase!.storage
                     .from('patient-attachments')

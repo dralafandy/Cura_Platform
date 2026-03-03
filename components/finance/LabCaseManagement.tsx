@@ -145,9 +145,47 @@ const LabCaseManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData })
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingCase, setEditingCase] = useState<LabCase | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<LabCaseStatus | 'ALL'>('ALL');
+    const [labFilter, setLabFilter] = useState<string>('ALL');
+    const [patientFilter, setPatientFilter] = useState<string>('ALL');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
     const dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+    const dentalLabs = useMemo(() => suppliers.filter(s => s.type === 'Dental Lab'), [suppliers]);
+
+    const filteredLabCases = useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+
+        return labCases.filter((lc) => {
+            if (statusFilter !== 'ALL' && lc.status !== statusFilter) {
+                return false;
+            }
+
+            if (labFilter !== 'ALL' && lc.labId !== labFilter) {
+                return false;
+            }
+
+            if (patientFilter !== 'ALL' && lc.patientId !== patientFilter) {
+                return false;
+            }
+
+            if (!normalizedSearch) {
+                return true;
+            }
+
+            const patient = patients.find(p => p.id === lc.patientId);
+            const lab = suppliers.find(s => s.id === lc.labId);
+            const searchableText = [
+                lc.caseType,
+                lc.notes,
+                patient?.name ?? '',
+                lab?.name ?? '',
+            ].join(' ').toLowerCase();
+
+            return searchableText.includes(normalizedSearch);
+        });
+    }, [labCases, statusFilter, labFilter, patientFilter, searchTerm, patients, suppliers]);
 
     const handleSaveCase = (labCase: Omit<LabCase, 'id'> | LabCase) => {
         if ('id' in labCase && labCase.id) {
@@ -189,12 +227,95 @@ const LabCaseManagement: React.FC<{ clinicData: ClinicData }> = ({ clinicData })
                     <AddIcon /> {t('labCases.addCase')}
                 </button>
             </div>
+            <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-slate-700/70 border border-slate-600' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <h4 className={`text-sm font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{t('common.filters')}</h4>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStatusFilter('ALL');
+                            setLabFilter('ALL');
+                            setPatientFilter('ALL');
+                            setSearchTerm('');
+                        }}
+                        className={`text-xs px-2.5 py-1.5 rounded-md transition-colors focus:outline-none focus:ring-2 ${isDark ? 'bg-slate-600 text-slate-100 hover:bg-slate-500 focus:ring-slate-500' : 'bg-white text-slate-700 hover:bg-slate-100 focus:ring-slate-300 border border-slate-300'}`}
+                    >
+                        {t('common.clearFilters')}
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                        <label htmlFor="lab-case-search" className={`block text-xs mb-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('common.search')}</label>
+                        <input
+                            id="lab-case-search"
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={t('common.search')}
+                            className={`w-full p-2 rounded-lg border text-sm focus:ring-primary focus:border-primary ${isDark ? 'bg-slate-800 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-700'}`}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="lab-case-status-filter" className={`block text-xs mb-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('labCases.status')}</label>
+                        <select
+                            id="lab-case-status-filter"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as LabCaseStatus | 'ALL')}
+                            className={`w-full p-2 rounded-lg border text-sm focus:ring-primary focus:border-primary ${isDark ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-slate-700'}`}
+                        >
+                            <option value="ALL">{t('common.all')}</option>
+                            {Object.values(LabCaseStatus).map(status => (
+                                <option key={status} value={status}>
+                                    {t(`labCaseStatus.${status}`)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="lab-case-lab-filter" className={`block text-xs mb-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('labCases.dentalLab')}</label>
+                        <select
+                            id="lab-case-lab-filter"
+                            value={labFilter}
+                            onChange={(e) => setLabFilter(e.target.value)}
+                            className={`w-full p-2 rounded-lg border text-sm focus:ring-primary focus:border-primary ${isDark ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-slate-700'}`}
+                        >
+                            <option value="ALL">{t('common.all')}</option>
+                            {dentalLabs.map(lab => (
+                                <option key={lab.id} value={lab.id}>
+                                    {lab.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="lab-case-patient-filter" className={`block text-xs mb-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('labCases.patient')}</label>
+                        <select
+                            id="lab-case-patient-filter"
+                            value={patientFilter}
+                            onChange={(e) => setPatientFilter(e.target.value)}
+                            className={`w-full p-2 rounded-lg border text-sm focus:ring-primary focus:border-primary ${isDark ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-slate-700'}`}
+                        >
+                            <option value="ALL">{t('common.all')}</option>
+                            {patients.map(patient => (
+                                <option key={patient.id} value={patient.id}>
+                                    {patient.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
             <div className={`p-4 rounded-lg shadow-inner ${isDark ? 'bg-slate-700' : 'bg-neutral'}`}>
                 {labCases.length === 0 ? (
                     <p className={`text-center py-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('labCases.noCasesRecorded')}</p>
+                ) : filteredLabCases.length === 0 ? (
+                    <div className="text-center py-4 space-y-1">
+                        <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('common.noResults')}</p>
+                        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('common.tryDifferentFilters')}</p>
+                    </div>
                 ) : (
                     <ul className="space-y-3">
-                        {labCases.map(lc => {
+                        {filteredLabCases.map(lc => {
                             const patient = patients.find(p => p.id === lc.patientId);
                             const lab = suppliers.find(s => s.id === lc.labId);
                             const statusClass = getStatusClass(lc.status);

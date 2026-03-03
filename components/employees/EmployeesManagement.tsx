@@ -301,13 +301,94 @@ const EmployeesManagement: React.FC = () => {
   const generateSalaries = async () => {
     if (!user) return;
     setWorking(true);
+    setError(null);
+
     const { data, error: err } = await supabase.rpc('generate_monthly_salaries', { p_user_id: user.id, p_month: `${monthFilter}-01` });
-    if (err) {
+    if (!err) {
+      setNote(tr(`تم توليد ${Number(data || 0)} راتب.`, `Generated ${Number(data || 0)} salaries.`));
+      setWorking(false);
+      await load();
+      return;
+    }
+
+    const missingRpcError =
+      err.code === 'PGRST202' || /Could not find the function public\.generate_monthly_salaries/i.test(err.message || '');
+
+    if (!missingRpcError) {
       setError(`${tr('فشل أتمتة الرواتب', 'Salary automation failed')}: ${err.message}`);
       setWorking(false);
       return;
     }
-    setNote(tr(`تم توليد ${Number(data || 0)} راتب.`, `Generated ${Number(data || 0)} salaries.`));
+
+    const [yearStr, monthStr] = monthFilter.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!year || !month) {
+      setError(tr('صيغة الشهر غير صحيحة.', 'Invalid month format.'));
+      setWorking(false);
+      return;
+    }
+
+    const monthStart = `${monthFilter}-01`;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const monthEnd = `${monthFilter}-${String(daysInMonth).padStart(2, '0')}`;
+    const nextMonthStart =
+      month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
+
+    const { data: activeEmployees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id,base_salary,clinic_id')
+      .eq('user_id', user.id)
+      .eq('status', 'ACTIVE');
+
+    if (employeesError) {
+      setError(`${tr('فشل أتمتة الرواتب', 'Salary automation failed')}: ${employeesError.message}`);
+      setWorking(false);
+      return;
+    }
+
+    const { data: existingSalaries, error: existingError } = await supabase
+      .from('employee_compensations')
+      .select('employee_id')
+      .eq('user_id', user.id)
+      .eq('entry_type', 'SALARY')
+      .gte('entry_date', monthStart)
+      .lt('entry_date', nextMonthStart);
+
+    if (existingError) {
+      setError(`${tr('فشل أتمتة الرواتب', 'Salary automation failed')}: ${existingError.message}`);
+      setWorking(false);
+      return;
+    }
+
+    const existingEmployeeIds = new Set((existingSalaries || []).map((r) => r.employee_id));
+    const rows = (activeEmployees || [])
+      .filter((e) => !existingEmployeeIds.has(e.id))
+      .map((e) => ({
+        employee_id: e.id,
+        entry_date: monthEnd,
+        entry_type: 'SALARY' as CompensationType,
+        amount: Number(e.base_salary || 0),
+        notes: `Auto salary generated for month ${monthFilter}`,
+        user_id: user.id,
+        clinic_id: e.clinic_id || activeClinicId || null,
+      }));
+
+    if (!rows.length) {
+      setNote(tr('لا توجد رواتب جديدة للتوليد.', 'No new salaries to generate.'));
+      setWorking(false);
+      await load();
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('employee_compensations').insert(rows);
+    if (insertError) {
+      setError(`${tr('فشل أتمتة الرواتب', 'Salary automation failed')}: ${insertError.message}`);
+      setWorking(false);
+      return;
+    }
+
+    setNote(tr(`تم توليد ${rows.length} راتب.`, `Generated ${rows.length} salaries.`));
     setWorking(false);
     await load();
   };

@@ -66,14 +66,55 @@ const AddEditExpenseModal: React.FC<{
         expense || { date: new Date().toISOString().split('T')[0], description: '', amount: 0, category: ExpenseCategory.MISC, supplierId: undefined, supplierInvoiceId: undefined }
     );
 
+    const resolveCategoryForSupplier = (supplierId?: string): ExpenseCategory | null => {
+        if (!supplierId) return null;
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier) return null;
+        if (supplier.type === 'Dental Lab') return ExpenseCategory.LAB_FEES;
+        if (supplier.type === 'Material Supplier') return ExpenseCategory.SUPPLIES;
+        return null;
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+
         if (name === 'amount') {
             const parsedValue = parseFloat(value);
-            setFormData({ ...formData, [name]: isNaN(parsedValue) ? 0 : parsedValue });
-        } else {
-            setFormData({ ...formData, [name]: value });
+            setFormData(prev => ({ ...prev, [name]: isNaN(parsedValue) ? 0 : parsedValue }));
+            return;
         }
+
+        if (name === 'supplierId') {
+            const normalizedSupplierId = value || undefined;
+            const autoCategory = resolveCategoryForSupplier(normalizedSupplierId);
+            setFormData(prev => ({
+                ...prev,
+                supplierId: normalizedSupplierId,
+                supplierInvoiceId: undefined,
+                ...(autoCategory ? { category: autoCategory } : {}),
+            }));
+            return;
+        }
+
+        if (name === 'supplierInvoiceId') {
+            const normalizedInvoiceId = value || undefined;
+            if (!normalizedInvoiceId) {
+                setFormData(prev => ({ ...prev, supplierInvoiceId: undefined }));
+                return;
+            }
+
+            const selectedInvoice = supplierInvoices.find(inv => inv.id === normalizedInvoiceId);
+            const autoCategory = resolveCategoryForSupplier(selectedInvoice?.supplierId);
+            setFormData(prev => ({
+                ...prev,
+                supplierInvoiceId: normalizedInvoiceId,
+                supplierId: selectedInvoice?.supplierId || prev.supplierId,
+                ...(autoCategory ? { category: autoCategory } : {}),
+            }));
+            return;
+        }
+
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -83,6 +124,20 @@ const AddEditExpenseModal: React.FC<{
             alert('Amount must be greater than 0');
             return;
         }
+
+        if (formData.supplierInvoiceId) {
+            const selectedInvoice = supplierInvoices.find(inv => inv.id === formData.supplierInvoiceId);
+            if (!selectedInvoice) {
+                alert(t('expenses.invalidInvoiceSelection'));
+                return;
+            }
+            const remainingBalance = getInvoiceBalance(selectedInvoice);
+            if (formData.amount > remainingBalance + 0.01) {
+                alert(t('expenses.invoicePaymentExceedsRemaining', { remaining: currencyFormatter.format(remainingBalance) }));
+                return;
+            }
+        }
+
         const expenseToSave = { ...formData };
         if (expenseToSave.supplierId === '') {
             delete expenseToSave.supplierId;
@@ -97,13 +152,17 @@ const AddEditExpenseModal: React.FC<{
     const unpaidInvoicesForSupplier = useMemo(() => {
         if (!formData.supplierId) return [];
         return supplierInvoices.filter(inv => 
-            inv.supplierId === formData.supplierId && inv.status === SupplierInvoiceStatus.UNPAID
+            inv.supplierId === formData.supplierId &&
+            (inv.status !== SupplierInvoiceStatus.PAID || inv.id === formData.supplierInvoiceId)
         );
-    }, [formData.supplierId, supplierInvoices]);
+    }, [formData.supplierId, formData.supplierInvoiceId, supplierInvoices]);
 
     const getInvoiceBalance = (invoice: SupplierInvoice) => {
-        const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-        return invoice.amount - totalPaid;
+        const editingExpenseId = 'id' in formData ? formData.id : undefined;
+        const totalPaid = invoice.payments
+            .filter(p => p.expenseId !== editingExpenseId)
+            .reduce((sum, p) => sum + p.amount, 0);
+        return Math.max(invoice.amount - totalPaid, 0);
     };
 
     return (

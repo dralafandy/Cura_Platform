@@ -295,6 +295,18 @@ BEGIN
 END;
 $$;
 
+-- Make RPC callable from Supabase/PostgREST authenticated sessions
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    GRANT EXECUTE ON FUNCTION public.generate_monthly_salaries(UUID, DATE) TO authenticated;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    GRANT EXECUTE ON FUNCTION public.generate_monthly_salaries(UUID, DATE) TO service_role;
+  END IF;
+END
+$$;
+
 -- =========================================================
 -- RLS Policies (safe / idempotent)
 -- =========================================================

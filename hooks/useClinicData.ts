@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import {
     Patient, Dentist, Appointment, DentalChartData, ToothStatus,
     Supplier, InventoryItem, Expense, TreatmentDefinition, TreatmentRecord,
-    LabCase, Payment, SupplierInvoice, ExpenseCategory, NotificationType, NotificationPriority, DoctorPayment, Prescription, PrescriptionItem, PatientAttachment, SupplierInvoiceAttachment, PaymentMethod, Clinic, TreatmentDoctorPercentage
+    LabCase, Payment, SupplierInvoice, SupplierInvoiceStatus, ExpenseCategory, NotificationType, NotificationPriority, DoctorPayment, Prescription, PrescriptionItem, PatientAttachment, SupplierInvoiceAttachment, PaymentMethod, Clinic, TreatmentDoctorPercentage
 } from '../types';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -396,13 +396,14 @@ export const useClinicData = (): ClinicData => {
             }));
             setInventoryItems(formattedInventoryItems);
         }
+        let formattedExpenses: Expense[] = [];
         if (expensesRes.data) {
             console.log('Setting expenses data:', expensesRes.data.length);
-            const formattedExpenses = expensesRes.data.map((expense: any) => ({
+            formattedExpenses = expensesRes.data.map((expense: any) => ({
                 id: expense.id,
                 date: expense.date,
                 description: expense.description,
-                amount: expense.amount,
+                amount: Number(expense.amount) || 0,
                 category: expense.category,
                 supplierId: expense.supplier_id,
                 supplierInvoiceId: expense.supplier_invoice_id,
@@ -507,17 +508,43 @@ export const useClinicData = (): ClinicData => {
         }
         if (supplierInvoicesRes.data) {
             console.log('Setting supplier invoices data:', supplierInvoicesRes.data.length);
-            const formattedSupplierInvoices = supplierInvoicesRes.data.map((invoice: any) => ({
-                id: invoice.id,
-                supplierId: invoice.supplier_id,
-                invoiceNumber: invoice.invoice_number,
-                invoiceDate: invoice.invoice_date,
-                dueDate: invoice.due_date,
-                amount: invoice.amount,
-                status: invoice.status,
-                items: invoice.items,
-                payments: invoice.payments
-            }));
+            const hasExpenseRows = Array.isArray(expensesRes.data);
+            const paymentsByInvoiceId = new Map<string, { expenseId: string; amount: number; date: string; }[]>();
+
+            if (hasExpenseRows) {
+                formattedExpenses.forEach((expense) => {
+                    if (!expense.supplierInvoiceId) return;
+                    const existing = paymentsByInvoiceId.get(expense.supplierInvoiceId) || [];
+                    existing.push({
+                        expenseId: expense.id,
+                        amount: Number(expense.amount) || 0,
+                        date: expense.date,
+                    });
+                    paymentsByInvoiceId.set(expense.supplierInvoiceId, existing);
+                });
+            }
+
+            const formattedSupplierInvoices = supplierInvoicesRes.data.map((invoice: any) => {
+                const derivedPayments = paymentsByInvoiceId.get(invoice.id) || [];
+                const normalizedPayments = hasExpenseRows ? derivedPayments : (invoice.payments || []);
+                const totalPaid = normalizedPayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                const invoiceAmount = Number(invoice.amount) || 0;
+                const normalizedStatus = totalPaid + 0.01 >= invoiceAmount
+                    ? SupplierInvoiceStatus.PAID
+                    : SupplierInvoiceStatus.UNPAID;
+
+                return {
+                    id: invoice.id,
+                    supplierId: invoice.supplier_id,
+                    invoiceNumber: invoice.invoice_number,
+                    invoiceDate: invoice.invoice_date,
+                    dueDate: invoice.due_date,
+                    amount: invoiceAmount,
+                    status: normalizedStatus,
+                    items: invoice.items || [],
+                    payments: normalizedPayments
+                };
+            });
             setSupplierInvoices(formattedSupplierInvoices);
 
             const formattedSupplierInvoiceAttachments = supplierInvoicesRes.data
@@ -734,6 +761,146 @@ export const useClinicData = (): ClinicData => {
         }
     };
 
+    const getSupplierExpenseCategory = (supplierType?: Supplier['type']): ExpenseCategory | null => {
+        if (supplierType === 'Dental Lab') return ExpenseCategory.LAB_FEES;
+        if (supplierType === 'Material Supplier') return ExpenseCategory.SUPPLIES;
+        return null;
+    };
+
+    const normalizeExpenseForLinkedInvoice = async (
+        expense: Pick<Expense, 'supplierId' | 'supplierInvoiceId' | 'category'>
+    ): Promise<Pick<Expense, 'supplierId' | 'supplierInvoiceId' | 'category'> | null> => {
+        if (!supabase) return null;
+        if (!expense.supplierInvoiceId) {
+            return {
+                supplierId: expense.supplierId,
+                supplierInvoiceId: expense.supplierInvoiceId,
+                category: expense.category
+            };
+        }
+
+        let linkedInvoice = supplierInvoices.find(inv => inv.id === expense.supplierInvoiceId);
+        if (!linkedInvoice) {
+            const { data: invoiceRow, error: invoiceError } = await supabase
+                .from('supplier_invoices')
+                .select('id, supplier_id, amount')
+                .eq('id', expense.supplierInvoiceId)
+                .single();
+
+            if (invoiceError || !invoiceRow) {
+                console.error('Unable to load linked supplier invoice:', invoiceError);
+                addNotification('Selected supplier invoice was not found.', NotificationType.ERROR);
+                return null;
+            }
+
+            linkedInvoice = {
+                id: invoiceRow.id,
+                supplierId: invoiceRow.supplier_id,
+                amount: Number(invoiceRow.amount) || 0,
+                invoiceDate: '',
+                status: SupplierInvoiceStatus.UNPAID,
+                items: [],
+                payments: []
+            };
+        }
+
+        let linkedSupplier = suppliers.find(supplier => supplier.id === linkedInvoice.supplierId);
+        if (!linkedSupplier) {
+            const { data: supplierRow, error: supplierError } = await supabase
+                .from('suppliers')
+                .select('id, type')
+                .eq('id', linkedInvoice.supplierId)
+                .single();
+
+            if (supplierError || !supplierRow) {
+                console.error('Unable to load supplier for linked invoice:', supplierError);
+                addNotification('Supplier for selected invoice was not found.', NotificationType.ERROR);
+                return null;
+            }
+
+            linkedSupplier = {
+                id: supplierRow.id,
+                type: supplierRow.type as Supplier['type'],
+                name: '',
+                contact_person: '',
+                phone: '',
+                email: ''
+            };
+        }
+
+        const forcedCategory = getSupplierExpenseCategory(linkedSupplier.type);
+        if (!forcedCategory) {
+            addNotification('Invoice-linked payments are allowed only for material suppliers or dental labs.', NotificationType.ERROR);
+            return null;
+        }
+
+        return {
+            supplierId: linkedInvoice.supplierId,
+            supplierInvoiceId: linkedInvoice.id,
+            category: forcedCategory
+        };
+    };
+
+    const syncSupplierInvoicePayments = async (invoiceId: string): Promise<void> => {
+        if (!supabase || !invoiceId) return;
+
+        const { data: invoiceRow, error: invoiceError } = await supabase
+            .from('supplier_invoices')
+            .select('id, amount')
+            .eq('id', invoiceId)
+            .single();
+
+        if (invoiceError || !invoiceRow) {
+            console.error('Unable to load invoice for payment sync:', invoiceError);
+            return;
+        }
+
+        const { data: linkedExpenses, error: expensesError } = await supabase
+            .from('expenses')
+            .select('id, amount, date')
+            .eq('supplier_invoice_id', invoiceId)
+            .order('date', { ascending: true });
+
+        if (expensesError) {
+            console.error('Unable to load linked expenses for invoice payment sync:', expensesError);
+            return;
+        }
+
+        const normalizedPayments = (linkedExpenses || []).map((linkedExpense: any) => ({
+            expenseId: linkedExpense.id,
+            amount: Number(linkedExpense.amount) || 0,
+            date: linkedExpense.date
+        }));
+
+        const totalPaid = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+        const invoiceAmount = Number(invoiceRow.amount) || 0;
+        const normalizedStatus = totalPaid + 0.01 >= invoiceAmount
+            ? SupplierInvoiceStatus.PAID
+            : SupplierInvoiceStatus.UNPAID;
+
+        const { error: updateError } = await supabase
+            .from('supplier_invoices')
+            .update({
+                payments: normalizedPayments,
+                status: normalizedStatus
+            })
+            .eq('id', invoiceId);
+
+        if (updateError) {
+            console.error('Unable to update supplier invoice payments:', updateError);
+            addNotification(updateError.message, NotificationType.ERROR);
+            return;
+        }
+
+        setSupplierInvoices((prev: SupplierInvoice[]) =>
+            prev.map((invoice: SupplierInvoice) =>
+                invoice.id === invoiceId
+                    ? { ...invoice, payments: normalizedPayments, status: normalizedStatus }
+                    : invoice
+            )
+        );
+    };
+
     // Delete functions
     const deletePatient = async (id: string) => {
         await deleteData('patients', id, setPatients);
@@ -751,7 +918,24 @@ export const useClinicData = (): ClinicData => {
         await deleteData('inventory_items', id, setInventoryItems);
     };
     const deleteExpense = async (id: string) => {
-        await deleteData('expenses', id, setExpenses);
+        if (!supabase) return;
+        const expenseToDelete = expenses.find(expense => expense.id === id);
+
+        const { error } = await supabase.from('expenses').delete().eq('id', id);
+        if (error) {
+            console.error(`Error deleting expense:`, error);
+            console.error('Error details:', error.details, error.hint, error.code);
+            addNotification(error.message, NotificationType.ERROR);
+            return;
+        }
+
+        setExpenses((prev: Expense[]) => prev.filter((item: Expense) => item.id !== id));
+
+        if (expenseToDelete?.supplierInvoiceId) {
+            await syncSupplierInvoicePayments(expenseToDelete.supplierInvoiceId);
+        }
+
+        await fetchData();
     };
     const deleteTreatmentDefinition = async (id: string) => {
         await deleteData('treatment_definitions', id, setTreatmentDefinitions);
@@ -1452,15 +1636,29 @@ export const useClinicData = (): ClinicData => {
         const activeClinic = await requireActiveClinic('expense');
         if (!activeClinic) return;
 
+        const normalizedLinkData = await normalizeExpenseForLinkedInvoice({
+            supplierId: e.supplierId,
+            supplierInvoiceId: e.supplierInvoiceId,
+            category: e.category
+        });
+        if (!normalizedLinkData) return;
+
+        const normalizedExpense: Omit<Expense, 'id'> = {
+            ...e,
+            supplierId: normalizedLinkData.supplierId,
+            supplierInvoiceId: normalizedLinkData.supplierInvoiceId,
+            category: normalizedLinkData.category
+        };
+
         const expenseData = {
-            date: e.date,
-            description: e.description,
-            amount: Number(e.amount) || 0,
-            category: e.category,
-            supplier_id: e.supplierId || null,
-            supplier_invoice_id: e.supplierInvoiceId || null,
-            method: e.method || null,
-            expense_receipt_image_url: e.expenseReceiptImageUrl || null,
+            date: normalizedExpense.date,
+            description: normalizedExpense.description,
+            amount: Number(normalizedExpense.amount) || 0,
+            category: normalizedExpense.category,
+            supplier_id: normalizedExpense.supplierId || null,
+            supplier_invoice_id: normalizedExpense.supplierInvoiceId || null,
+            method: normalizedExpense.method || null,
+            expense_receipt_image_url: normalizedExpense.expenseReceiptImageUrl || null,
             user_id: user.id,
             clinic_id: activeClinic.clinicId
         };
@@ -1474,22 +1672,46 @@ export const useClinicData = (): ClinicData => {
             addNotification(error.message, NotificationType.ERROR);
         } else if (newData) {
             console.log('Successfully added expense:', newData);
-            setExpenses((prev: Expense[]) => [...prev, ...newData as Expense[]]);
-            addNotification('Expense added successfully', NotificationType.SUCCESS);
-            if (e.supplierInvoiceId) {
-                  const expenseId = newData[0].id;
-                  const {data: invoice, error} = await supabase.from('supplier_invoices').select('*').eq('id', e.supplierInvoiceId).single();
-                  if (invoice) {
-                    const newPayments = [...(invoice.payments || []), { expenseId, amount: e.amount, date: e.date }];
-                    await updateData('supplier_invoices', {...invoice, payments: newPayments }, setSupplierInvoices);
-                  }
+            const formattedExpenses = newData.map((expense: any) => ({
+                id: expense.id,
+                date: expense.date,
+                description: expense.description,
+                amount: Number(expense.amount) || 0,
+                category: expense.category,
+                supplierId: expense.supplier_id,
+                supplierInvoiceId: expense.supplier_invoice_id,
+                method: expense.method,
+                expenseReceiptImageUrl: expense.expense_receipt_image_url
+            }));
+            setExpenses((prev: Expense[]) => [...prev, ...formattedExpenses]);
+
+            if (normalizedExpense.supplierInvoiceId) {
+                await syncSupplierInvoicePayments(normalizedExpense.supplierInvoiceId);
             }
+
+            await fetchData();
+            addNotification('Expense added successfully', NotificationType.SUCCESS);
         }
     };
     const updateExpense = async (e: Expense) => {
         if (!supabase) return;
 
-        const { id, supplierId, supplierInvoiceId, method, expenseReceiptImageUrl, ...rest } = e;
+        const existingExpense = expenses.find(expense => expense.id === e.id);
+        const normalizedLinkData = await normalizeExpenseForLinkedInvoice({
+            supplierId: e.supplierId,
+            supplierInvoiceId: e.supplierInvoiceId,
+            category: e.category
+        });
+        if (!normalizedLinkData) return;
+
+        const normalizedExpense: Expense = {
+            ...e,
+            supplierId: normalizedLinkData.supplierId,
+            supplierInvoiceId: normalizedLinkData.supplierInvoiceId,
+            category: normalizedLinkData.category
+        };
+
+        const { id, supplierId, supplierInvoiceId, method, expenseReceiptImageUrl, ...rest } = normalizedExpense;
         const supabaseData = {
             ...rest,
             supplier_id: supplierId || null,
@@ -1507,7 +1729,18 @@ export const useClinicData = (): ClinicData => {
             addNotification(error.message, NotificationType.ERROR);
         } else {
             console.log(`Successfully updated expense for id: ${id}`);
-            setExpenses((prev: Expense[]) => prev.map((item: Expense) => (item.id === id ? e : item)));
+            setExpenses((prev: Expense[]) => prev.map((item: Expense) => (item.id === id ? normalizedExpense : item)));
+
+            const invoiceIdsToSync = Array.from(new Set([
+                existingExpense?.supplierInvoiceId,
+                normalizedExpense.supplierInvoiceId
+            ].filter(Boolean))) as string[];
+
+            for (const invoiceId of invoiceIdsToSync) {
+                await syncSupplierInvoicePayments(invoiceId);
+            }
+
+            await fetchData();
         }
     };
 
@@ -1838,20 +2071,11 @@ export const useClinicData = (): ClinicData => {
     };
 
     const paySupplierInvoice = async (invoice: SupplierInvoice) => {
-        if (!supabase) return;
-        const totalPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-        const balance = invoice.amount - totalPaid;
-        if(balance <= 0) return;
-
-        const newExpense: Omit<Expense, 'id'> = {
-            date: new Date().toISOString().split('T')[0],
-            description: `Payment for invoice #${invoice.invoiceNumber || invoice.id.slice(-4)}`,
-            amount: balance,
-            category: ExpenseCategory.SUPPLIES,
-            supplierId: invoice.supplierId,
-            supplierInvoiceId: invoice.id,
-        };
-        await addExpense(newExpense);
+        console.warn('Direct invoice payment from suppliers screen is disabled. Use expenses screen instead.', invoice.id);
+        addNotification({
+            message: 'Invoice payments are now recorded from the Expenses screen only.',
+            type: NotificationType.WARNING
+        });
     };
 
     // Prescription Management

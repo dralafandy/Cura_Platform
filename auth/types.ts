@@ -338,6 +338,11 @@ export interface AuthContextType {
   hasAllPermissions: (permissions: Permission[]) => boolean;
   hasRole: (role: UserRole) => boolean;
   hasCustomPermission: (permission: Permission) => boolean;
+  // Backward compatibility aliases for legacy screens/components
+  checkPermission: (permission: Permission) => boolean;
+  checkAnyPermission: (permissions: Permission[]) => boolean;
+  checkAllPermissions: (permissions: Permission[]) => boolean;
+  checkCustomPermission: (permission: Permission) => boolean;
   
   // Helpers
   isAdmin: boolean;
