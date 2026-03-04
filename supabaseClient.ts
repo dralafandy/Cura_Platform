@@ -11,6 +11,17 @@ export const supabase: SupabaseClient | null =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
+export const createEphemeralSupabaseClient = (): SupabaseClient | null => {
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+};
+
 if (!supabase) {
     console.error(
         'Supabase client could not be initialized. Please check that the URL and anon key are valid in `frontend/supabaseClient.ts`.'

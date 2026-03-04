@@ -32,6 +32,10 @@ const BackendConfigMessage: React.FC = () => {
 const AuthApp: React.FC = () => {
   const { user, loading } = useAuth();
   const [showClinicRegistration, setShowClinicRegistration] = useState(false);
+  const isRecoveryFlow =
+    typeof window !== 'undefined' &&
+    (window.location.hash.toLowerCase().includes('type=recovery') ||
+      window.location.search.toLowerCase().includes('type=recovery'));
 
   if (loading) {
     return (
@@ -48,7 +52,7 @@ const AuthApp: React.FC = () => {
     return <BackendConfigMessage />;
   }
 
-  if (user) {
+  if (user && !isRecoveryFlow) {
     return <App />;
   }
 
@@ -62,7 +66,12 @@ const AuthApp: React.FC = () => {
     );
   }
 
-  return <LoginPage onRequestClinicRegistration={() => setShowClinicRegistration(true)} />;
+  return (
+    <LoginPage
+      onRequestClinicRegistration={() => setShowClinicRegistration(true)}
+      forceRecoveryMode={isRecoveryFlow}
+    />
+  );
 };
 
 export default AuthApp;

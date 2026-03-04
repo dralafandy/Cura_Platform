@@ -11,6 +11,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 import type { Session as SupabaseSession, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 import { Permission, UserRole, UserStatus } from './types';
+import { ROLE_PERMISSIONS } from '../utils/permissions';
 import type {
   User,
   LoginCredentials,
@@ -52,7 +53,7 @@ const EMPTY_AUTH_STATE: AuthStateWithClinic = {
   isSwitchingClinic: false,
 };
 
-const AUTH_OP_TIMEOUT_MS = 12000;
+const AUTH_OP_TIMEOUT_MS = 20000;
 
 const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
   return await new Promise<T>((resolve, reject) => {
@@ -94,60 +95,126 @@ const usernameFromEmail = (email?: string | null): string => {
   return base || `user_${Math.random().toString(36).slice(2, 10)}`;
 };
 
+const uniquePermissions = (permissions: Permission[]): Permission[] => {
+  return Array.from(new Set(permissions));
+};
+
+const fetchRolePermissionsFromDB = async (role: UserRole): Promise<Permission[]> => {
+  if (!supabase) {
+    return ROLE_PERMISSIONS[role] || [];
+  }
+
+  try {
+    let rolePermissions: Permission[] = [];
+    const { data: roleRow } = await supabase.from('roles').select('id').eq('name', role).maybeSingle();
+    if (roleRow?.id) {
+      const { data: rolePermsById } = await supabase
+        .from('role_permissions')
+        .select('permission')
+        .eq('role_id', roleRow.id);
+      rolePermissions = (rolePermsById || []).map((rp: any) => rp.permission as Permission);
+    }
+
+    if (rolePermissions.length > 0) {
+      return uniquePermissions(rolePermissions);
+    }
+  } catch (error) {
+    console.error('Error fetching role permissions:', error);
+  }
+
+  return ROLE_PERMISSIONS[role] || [];
+};
+
 /**
  * Get user permissions from database.
  */
-const fetchUserPermissionsFromDB = async (userId: string): Promise<Permission[]> => {
-  if (!supabase) return [];
+const fetchUserPermissionsFromDB = async (
+  userId: string,
+  context?: { role: UserRole; customPermissions: Permission[]; overrideMode: boolean },
+): Promise<Permission[]> => {
+  if (!supabase) {
+    if (!context) return [];
+    if (context.role === UserRole.ADMIN) return Object.values(Permission);
+    if (context.overrideMode) return uniquePermissions(context.customPermissions);
+    return uniquePermissions([...(ROLE_PERMISSIONS[context.role] || []), ...context.customPermissions]);
+  }
 
   try {
-    const { data: user, error: userError } = await supabase
-      .from('user_profiles')
-      .select('role, custom_permissions, override_permissions')
-      .eq('id', userId)
-      .single();
+    let role: UserRole;
+    let customPermissions: Permission[];
+    let overrideMode: boolean;
 
-    if (userError || !user) {
-      return [];
+    if (context) {
+      role = context.role;
+      customPermissions = context.customPermissions;
+      overrideMode = context.overrideMode;
+    } else {
+      const { data: user, error: userError } = await supabase
+        .from('user_profiles')
+        .select('role, custom_permissions, override_permissions')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        return [];
+      }
+
+      role = normalizeRole(user.role as string);
+      customPermissions = (user.custom_permissions || []) as Permission[];
+      overrideMode = user.override_permissions === true;
     }
-
-    const role = normalizeRole(user.role as string);
 
     if (role === UserRole.ADMIN) {
       return Object.values(Permission);
     }
 
-    const customPermissions: Permission[] = (user.custom_permissions || []) as Permission[];
-    const overrideMode = user.override_permissions === true;
-
     if (overrideMode) {
-      return customPermissions;
+      return uniquePermissions(customPermissions);
     }
 
-    const { data: rolePerms, error: byRoleNameError } = await supabase
-      .from('role_permissions')
-      .select('permission')
-      .eq('role_name', role);
+    const rolePermissions = await fetchRolePermissionsFromDB(role);
 
-    let rolePermissions: Permission[] = [];
-
-    if (!byRoleNameError && rolePerms) {
-      rolePermissions = rolePerms.map((rp: any) => rp.permission as Permission);
-    } else {
-      const { data: roleRow } = await supabase.from('roles').select('id').eq('name', role).maybeSingle();
-      if (roleRow?.id) {
-        const { data: rolePermsById } = await supabase
-          .from('role_permissions')
-          .select('permission')
-          .eq('role_id', roleRow.id);
-        rolePermissions = (rolePermsById || []).map((rp: any) => rp.permission as Permission);
-      }
-    }
-
-    return Array.from(new Set([...rolePermissions, ...customPermissions]));
+    return uniquePermissions([...rolePermissions, ...customPermissions]);
   } catch (error) {
     console.error('Error fetching permissions:', error);
     return [];
+  }
+};
+
+const fetchUserPermissionContextFromDB = async (
+  userId: string,
+): Promise<{ role: UserRole; customPermissions: Permission[]; overrideMode: boolean } | null> => {
+  if (!supabase || !userId) return null;
+
+  try {
+    const profileById = await supabase
+      .from('user_profiles')
+      .select('role, custom_permissions, override_permissions')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let row: any = profileById.data;
+    if (profileById.error || !row) {
+      const profileByAuthId = await supabase
+        .from('user_profiles')
+        .select('role, custom_permissions, override_permissions')
+        .eq('auth_id', userId)
+        .maybeSingle();
+      if (!profileByAuthId.error && profileByAuthId.data) {
+        row = profileByAuthId.data;
+      }
+    }
+
+    if (!row) return null;
+
+    return {
+      role: normalizeRole(row.role),
+      customPermissions: (row.custom_permissions || []) as Permission[],
+      overrideMode: row.override_permissions === true,
+    };
+  } catch (error) {
+    console.error('Error fetching user permission context:', error);
+    return null;
   }
 };
 
@@ -361,16 +428,28 @@ const isTenantAccessValid = async (userId: string): Promise<boolean> => {
   }
 };
 
-const mapProfileToUser = (profile: DBUserProfile, authUser: SupabaseUser): User => {
+const mapProfileToUser = (
+  profile: DBUserProfile,
+  authUser: SupabaseUser,
+  permissions: Permission[],
+  customPermissions: Permission[],
+  overrideMode: boolean,
+): User => {
   const role = normalizeRole(profile.role);
   const status = normalizeStatus(profile.status);
 
   return {
     id: profile.id,
+    user_id: profile.id,
+    auth_id: profile.auth_id || authUser.id,
+    dentist_id: (profile as any)?.dentist_id || null,
     email: profile.email || authUser.email,
     username: profile.username || usernameFromEmail(profile.email || authUser.email),
     role,
     status,
+    custom_permissions: customPermissions,
+    override_permissions: overrideMode,
+    permissions,
     firstName: undefined,
     lastName: undefined,
     phone: undefined,
@@ -497,7 +576,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        const permissions = await fetchUserPermissionsFromDB(profile.id);
         const accessibleClinics = await fetchUserClinicsFromDB(profile.id);
 
         const preferredClinicId = localStorage.getItem('currentClinicId');
@@ -509,6 +587,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ) ||
           accessibleClinics.find(c => c.isDefault) ||
           accessibleClinics[0];
+
+        const profileRole = normalizeRole(profile.role);
+        const role =
+          profileRole === UserRole.ADMIN
+            ? UserRole.ADMIN
+            : normalizeRole(selectedAccess?.roleAtClinic || profile.role);
+        const mergedCustomPermissions = uniquePermissions([
+          ...((profile.custom_permissions || []) as Permission[]),
+          ...((selectedAccess?.customPermissions || []) as Permission[]),
+        ]);
+        const overrideMode = profile.override_permissions === true;
+        const permissions = await fetchUserPermissionsFromDB(profile.id, {
+          role,
+          customPermissions: mergedCustomPermissions,
+          overrideMode,
+        });
 
         let currentClinic: Clinic | null = null;
         let currentBranch: ClinicBranch | null = null;
@@ -533,7 +627,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.removeItem('currentBranchId');
         }
 
-        const role = normalizeRole(profile.role);
         const status = normalizeStatus(profile.status);
         const user = mapProfileToUser(
           {
@@ -542,6 +635,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             status,
           },
           authUser,
+          permissions,
+          mergedCustomPermissions,
+          overrideMode,
         );
 
         if (!isActive()) return;
@@ -551,8 +647,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isLoading: false,
           user,
           permissions,
-          customPermissions: (profile.custom_permissions || []) as Permission[],
-          overrideMode: profile.override_permissions === true,
+          customPermissions: mergedCustomPermissions,
+          overrideMode,
           role,
           token: session.access_token,
           currentClinic,
@@ -590,11 +686,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw error;
         }
 
-        await withTimeout(
-          hydrateFromSession(data.session, () => active),
-          AUTH_OP_TIMEOUT_MS,
-          'hydrateFromSession(init)',
-        );
+        await hydrateFromSession(data.session, () => active);
       } catch (error) {
         console.error('Auth init failed:', error);
         if (!active) return;
@@ -610,18 +702,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     }
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        await withTimeout(
-          hydrateFromSession(session, () => active),
-          AUTH_OP_TIMEOUT_MS,
-          'hydrateFromSession(authChange)',
-        );
-      } catch (error) {
-        console.error('Auth state change hydration failed:', error);
-        if (!active) return;
-        clearAuthState();
-      }
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Do not await heavy async work directly in this callback to avoid auth lock contention.
+      setTimeout(async () => {
+        try {
+          await hydrateFromSession(session, () => active);
+        } catch (error) {
+          console.error('Auth state change hydration failed:', error);
+          if (!active) return;
+          clearAuthState();
+        }
+      }, 0);
     });
 
     return () => {
@@ -737,6 +828,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const clinicSettings = await fetchClinicSettingsFromDB(clinicId, branchId);
 
+        const scopedAccess = authState.accessibleClinics.find(
+          c => c.clinicId === clinicId && (!branchId || c.branchId === branchId),
+        );
+        const permissionContext = authState.user?.id
+          ? await fetchUserPermissionContextFromDB(authState.user.id)
+          : null;
+        const profileRole = permissionContext?.role || authState.user?.role || authState.role || UserRole.DOCTOR;
+        const role =
+          profileRole === UserRole.ADMIN
+            ? UserRole.ADMIN
+            : normalizeRole(scopedAccess?.roleAtClinic || profileRole);
+        const customPermissions = uniquePermissions([
+          ...((permissionContext?.customPermissions || []) as Permission[]),
+          ...((scopedAccess?.customPermissions || []) as Permission[]),
+        ]);
+        const overrideMode = permissionContext?.overrideMode ?? authState.overrideMode;
+        const permissions = authState.user?.id
+          ? await fetchUserPermissionsFromDB(authState.user.id, {
+              role,
+              customPermissions,
+              overrideMode,
+            })
+          : authState.permissions;
+
         localStorage.setItem('currentClinicId', clinic.id);
         if (branch?.id) {
           localStorage.setItem('currentBranchId', branch.id);
@@ -746,6 +861,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setAuthState(prev => ({
           ...prev,
+          role,
+          permissions,
+          customPermissions,
+          overrideMode,
+          user: prev.user
+            ? {
+                ...prev.user,
+                role,
+                custom_permissions: customPermissions,
+                override_permissions: overrideMode,
+                permissions,
+              }
+            : prev.user,
           currentClinic: clinic,
           currentBranch: branch,
           clinicSettings,
@@ -756,7 +884,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
     },
-    [authState.accessibleClinics],
+    [authState.accessibleClinics, authState.permissions, authState.overrideMode, authState.role, authState.user],
   );
 
   const switchBranch = useCallback(
@@ -790,7 +918,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const hasClinicPermission = useCallback(
     (permission: ClinicPermission): boolean => {
-      return authState.permissions.includes(permission as unknown as Permission);
+      const mappedPermission = (() => {
+        switch (permission) {
+          case ClinicPermission.CLINIC_VIEW:
+            return Permission.SETTINGS_VIEW;
+          case ClinicPermission.CLINIC_CREATE:
+          case ClinicPermission.CLINIC_UPDATE:
+          case ClinicPermission.CLINIC_DELETE:
+          case ClinicPermission.CLINIC_MANAGE_SETTINGS:
+            return Permission.SETTINGS_EDIT;
+          case ClinicPermission.BRANCH_VIEW:
+            return Permission.CLINIC_BRANCH_VIEW;
+          case ClinicPermission.BRANCH_CREATE:
+            return Permission.CLINIC_BRANCH_CREATE;
+          case ClinicPermission.BRANCH_UPDATE:
+          case ClinicPermission.BRANCH_MANAGE_HOURS:
+            return Permission.CLINIC_BRANCH_EDIT;
+          case ClinicPermission.BRANCH_DELETE:
+            return Permission.CLINIC_BRANCH_DELETE;
+          case ClinicPermission.USER_CLINIC_ASSIGN:
+          case ClinicPermission.USER_CLINIC_REMOVE:
+          case ClinicPermission.USER_CLINIC_UPDATE_ROLE:
+            return Permission.USER_MANAGEMENT_EDIT;
+          default:
+            return null;
+        }
+      })();
+
+      if (!mappedPermission) return false;
+      return authState.permissions.includes(mappedPermission);
     },
     [authState.permissions],
   );

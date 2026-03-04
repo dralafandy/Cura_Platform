@@ -39,123 +39,10 @@ export interface PermissionUser {
  * Default permissions for each role - single source of truth
  */
 export const RBAC_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: Object.values(Permission),
-  
-  [UserRole.DOCTOR]: [
-    // Patient Management
-    Permission.PATIENT_VIEW,
-    Permission.PATIENT_CREATE,
-    Permission.PATIENT_EDIT,
-    
-    // Appointments
-    Permission.APPOINTMENT_VIEW,
-    Permission.APPOINTMENT_CREATE,
-    Permission.APPOINTMENT_EDIT,
-    
-    // Treatments
-    Permission.TREATMENT_VIEW,
-    Permission.TREATMENT_CREATE,
-    Permission.TREATMENT_EDIT,
-    
-    // Prescriptions
-    Permission.PRESCRIPTION_VIEW,
-    Permission.PRESCRIPTION_CREATE,
-    Permission.PRESCRIPTION_EDIT,
-    
-    // Lab Cases
-    Permission.LAB_CASE_VIEW,
-    Permission.LAB_CASE_MANAGE,
-    
-    // Reports
-    Permission.REPORTS_VIEW,
-    Permission.REPORTS_GENERATE,
-    
-    // Notifications
-    Permission.NOTIFICATIONS_VIEW,
-    Permission.NOTIFICATIONS_MANAGE,
-    
-    // Finance (limited)
-    Permission.FINANCE_VIEW,
-    Permission.FINANCE_ACCOUNTS_VIEW,
-    
-    // Settings (view only)
-    Permission.SETTINGS_VIEW,
-  ],
-  
-  [UserRole.ASSISTANT]: [
-    // Patient Management
-    Permission.PATIENT_VIEW,
-    Permission.PATIENT_CREATE,
-    Permission.PATIENT_EDIT,
-    
-    // Appointments
-    Permission.APPOINTMENT_VIEW,
-    Permission.APPOINTMENT_CREATE,
-    Permission.APPOINTMENT_EDIT,
-    
-    // Treatments
-    Permission.TREATMENT_VIEW,
-    Permission.TREATMENT_CREATE,
-    Permission.TREATMENT_EDIT,
-    
-    // Prescriptions
-    Permission.PRESCRIPTION_VIEW,
-    Permission.PRESCRIPTION_CREATE,
-    Permission.PRESCRIPTION_EDIT,
-    
-    // Lab Cases
-    Permission.LAB_CASE_VIEW,
-    Permission.LAB_CASE_MANAGE,
-    
-    // Inventory
-    Permission.INVENTORY_VIEW,
-    Permission.INVENTORY_MANAGE,
-    Permission.INVENTORY_LOW_STOCK_ALERT,
-    
-    // Suppliers
-    Permission.SUPPLIER_VIEW,
-    
-    // Reports
-    Permission.REPORTS_VIEW,
-    
-    // Notifications
-    Permission.NOTIFICATIONS_VIEW,
-    Permission.NOTIFICATIONS_MANAGE,
-    
-    // Finance (limited)
-    Permission.FINANCE_VIEW,
-    Permission.FINANCE_EXPENSES_MANAGE,
-    
-    // Settings (view only)
-    Permission.SETTINGS_VIEW,
-  ],
-  
-  [UserRole.RECEPTIONIST]: [
-    // Patient Management
-    Permission.PATIENT_VIEW,
-    Permission.PATIENT_CREATE,
-    Permission.PATIENT_EDIT,
-    
-    // Appointments (full access)
-    Permission.APPOINTMENT_VIEW,
-    Permission.APPOINTMENT_CREATE,
-    Permission.APPOINTMENT_EDIT,
-    Permission.APPOINTMENT_DELETE,
-    
-    // Finance (limited)
-    Permission.FINANCE_VIEW,
-    Permission.FINANCE_EXPENSES_MANAGE,
-    
-    // Reports
-    Permission.REPORTS_VIEW,
-    
-    // Notifications
-    Permission.NOTIFICATIONS_VIEW,
-    Permission.NOTIFICATIONS_MANAGE,
-    
-    // Settings (view only)
-    Permission.SETTINGS_VIEW,
-  ],
+  [UserRole.ADMIN]: [...(ROLE_PERMISSIONS[UserRole.ADMIN] || [])],
+  [UserRole.DOCTOR]: [...(ROLE_PERMISSIONS[UserRole.DOCTOR] || [])],
+  [UserRole.ASSISTANT]: [...(ROLE_PERMISSIONS[UserRole.ASSISTANT] || [])],
+  [UserRole.RECEPTIONIST]: [...(ROLE_PERMISSIONS[UserRole.RECEPTIONIST] || [])],
 };
 
 // ============================================================================
@@ -190,6 +77,15 @@ export class PermissionManager {
     // Admin bypass
     if (this.options.adminBypass && this.user.role === UserRole.ADMIN) {
       return true;
+    }
+
+    // If effective permissions are injected from auth context, prefer them.
+    if (this.user.permissions && Array.isArray(this.user.permissions) && this.user.permissions.length > 0) {
+      const permissionString = permission.toString().toLowerCase();
+      return this.user.permissions.some((p: string) => {
+        const normalized = p.toLowerCase();
+        return normalized === permissionString || normalized.replace(/_/g, '') === permissionString.replace(/_/g, '');
+      });
     }
 
     // Check custom overrides first
@@ -430,6 +326,19 @@ export class PermissionManager {
   getEffectivePermissions(): Permission[] {
     if (!this.user) {
       return [];
+    }
+
+    if (this.user.permissions && Array.isArray(this.user.permissions) && this.user.permissions.length > 0) {
+      const explicit = new Set<Permission>();
+      this.user.permissions.forEach((p: string) => {
+        const upperPermission = p.toUpperCase().replace(/ /g, '_') as Permission;
+        if (Object.values(Permission).includes(upperPermission)) {
+          explicit.add(upperPermission);
+        }
+      });
+      if (explicit.size > 0) {
+        return Array.from(explicit);
+      }
     }
 
     // Admin has all permissions

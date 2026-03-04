@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { UserProfile, Permission } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   hasPermission, 
   hasAnyPermission, 
@@ -17,10 +18,18 @@ import {
  * - Role-based helpers
  * - Backward compatible with old permissions array
  */
-export const usePermissions = (userProfile: UserProfile | null) => {
+type PermissionProfile =
+  | Pick<UserProfile, 'role' | 'custom_permissions' | 'override_permissions' | 'permissions'>
+  | null
+  | undefined;
+
+export const usePermissions = (userProfile?: PermissionProfile) => {
+  const { userProfile: authUserProfile } = useAuth();
+  const effectiveProfile = (userProfile ?? (authUserProfile as PermissionProfile)) ?? null;
+
   const permissions = useMemo(() => {
     // If no user profile, return default permissions
-    if (!userProfile) {
+    if (!effectiveProfile) {
       return {
         checkPermission: () => false,
         checkAnyPermission: () => false,
@@ -37,9 +46,9 @@ export const usePermissions = (userProfile: UserProfile | null) => {
       };
     }
 
-    const userRole = userProfile.role;
-    const customPermissions = userProfile.custom_permissions || [];
-    const overridePermissions = userProfile.override_permissions || false;
+    const userRole = effectiveProfile.role;
+    const customPermissions = effectiveProfile.custom_permissions || [];
+    const overridePermissions = effectiveProfile.override_permissions || false;
 
     // Check if user is admin
     const isAdmin = userRole === 'ADMIN';
@@ -57,10 +66,10 @@ export const usePermissions = (userProfile: UserProfile | null) => {
       if (hasNewPermission) return true;
       
       // Backward compatibility: check old permissions array
-      if (userProfile.permissions && Array.isArray(userProfile.permissions)) {
+      if (effectiveProfile.permissions && Array.isArray(effectiveProfile.permissions)) {
         // Convert old permission string to new enum if needed
         const oldPermissionString = permission.toString().toLowerCase();
-        return userProfile.permissions.some((p: string) => 
+        return effectiveProfile.permissions.some((p: string) => 
           p.toLowerCase() === oldPermissionString || 
           p.toLowerCase().replace(/_/g, '') === oldPermissionString.replace(/_/g, '')
         );
@@ -106,7 +115,7 @@ export const usePermissions = (userProfile: UserProfile | null) => {
       customPermissions,
       overridePermissions,
     };
-  }, [userProfile]);
+  }, [effectiveProfile]);
 
   return permissions;
 };

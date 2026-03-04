@@ -314,6 +314,18 @@ export const useClinicData = (): ClinicData => {
         const userClinicIds = await getUserClinicIds();
         console.log('User accessible clinic IDs:', userClinicIds);
 
+        const activeClinicAccess = (accessibleClinics || []).filter((entry: any) =>
+            Boolean(entry?.isActive && currentClinic?.id && entry.clinicId === currentClinic.id)
+        );
+        const hasClinicWideAccess = activeClinicAccess.some((entry: any) => !entry?.branchId);
+        const accessibleBranchIds = Array.from(
+            new Set(
+                activeClinicAccess
+                    .map((entry: any) => entry?.branchId)
+                    .filter((id: any): id is string => Boolean(id))
+            )
+        );
+
         const tables = [
             'patients', 'dentists', 'appointments', 'suppliers', 'inventory_items',
             'expenses', 'treatment_definitions', 'treatment_records', 'lab_cases',
@@ -350,6 +362,16 @@ export const useClinicData = (): ClinicData => {
             'inventory_items',
             'dentists',
         ]);
+        const branchScopedTables = new Set<string>([
+            'patients',
+            'appointments',
+            'treatment_records',
+            'payments',
+            'expenses',
+            'suppliers',
+            'inventory_items',
+            'dentists',
+        ]);
 
         // Build queries with clinic filtering where applicable
         const queries = tables.map((table: string) => {
@@ -364,6 +386,15 @@ export const useClinicData = (): ClinicData => {
             if (currentClinic?.id && clinicScopedTables.has(table)) {
                 // For active clinic, filter by current clinic only
                 query = query.eq('clinic_id', currentClinic.id);
+                if (currentBranch?.id && branchScopedTables.has(table)) {
+                    query = query.eq('branch_id', currentBranch.id);
+                } else if (!currentBranch?.id && branchScopedTables.has(table) && !hasClinicWideAccess) {
+                    if (accessibleBranchIds.length > 0) {
+                        query = query.in('branch_id', accessibleBranchIds);
+                    } else {
+                        query = query.limit(0);
+                    }
+                }
             } else if (userClinicIds.length > 0 && clinicScopedTables.has(table)) {
                 // Fallback: if no currentClinic, use accessible clinics
                 query = query.in('clinic_id', userClinicIds);
@@ -745,13 +776,19 @@ export const useClinicData = (): ClinicData => {
             console.log('All data fetched successfully');
         }
         setIsLoading(false);
-    }, [user, addNotification, getUserClinicIds, resolvePatientAttachmentUrl, currentClinic, currentBranch]);
+    }, [user, addNotification, getUserClinicIds, resolvePatientAttachmentUrl, currentClinic, currentBranch, accessibleClinics]);
 
     useEffect(() => {
-        if (supabase && currentClinic) {
-            fetchData();
+        if (!supabase || !user) {
+            setIsLoading(false);
+            return;
         }
-    }, [fetchData, currentClinic]);
+
+        fetchData().catch((error) => {
+            console.error('Failed to fetch clinic data:', error);
+            setIsLoading(false);
+        });
+    }, [fetchData, user]);
 
     // Load clinic settings from localStorage
     useEffect(() => {
@@ -797,6 +834,9 @@ export const useClinicData = (): ClinicData => {
         const insertPayload: Record<string, unknown> = { ...data, user_id: user.id };
         if (activeClinic.clinicId) {
             insertPayload.clinic_id = activeClinic.clinicId;
+        }
+        if (activeClinic.branchId && ['patients', 'appointments', 'treatment_records', 'payments', 'expenses', 'suppliers', 'inventory_items', 'dentists'].includes(table)) {
+            insertPayload.branch_id = activeClinic.branchId;
         }
         console.log(`Adding data to table: ${table}`, insertPayload);
         const { data: newData, error } = await supabase.from(table).insert(insertPayload).select();
@@ -1209,7 +1249,8 @@ export const useClinicData = (): ClinicData => {
             dental_chart: createEmptyChart(),
             images: patient.images || [],
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('User ID:', user.id);
@@ -1295,7 +1336,7 @@ export const useClinicData = (): ClinicData => {
         const activeClinic = await requireActiveClinic('doctor');
         if (!activeClinic) return;
 
-        const payload = { ...doctor, user_id: user.id, clinic_id: activeClinic.clinicId };
+        const payload = { ...doctor, user_id: user.id, clinic_id: activeClinic.clinicId, branch_id: activeClinic.branchId };
         console.log('Adding doctor with data:', payload);
         const { data: newData, error } = await supabase.from('dentists').insert(payload).select();
         if (error) {
@@ -1327,7 +1368,8 @@ export const useClinicData = (): ClinicData => {
             end_time: endTime,
             reminder_time: reminderTime,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding appointment with data:', JSON.stringify(supabaseData, null, 2));
@@ -1427,7 +1469,8 @@ export const useClinicData = (): ClinicData => {
             affected_teeth: affectedTeeth || [],
             total_treatment_cost: totalTreatmentCost,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding treatment record with data:', supabaseData);
@@ -1544,7 +1587,8 @@ export const useClinicData = (): ClinicData => {
             doctor_share: doctorShare,
             payment_receipt_image_url: payment.paymentReceiptImageUrl || null,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
 
@@ -1633,7 +1677,8 @@ export const useClinicData = (): ClinicData => {
             email: s.email || null,
             type: s.type,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding supplier with data:', supplierData);
@@ -1666,7 +1711,8 @@ export const useClinicData = (): ClinicData => {
             min_stock_level: Number(i.minStockLevel) || 0,
             expiry_date: i.expiryDate || null,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding inventory item with data:', JSON.stringify(inventoryData, null, 2));
@@ -1748,7 +1794,8 @@ export const useClinicData = (): ClinicData => {
             method: normalizedExpense.method || null,
             expense_receipt_image_url: normalizedExpense.expenseReceiptImageUrl || null,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding expense with data:', expenseData);
@@ -1844,7 +1891,8 @@ export const useClinicData = (): ClinicData => {
             doctor_percentage: Number(d.doctorPercentage) || 0,
             clinic_percentage: Number(d.clinicPercentage) || 0,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding treatment definition with data:', treatmentData);
@@ -1999,7 +2047,8 @@ export const useClinicData = (): ClinicData => {
             lab_cost: Number(lc.labCost) || 0,
             notes: lc.notes || null,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding lab case with data:', labCaseData);
@@ -2071,7 +2120,8 @@ export const useClinicData = (): ClinicData => {
             items: i.items || [],
             payments: [],
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding supplier invoice with data:', invoiceData);
@@ -2178,7 +2228,8 @@ export const useClinicData = (): ClinicData => {
             prescription_date: prescription.prescriptionDate,
             notes: prescription.notes || null,
             user_id: user.id,
-            clinic_id: activeClinic.clinicId
+            clinic_id: activeClinic.clinicId,
+            branch_id: activeClinic.branchId
         };
 
         console.log('Adding prescription with data:', prescriptionData);

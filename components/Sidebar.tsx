@@ -244,7 +244,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'reports', label: t('sidebar.reports'), icon: StatisticsIcon, permission: Permission.REPORTS_VIEW, adminOnly: false },
       { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: Permission.SETTINGS_VIEW, adminOnly: false },
       { id: 'about', label: 'عن البرنامج', icon: AboutIcon, permission: null, adminOnly: false },
-      { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
+      { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: null, adminOnly: true },
       { id: 'clinicManagement', label: 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW },
     ];
 

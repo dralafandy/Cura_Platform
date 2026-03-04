@@ -59,11 +59,13 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
       };
     }
     if (access.branchId && access.branchName) {
-      acc[access.clinicId].branches.push({
-        id: access.branchId,
-        name: access.branchName,
-        clinicId: access.clinicId,
-      } as ClinicBranch);
+      if (!acc[access.clinicId].branches.some((b) => b.id === access.branchId)) {
+        acc[access.clinicId].branches.push({
+          id: access.branchId,
+          name: access.branchName,
+          clinicId: access.clinicId,
+        } as ClinicBranch);
+      }
     }
     return acc;
   }, {} as Record<string, { clinic: Clinic; branches: ClinicBranch[]; access: UserClinicAccess }>);
@@ -111,29 +113,65 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
               </p>
             </div>
             
-            {Object.values(groupedClinics).map(({ clinic, branches }) => (
-              <div key={clinic.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0">
-                <button
-                  onClick={() => branches.length === 0 ? handleClinicSelect(clinic.id) : handleClinicSelect(clinic.id, branches[0]?.id)}
-                  className={`w-full px-3 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${
-                    currentClinic?.id === clinic.id ? 'bg-cyan-50 dark:bg-cyan-900/20' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      currentClinic?.id === clinic.id ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-600'
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      currentClinic?.id === clinic.id 
-                        ? 'text-cyan-700 dark:text-cyan-300' 
-                        : 'text-slate-700 dark:text-slate-200'
-                    }`}>
-                      {clinic.name}
-                    </span>
-                  </div>
-                </button>
-              </div>
-            ))}
+              {Object.values(groupedClinics).map(({ clinic, branches }) => (
+                <div key={clinic.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0">
+                  <button
+                    onClick={() => handleClinicSelect(clinic.id)}
+                    className={`w-full px-3 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${
+                      currentClinic?.id === clinic.id ? 'bg-cyan-50 dark:bg-cyan-900/20' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        currentClinic?.id === clinic.id ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-600'
+                      }`} />
+                      <span className={`text-sm font-medium ${
+                        currentClinic?.id === clinic.id 
+                          ? 'text-cyan-700 dark:text-cyan-300' 
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}>
+                        {clinic.name}
+                      </span>
+                    </div>
+                  </button>
+                  
+                  {/* Branches List */}
+                  {showBranches && branches.length > 0 && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      <button
+                        onClick={() => handleClinicSelect(clinic.id)}
+                        className={`w-full px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors ${
+                          currentClinic?.id === clinic.id && !currentBranch?.id
+                            ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M3 12h18M3 19h18" />
+                        </svg>
+                        All Data / جميع البيانات
+                      </button>
+                      {branches.map(branch => (
+                        <button
+                          key={branch.id}
+                          onClick={() => handleClinicSelect(clinic.id, branch.id)}
+                          className={`w-full px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors ${
+                            currentClinic?.id === clinic.id && currentBranch?.id === branch.id
+                              ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {branch.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             
             {Object.keys(groupedClinics).length === 0 && (
               <div className="px-3 py-4 text-center">
@@ -206,7 +244,7 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
               <div key={clinic.id} className="px-2">
                 {/* Clinic Header */}
                 <button
-                  onClick={() => branches.length === 0 ? handleClinicSelect(clinic.id) : handleClinicSelect(clinic.id, branches[0]?.id)}
+                  onClick={() => handleClinicSelect(clinic.id)}
                   className={`w-full px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
                     currentClinic?.id === clinic.id
                       ? 'bg-cyan-50 dark:bg-cyan-900/20'
@@ -247,6 +285,19 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
                 {/* Branches List */}
                 {showBranches && currentClinic?.id === clinic.id && branches.length > 0 && (
                   <div className="ml-4 mt-1 space-y-1">
+                    <button
+                      onClick={() => handleClinicSelect(clinic.id)}
+                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors ${
+                        !currentBranch?.id
+                          ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M3 12h18M3 19h18" />
+                      </svg>
+                      All Data / جميع البيانات
+                    </button>
                     {branches.map(branch => (
                       <button
                         key={branch.id}

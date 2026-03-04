@@ -375,12 +375,20 @@ export const permissionService = {
 
       if (!user) return false;
 
+      const { data: roleRow } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', user.role)
+        .maybeSingle();
+
+      if (!roleRow?.id) return false;
+
       const { data: rolePerm } = await supabase
         .from('role_permissions')
         .select('permission')
-        .eq('role_name', user.role)
+        .eq('role_id', roleRow.id)
         .eq('permission', permission)
-        .single();
+        .maybeSingle();
 
       return !!rolePerm;
     } catch (error) {

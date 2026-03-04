@@ -41,6 +41,12 @@ export interface User {
   avatar_url?: string;
   role: UserRole;
   status: UserStatus;
+  user_id?: string;
+  auth_id?: string;
+  dentist_id?: string | null;
+  custom_permissions?: Permission[];
+  override_permissions?: boolean;
+  permissions?: Permission[];
   lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;

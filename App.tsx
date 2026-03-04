@@ -10,7 +10,7 @@ import Header from './components/Header';
 import UserManagement from './components/UserManagement';
 import { useClinicData, ClinicData } from './hooks/useClinicData';
 import MobileDrawer from './components/MobileDrawer';
-import { View, Appointment, LabCaseStatus, PatientDetailTab } from './types';
+import { View, Appointment, LabCaseStatus, PatientDetailTab, UserRole } from './types';
 import { useI18n } from './hooks/useI18n';
 import { useAuth } from './contexts/AuthContext';
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
@@ -93,7 +93,7 @@ const AppContent: React.FC = () => {
           <Scheduler clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'doctors':
-        return hasPermission(Permission.PATIENT_VIEW) ? (
+        return hasPermission(Permission.DOCTOR_VIEW) ? (
           <DoctorList clinicData={clinicData} setCurrentView={setCurrentView} setSelectedDoctorId={setSelectedDoctorId} />
         ) : <AccessDenied />;
       case 'employees':
@@ -136,7 +136,7 @@ const AppContent: React.FC = () => {
         return <PatientDetailsPanel patient={patient} onBack={() => setCurrentView('patients')} onEdit={() => setCurrentView('patients')} clinicData={clinicData} />;
 
       case 'doctor-details':
-        if (!hasPermission(Permission.PATIENT_VIEW)) return <AccessDenied />;
+        if (!hasPermission(Permission.DOCTOR_VIEW)) return <AccessDenied />;
         const resolvedDoctorId =
           selectedDoctorId ||
           (user as any)?.dentist_id ||
@@ -150,7 +150,7 @@ const AppContent: React.FC = () => {
           <Settings clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'userManagement':
-        return hasPermission(Permission.USER_MANAGEMENT_VIEW) ? (
+        return user?.role === UserRole.ADMIN ? (
           <UserManagement />
         ) : <AccessDenied />;
       case 'test-patient-cards':

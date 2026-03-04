@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, createEphemeralSupabaseClient } from '../supabaseClient';
 import { UserProfile, UserRole, UserStatus, NotificationType, Permission, Dentist } from '../types';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +33,13 @@ interface FormErrors {
   newPassword?: string;
   confirmPassword?: string;
   dentist_id?: string;
+  clinic_id?: string;
+  role?: string;
+}
+
+interface ClinicOption {
+  id: string;
+  name: string;
 }
 
 // Role badge colors map - single source of truth
@@ -51,13 +58,16 @@ const STATUS_BADGE_COLORS: Record<UserStatus, string> = {
 };
 
 const UserManagement: React.FC = () => {
-  const { user: currentUser, userProfile, isAdmin: isUserAdmin } = useAuth();
+  const { user: currentUser, userProfile, currentClinic, currentBranch, accessibleClinics } = useAuth();
   const { addNotification } = useNotification();
   const { theme } = useTheme();
   const currentUserId = currentUser?.id ?? null;
+  const isAdmin = userProfile?.role === UserRole.ADMIN;
+  const canViewUserManagement = isAdmin;
+  const canManageUsers = isAdmin;
 
-  // Account-isolation mode: each signed-in user can only access their own profile.
-  const SELF_ONLY_MODE = true;
+  // Users without management permissions remain in self-only scope.
+  const SELF_ONLY_MODE = !canManageUsers;
   
   // Check if supabase is available
   if (!supabase) {
@@ -92,6 +102,7 @@ const UserManagement: React.FC = () => {
   const [changingRoleFor, setChangingRoleFor] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userId: string | null; type: 'single' | 'bulk' }>({ isOpen: false, userId: null, type: 'single' });
   const [oauthUnlinkConfirm, setOauthUnlinkConfirm] = useState<{ isOpen: boolean; userId: string | null; provider: string | null }>({ isOpen: false, userId: null, provider: null });
+  const [selectedClinicId, setSelectedClinicId] = useState('');
 
   // Form state
 
@@ -101,7 +112,7 @@ const UserManagement: React.FC = () => {
     password: '',
     newPassword: '',
     confirmPassword: '',
-    role: UserRole.ADMIN,
+    role: UserRole.ASSISTANT,
     status: UserStatus.ACTIVE,
     dentist_id: null,
   });
@@ -109,10 +120,43 @@ const UserManagement: React.FC = () => {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  // Check if user is admin - use userProfile for role info
-  const isAdmin = userProfile?.role === UserRole.ADMIN;
-
   const usersPerPage = USERS_PER_PAGE;
+
+  const clinicOptions = useMemo<ClinicOption[]>(() => {
+    const map = new Map<string, string>();
+    (accessibleClinics || []).forEach((entry: any) => {
+      if (entry?.clinicId) {
+        map.set(entry.clinicId, entry.clinicName || `Clinic ${entry.clinicId.slice(0, 8)}`);
+      }
+    });
+    if (currentClinic?.id) {
+      map.set(currentClinic.id, currentClinic.name || `Clinic ${currentClinic.id.slice(0, 8)}`);
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [accessibleClinics, currentClinic?.id, currentClinic?.name]);
+
+  const selectedBranchId = useMemo<string | null>(() => {
+    if (!selectedClinicId) return null;
+    if (currentClinic?.id === selectedClinicId && currentBranch?.id) return currentBranch.id;
+
+    const scoped = (accessibleClinics || []).filter((entry: any) => entry?.clinicId === selectedClinicId && entry?.isActive);
+    if (scoped.length === 0) return null;
+
+    const preferred = scoped.find((entry: any) => entry?.isDefault && entry?.branchId) || scoped.find((entry: any) => entry?.branchId);
+    return preferred?.branchId || null;
+  }, [selectedClinicId, currentClinic?.id, currentBranch?.id, accessibleClinics]);
+
+  useEffect(() => {
+    if (clinicOptions.length === 0) {
+      setSelectedClinicId('');
+      return;
+    }
+    setSelectedClinicId(prev => {
+      if (prev && clinicOptions.some(c => c.id === prev)) return prev;
+      if (currentClinic?.id && clinicOptions.some(c => c.id === currentClinic.id)) return currentClinic.id;
+      return clinicOptions[0].id;
+    });
+  }, [clinicOptions, currentClinic?.id]);
 
   const isSelfTarget = useCallback((targetUserId?: string | null): boolean => {
     return Boolean(currentUserId && targetUserId && targetUserId === currentUserId);
@@ -141,7 +185,7 @@ const UserManagement: React.FC = () => {
     return message;
   };
 
-  // Fetch users from database with server-side pagination
+  // Fetch users from database with pagination.
   const fetchUsers = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
@@ -152,42 +196,61 @@ const UserManagement: React.FC = () => {
       }
       const from = (page - 1) * usersPerPage;
       const to = from + usersPerPage - 1;
-      
-      // Build query with filters
+
+      if (!SELF_ONLY_MODE) {
+        if (!selectedClinicId) {
+          setUsers([]);
+          setTotalUsers(0);
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('admin_list_users_for_clinic', {
+          p_clinic_id: selectedClinicId,
+          p_include_admins: true,
+          p_branch_id: selectedBranchId,
+        });
+        if (error) throw error;
+
+        const rows = (Array.isArray(data) ? data : []) as any[];
+        const filtered = rows.filter((user) => {
+          const matchesSearch = !searchTerm || String(user.username || '').toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+          const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+          return matchesSearch && matchesRole && matchesStatus;
+        });
+
+        const paginated = filtered.slice(from, to + 1).map((user: any) => ({
+          ...user,
+          user_id: user.user_id || user.id,
+        }));
+
+        setUsers(paginated as UserProfile[]);
+        setTotalUsers(filtered.length);
+        return;
+      }
+
+      // Self-only mode fallback.
       let query = supabase
         .from('user_profiles')
         .select('id, user_id, auth_id, username, email, role, status, dentist_id, created_at, updated_at, last_login, custom_permissions, override_permissions', { count: 'exact' });
-      
-      // Apply search filter
+
       if (searchTerm) {
         query = query.ilike('username', `%${searchTerm}%`);
       }
-      
-      // Apply role filter
       if (roleFilter !== 'ALL') {
         query = query.eq('role', roleFilter);
       }
-      
-      // Apply status filter
       if (statusFilter !== 'ALL') {
         query = query.eq('status', statusFilter);
       }
 
-      if (SELF_ONLY_MODE) {
-        query = query.or(`id.eq.${currentUserId},auth_id.eq.${currentUserId}`);
-      }
-      
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      query = query.or(`id.eq.${currentUserId},auth_id.eq.${currentUserId}`);
 
+      const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
       if (error) throw error;
-      // Map data to ensure user_id is present (it may be returned as id)
+
       const rawData = data || [];
-      const mappedData = rawData.map((user: any) => ({
-        ...user,
-        user_id: user.user_id || user.id
-      }));
+      const mappedData = rawData.map((user: any) => ({ ...user, user_id: user.user_id || user.id }));
       setUsers(mappedData as UserProfile[]);
       setTotalUsers(count || 0);
     } catch (error) {
@@ -195,7 +258,7 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, searchTerm, roleFilter, statusFilter, usersPerPage]);
+  }, [currentUserId, searchTerm, roleFilter, selectedClinicId, selectedBranchId, statusFilter, usersPerPage, SELF_ONLY_MODE]);
 
   useEffect(() => {
     fetchUsers(currentPage);
@@ -238,10 +301,18 @@ const UserManagement: React.FC = () => {
 
     // Email validation (only for new users)
     if (!editingUser) {
+      if (!selectedClinicId) {
+        errors.clinic_id = 'Clinic is required';
+      }
+
       if (!formData.email.trim()) {
         errors.email = 'Email is required';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         errors.email = 'Email is invalid';
+      }
+
+      if (formData.role === UserRole.ADMIN) {
+        errors.role = 'Only non-admin users can be created from this page';
       }
 
       // Password validation (only for new users) - stronger policy
@@ -281,7 +352,7 @@ const UserManagement: React.FC = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData, editingUser, isResettingPassword]);
+  }, [formData, editingUser, isResettingPassword, selectedClinicId]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -323,15 +394,21 @@ const UserManagement: React.FC = () => {
     if (SELF_ONLY_MODE) {
       throw new Error('Creating additional users is disabled while account isolation is active.');
     }
+    if (!selectedClinicId) {
+      throw new Error('Please select a clinic');
+    }
+    if (formData.role === UserRole.ADMIN) {
+      throw new Error('Only non-admin users can be created from this page.');
+    }
 
     try {
-      const currentSession = await supabase.auth.getSession();
-      const currentAccessToken = currentSession.data.session?.access_token;
-      const currentRefreshToken = currentSession.data.session?.refresh_token;
-      const currentUserId = currentSession.data.session?.user?.id;
-
       const email = formData.email.trim().toLowerCase();
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const isolatedSupabase = createEphemeralSupabaseClient();
+      if (!isolatedSupabase) {
+        throw new Error('Failed to initialize isolated auth client');
+      }
+
+      const { data: authData, error: authError } = await isolatedSupabase.auth.signUp({
         email,
         password: formData.password,
         options: {
@@ -349,50 +426,31 @@ const UserManagement: React.FC = () => {
         throw new Error('Failed to create user. Email may already be registered.');
       }
 
-      const profilePayload = {
-        id: authData.user.id,
-        auth_id: authData.user.id,
-        user_id: authData.user.id,
-        email,
-        username: formData.username.trim(),
-        role: formData.role,
-        status: formData.status,
-        dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
-        updated_at: new Date().toISOString(),
-      };
+      const requiresEmailConfirmation = !authData.session && !authData.user.email_confirmed_at;
 
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update(profilePayload)
-        .eq('id', authData.user.id);
-
-      if (profileError) {
-        const { error: upsertError } = await supabase
-          .from('user_profiles')
-          .upsert(profilePayload, { onConflict: 'id' });
-        if (upsertError) {
-          if (upsertError.code === '23505') {
-            throw new Error('Username already exists');
-          }
-          throw upsertError;
-        }
+      const { error: linkError } = await supabase.rpc('admin_create_non_admin_user_for_clinic', {
+        p_auth_user_id: authData.user.id,
+        p_username: formData.username.trim(),
+        p_email: email,
+        p_role: formData.role,
+        p_status: formData.status,
+        p_clinic_id: selectedClinicId,
+        p_branch_id: selectedBranchId,
+        p_dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
+        p_is_default: true,
+      });
+      if (linkError) {
+        throw new Error(linkError.message || 'Failed to link user to clinic');
       }
 
-      // If signUp switched the current session, restore the admin session.
-      if (
-        authData.session &&
-        currentAccessToken &&
-        currentRefreshToken &&
-        currentUserId &&
-        authData.user.id !== currentUserId
-      ) {
-        await supabase.auth.setSession({
-          access_token: currentAccessToken,
-          refresh_token: currentRefreshToken,
+      if (requiresEmailConfirmation) {
+        addNotification({
+          message: 'User created, but email confirmation is required before first login.',
+          type: NotificationType.WARNING,
         });
+      } else {
+        addNotification({ message: 'User created successfully', type: NotificationType.SUCCESS });
       }
-
-      addNotification({ message: 'User created successfully', type: NotificationType.SUCCESS });
     } catch (error) {
       handleError(error, 'Failed to create user');
       throw error; // Re-throw for form handling
@@ -401,7 +459,7 @@ const UserManagement: React.FC = () => {
 
   // Update existing user
   const handleUpdateUser = async () => {
-    if (!isSelfTarget(editingUser?.id)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(editingUser?.id)) {
       notifySelfOnlyViolation('Updating users');
       return;
     }
@@ -467,7 +525,7 @@ const UserManagement: React.FC = () => {
   const confirmUnlinkOAuth = async () => {
     const { userId, provider } = oauthUnlinkConfirm;
     if (!userId || !provider) return;
-    if (!isSelfTarget(userId)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(userId)) {
       notifySelfOnlyViolation('Unlinking OAuth');
       setOauthUnlinkConfirm({ isOpen: false, userId: null, provider: null });
       return;
@@ -496,7 +554,7 @@ const UserManagement: React.FC = () => {
 
   // Edit user
   const handleEdit = (userProfile: UserProfile) => {
-    if (!isSelfTarget(userProfile.id)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(userProfile.id)) {
       notifySelfOnlyViolation('Editing users');
       return;
     }
@@ -526,7 +584,7 @@ const UserManagement: React.FC = () => {
   const confirmDelete = async () => {
     const userId = deleteConfirm.userId;
     if (!userId) return;
-    if (!isSelfTarget(userId)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(userId)) {
       notifySelfOnlyViolation('Deleting users');
       setDeleteConfirm({ isOpen: false, userId: null, type: 'single' });
       return;
@@ -569,7 +627,7 @@ const UserManagement: React.FC = () => {
       password: '',
       newPassword: '',
       confirmPassword: '',
-      role: UserRole.ADMIN,
+      role: UserRole.ASSISTANT,
       status: UserStatus.ACTIVE,
       dentist_id: null,
     });
@@ -582,6 +640,13 @@ const UserManagement: React.FC = () => {
     if (SELF_ONLY_MODE) {
       addNotification({
         message: 'Creating additional users is disabled while account isolation is active.',
+        type: NotificationType.WARNING,
+      });
+      return;
+    }
+    if (clinicOptions.length === 0) {
+      addNotification({
+        message: 'No clinic found. Please create or assign a clinic first.',
         type: NotificationType.WARNING,
       });
       return;
@@ -615,7 +680,7 @@ const UserManagement: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, statusFilter, selectedClinicId]);
 
   // Bulk selection handlers
   const handleSelectUser = (userId: string) => {
@@ -717,7 +782,7 @@ const UserManagement: React.FC = () => {
 
   // Handle quick role change from dropdown
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
-    if (!isSelfTarget(userId)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(userId)) {
       notifySelfOnlyViolation('Changing roles');
       return;
     }
@@ -767,7 +832,7 @@ const UserManagement: React.FC = () => {
 
   // Handle opening the edit permissions modal
   const handleEditPermissions = (userProfile: UserProfile) => {
-    if (!isSelfTarget(userProfile.id)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(userProfile.id)) {
       notifySelfOnlyViolation('Editing permissions');
       return;
     }
@@ -805,7 +870,7 @@ const UserManagement: React.FC = () => {
   // Handle saving custom permissions
   const handleSaveCustomPermissions = async () => {
     if (!editingPermissionsUser) return;
-    if (!isSelfTarget(editingPermissionsUser.id)) {
+    if (SELF_ONLY_MODE && !isSelfTarget(editingPermissionsUser.id)) {
       notifySelfOnlyViolation('Saving permissions');
       return;
     }
@@ -885,8 +950,8 @@ const UserManagement: React.FC = () => {
     );
   }
 
-  // Access denied for non-admins
-  if (!isAdmin) {
+  // Access denied only when user lacks view permission entirely
+  if (!canViewUserManagement) {
     return (
       <div className="p-6">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -918,9 +983,9 @@ const UserManagement: React.FC = () => {
             {!SELF_ONLY_MODE && (
               <button
                 onClick={openCreateModal}
-                disabled={!isAdmin}
+                disabled={!canManageUsers}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!isAdmin ? 'Only admins can create users' : 'Add New User'}
+                title={!canManageUsers ? 'You do not have permission to create users' : 'Add New User'}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -937,9 +1002,37 @@ const UserManagement: React.FC = () => {
           </div>
         )}
 
+        {!SELF_ONLY_MODE && (
+          <div className={`${theme === 'dark' ? 'bg-blue-900/20 border-blue-700 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'} border rounded-lg p-4 mb-6`}>
+            New users are created as non-admin and linked to the selected clinic only.
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {!SELF_ONLY_MODE && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Clinic Scope</label>
+                <select
+                  value={selectedClinicId}
+                  onChange={(e) => setSelectedClinicId(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                  }`}
+                >
+                  {clinicOptions.length === 0 ? (
+                    <option value="">No clinics available</option>
+                  ) : (
+                    clinicOptions.map((clinic) => (
+                      <option key={clinic.id} value={clinic.id}>
+                        {clinic.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Search Users</label>
               <div className="relative">
@@ -1262,7 +1355,7 @@ const UserManagement: React.FC = () => {
                   </div>
 
                   {!editingUser && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
                         <label className="block text-sm font-medium mb-2">
                           Email *
@@ -1298,6 +1391,29 @@ const UserManagement: React.FC = () => {
                           <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
                         )}
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Clinic *
+                        </label>
+                        <select
+                          value={selectedClinicId}
+                          onChange={(e) => setSelectedClinicId(e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            formErrors.clinic_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          } ${theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-white'}`}
+                        >
+                          <option value="">Select clinic</option>
+                          {clinicOptions.map((clinic) => (
+                            <option key={clinic.id} value={clinic.id}>
+                              {clinic.name}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.clinic_id && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.clinic_id}</p>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1321,11 +1437,14 @@ const UserManagement: React.FC = () => {
                         theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                       }`}
                     >
-                      <option value={UserRole.ADMIN}>Admin</option>
+                      {editingUser && <option value={UserRole.ADMIN}>Admin</option>}
                       <option value={UserRole.DOCTOR}>Doctor</option>
                       <option value={UserRole.ASSISTANT}>Assistant</option>
                       <option value={UserRole.RECEPTIONIST}>Receptionist</option>
                     </select>
+                    {formErrors.role && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.role}</p>
+                    )}
                   </div>
 
                   {formData.role === UserRole.DOCTOR && (
