@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({
   isMobileDrawerOpen,
   setIsMobileDrawerOpen
 }) => {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, direction } = useI18n();
   const { userProfile, logout, isAdmin } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -507,7 +507,11 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* User Dropdown - Modern Glassmorphism Card */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-3 w-72 max-w-[calc(100vw-1rem)] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-slate-400/20 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-700/50 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 overflow-hidden">
+                  <div
+                    className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-slate-400/20 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-700/50 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 overflow-hidden max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-[calc(env(safe-area-inset-top)+7.25rem)] max-sm:w-auto max-sm:max-h-[72vh] max-sm:overflow-y-auto sm:absolute sm:mt-3 sm:w-72 sm:max-w-[calc(100vw-1rem)] ${
+                      direction === 'rtl' ? 'sm:left-0' : 'sm:right-0'
+                    }`}
+                  >
 
                     {/* Decorative top gradient bar */}
                     <div className={`h-1.5 w-full bg-gradient-to-r ${getRoleColor()}`}></div>
