@@ -5,8 +5,7 @@ import { useI18n } from '../../hooks/useI18n';
 import { useAuth } from '../../contexts/AuthContext';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
 import { openPrintWindow } from '../../utils/print';
-import { View } from '../../types';
-import { FINANCIAL_ACCOUNTS_PERMISSIONS } from '../../utils/permissions';
+import { View, Permission } from '../../types';
 import FinancialSummary from './FinancialSummary';
 import RevenueTab from './RevenueTab';
 import ExpensesTab from './ExpensesTab';
@@ -34,7 +33,7 @@ interface FinancialAccountsProps {
 
 const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView }) => {
   const { t, locale } = useI18n();
-  const { userProfile } = useAuth();
+  const { hasPermission } = useAuth();
   const { filters: reportsFilters, resetFilters } = useReportsFilters();
   const {
     payments,
@@ -110,7 +109,7 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
   };
 
   // Permission check
-  if (!userProfile?.permissions?.includes(FINANCIAL_ACCOUNTS_PERMISSIONS.VIEW_FINANCIAL_ACCOUNTS)) {
+  if (!hasPermission(Permission.FINANCE_ACCOUNTS_VIEW)) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center py-8">

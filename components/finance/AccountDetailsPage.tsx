@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useI18n } from '../../hooks/useI18n';
 import { useAuth } from '../../contexts/AuthContext';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
-import { ACCOUNT_DETAILS_PERMISSIONS } from '../../utils/permissions';
+import { Permission } from '../../types';
 import FinancialFilters from './FinancialFilters';
 import AccountDetailsTab from './AccountDetailsTab';
 import PrintableAccountDetails from './PrintableAccountDetails';
 
 const AccountDetailsPage: React.FC = () => {
   const { t, locale } = useI18n();
-  const { userProfile } = useAuth();
+  const { hasPermission } = useAuth();
   const { filters: reportsFilters, resetFilters } = useReportsFilters();
   
   const [filters, setFilters] = useState({
@@ -29,7 +29,7 @@ const AccountDetailsPage: React.FC = () => {
 
   const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
-  if (!userProfile?.permissions?.includes(ACCOUNT_DETAILS_PERMISSIONS.VIEW_ACCOUNT_DETAILS)) {
+  if (!hasPermission(Permission.FINANCE_ACCOUNTS_VIEW)) {
     return <div className="text-center py-8 text-slate-700 dark:text-slate-300">{t('common.accessDenied')}</div>;
   }
 

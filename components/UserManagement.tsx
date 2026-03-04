@@ -58,7 +58,7 @@ const STATUS_BADGE_COLORS: Record<UserStatus, string> = {
 };
 
 const UserManagement: React.FC = () => {
-  const { user: currentUser, userProfile, currentClinic, currentBranch, accessibleClinics } = useAuth();
+  const { user: currentUser, userProfile, currentClinic, currentBranch, accessibleClinics, refreshSession } = useAuth();
   const { addNotification } = useNotification();
   const { theme } = useTheme();
   const currentUserId = currentUser?.id ?? null;
@@ -793,20 +793,27 @@ const UserManagement: React.FC = () => {
       return;
     }
 
+    if (!selectedClinicId) {
+      addNotification({ message: 'Please select a clinic first', type: NotificationType.ERROR });
+      return;
+    }
+
     // Optimistic update
     const oldUsers = [...users];
     setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     setChangingRoleFor(userId);
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ 
-          role: newRole,
-          dentist_id: newRole === UserRole.DOCTOR ? undefined : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+      const currentRow = oldUsers.find(u => u.id === userId);
+      const dentistIdForRole = newRole === UserRole.DOCTOR ? (currentRow?.dentist_id || null) : null;
+
+      const { error } = await supabase.rpc('admin_update_user_role_for_scope', {
+        p_target_user_id: userId,
+        p_new_role: newRole,
+        p_clinic_id: selectedClinicId,
+        p_branch_id: selectedBranchId,
+        p_dentist_id: dentistIdForRole,
+      });
 
       if (error) throw error;
       
@@ -874,17 +881,20 @@ const UserManagement: React.FC = () => {
       notifySelfOnlyViolation('Saving permissions');
       return;
     }
+    if (!selectedClinicId) {
+      addNotification({ message: 'Please select a clinic first', type: NotificationType.ERROR });
+      return;
+    }
     
     setIsSavingPermissions(true);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ 
-          custom_permissions: customPermissions,
-          override_permissions: overridePermissions,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingPermissionsUser.id);
+      const { error } = await supabase.rpc('admin_update_user_permissions_for_scope', {
+        p_target_user_id: editingPermissionsUser.id,
+        p_custom_permissions: customPermissions,
+        p_override_permissions: overridePermissions,
+        p_clinic_id: selectedClinicId,
+        p_branch_id: selectedBranchId,
+      });
 
       if (error) throw error;
       
@@ -896,6 +906,7 @@ const UserManagement: React.FC = () => {
       setShowEditPermissionsModal(false);
       setEditingPermissionsUser(null);
       await fetchUsers(currentPage);
+      await refreshSession();
     } catch (error) {
       handleError(error, 'Failed to save custom permissions');
     } finally {

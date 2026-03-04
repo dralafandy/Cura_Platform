@@ -1,15 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { useClinicData } from '../../hooks/useClinicData';
-import { DoctorPayment, Dentist } from '../../types';
+import { DoctorPayment, Dentist, Permission } from '../../types';
 import { useI18n } from '../../hooks/useI18n';
 import { useAuth } from '../../contexts/AuthContext';
-import { DOCTOR_PERMISSIONS } from '../../utils/permissions';
 import AddDoctorPaymentModal from './AddDoctorPaymentModal';
 import PrintableDoctorStatement from './PrintableDoctorStatement';
 
 const DoctorAccountsManagement: React.FC<{}> = () => {
    const { t } = useI18n();
-   const { userProfile } = useAuth();
+   const { hasPermission } = useAuth();
    const clinicData = useClinicData();
    const { doctorPayments, dentists, addDoctorPayment, updateDoctorPayment, deleteDoctorPayment } = clinicData;
    const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,7 +30,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
    };
 
    const handleEdit = (payment: DoctorPayment) => {
-     if (!checkPermission(Permission.FINANCE_DISCOUNT_EDIT)) {
+     if (!hasPermission(Permission.FINANCE_PAYMENT_EDIT)) {
        return;
      }
      setEditingPayment(payment);
@@ -40,7 +39,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
    };
 
    const handleDelete = async (id: string) => {
-     if (!checkPermission(Permission.FINANCE_DISCOUNT_DELETE)) {
+     if (!hasPermission(Permission.FINANCE_PAYMENT_DELETE)) {
        return;
      }
      if (window.confirm(t('common.confirmDelete'))) {
@@ -66,7 +65,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
      return dentist ? dentist.name : t('common.unknown');
    };
 
-   if (!userProfile?.permissions?.includes(DOCTOR_PERMISSIONS.VIEW_DOCTOR_ACCOUNTS)) {
+   if (!hasPermission(Permission.FINANCE_ACCOUNTS_VIEW)) {
      return <div className="text-center py-8">{t('common.accessDenied')}</div>;
    }
 
@@ -113,7 +112,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
                    {payment.notes || '-'}
                  </td>
                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                   {checkPermission(Permission.FINANCE_DISCOUNT_EDIT) && (
+                   {hasPermission(Permission.FINANCE_PAYMENT_EDIT) && (
                      <button
                        onClick={() => handleEdit(payment)}
                        className="text-primary hover:text-primary-dark mr-4"
@@ -121,7 +120,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
                        {t('common.edit')}
                      </button>
                    )}
-                   {checkPermission(Permission.FINANCE_DISCOUNT_DELETE) && (
+                   {hasPermission(Permission.FINANCE_PAYMENT_DELETE) && (
                      <button
                        onClick={() => handleDelete(payment.id)}
                        className="text-red-600 hover:text-red-900"

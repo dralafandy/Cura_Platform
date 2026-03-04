@@ -150,7 +150,7 @@ const AppContent: React.FC = () => {
           <Settings clinicData={clinicData} />
         ) : <AccessDenied />;
       case 'userManagement':
-        return user?.role === UserRole.ADMIN ? (
+        return hasPermission(Permission.USER_MANAGEMENT_VIEW) ? (
           <UserManagement />
         ) : <AccessDenied />;
       case 'test-patient-cards':
