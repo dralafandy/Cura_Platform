@@ -251,7 +251,7 @@ const AppContent: React.FC = () => {
               isMobileDrawerOpen={isMobileDrawerOpen}
               setIsMobileDrawerOpen={setIsMobileDrawerOpen}
             />
-            <main className="app-main mobile-pro-main flex-1 min-w-0 bg-neutral dark:bg-slate-900 p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6 print:p-0 print:block">
+            <main className="app-main mobile-pro-main flex-1 min-w-0 bg-neutral dark:bg-slate-900 p-3 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6 print:p-0 print:block scroll-pb-24">
               <div className="view-stage w-full max-w-[1800px] mx-auto animate-fade-in">
                 {renderView()}
               </div>

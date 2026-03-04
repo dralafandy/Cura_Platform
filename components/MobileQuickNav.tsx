@@ -112,7 +112,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
   }, [candidateItems, hasPermission]);
 
   return (
-    <nav className="mobile-quick-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/90 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90 dark:shadow-[0_-12px_30px_rgba(2,6,23,0.62)] md:hidden">
+    <nav className="mobile-quick-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/90 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90 dark:shadow-[0_-12px_30px_rgba(2,6,23,0.62)] md:hidden" style={{ height: 'auto', minHeight: 'calc(3.5rem + env(safe-area-inset-bottom))' }}>
       <div className="mx-auto flex w-full max-w-xl items-center justify-between px-1.5 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {visibleItems.map(item => {
           const isActive = currentView === item.id;

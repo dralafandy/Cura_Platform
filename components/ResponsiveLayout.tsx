@@ -90,7 +90,9 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     insuranceUnified: 'Insurance Unified',
     reports: 'Reports',
     publicBooking: 'Public Booking',
-    pendingReservations: 'Pending Reservations'
+    pendingReservations: 'Pending Reservations',
+    about: 'About',
+    clinicManagement: 'Clinic Management'
   }), []);
 
   // Get subtitle for current view
@@ -203,7 +205,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 bg-neutral-light dark:bg-slate-900 p-3 pb-24 overflow-y-auto overscroll-y-contain">
+      <main className="flex-1 bg-neutral-light dark:bg-slate-900 p-3 pb-28 overflow-y-auto overscroll-y-contain scroll-pb-28">
         {children}
       </main>
 

@@ -1127,3 +1127,133 @@ iframe {
     opacity: 1;
   }
 }
+
+/* ========================================
+   MOBILE TEXT OVERLAP GUARD
+   ======================================== */
+@media (max-width: 767px) {
+  /* Keep long labels from colliding in tight controls */
+  .mobile-ui-pro .mobile-pro-main :where(button, a, [role="button"]) {
+    white-space: normal;
+    line-height: 1.25;
+    max-width: 100%;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(p, span, label, strong, h1, h2, h3, h4) {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Many pages use truncate/nowrap utilities that can break Arabic on phones */
+  .mobile-ui-pro .mobile-pro-main :where(.truncate) {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(.whitespace-nowrap, .text-nowrap) {
+    white-space: normal !important;
+  }
+
+  /* Many pages use this pattern for mobile toolbars */
+  .mobile-ui-pro .mobile-pro-main :where(.flex[class*="md:flex-row"]) {
+    align-items: stretch;
+    row-gap: 0.6rem;
+    column-gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(.flex[class*="md:flex-row"] > *) {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(.flex[class*="md:flex-row"] > .sm\:w-auto, .flex[class*="md:flex-row"] > .md\:w-auto, .flex[class*="md:flex-row"] > .w-auto) {
+    width: 100% !important;
+  }
+
+  /* Neutralize aggressive min-width utilities that force overflow on mobile */
+  .mobile-ui-pro .mobile-pro-main :where([class*="min-w-["]) {
+    min-width: 0 !important;
+  }
+
+  /* Chips/badges and compact controls should wrap if text is long */
+  .mobile-ui-pro .mobile-pro-main :where(.rounded-full, .badge, [class*="px-"][class*="py-"]) {
+    max-width: 100%;
+  }
+
+  /* Slightly smaller headings on phone to reduce crowding */
+  .mobile-ui-pro .mobile-pro-main :where(.text-2xl) {
+    font-size: 1.3rem !important;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(.text-xl) {
+    font-size: 1.15rem !important;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(td, th) {
+    white-space: normal;
+    vertical-align: top;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(.overflow-hidden) {
+    overflow-x: hidden;
+  }
+}
+
+/* ========================================
+   MOBILE FORM OVERFLOW GUARD
+   ======================================== */
+@media (max-width: 767px) {
+  .mobile-ui-pro .mobile-pro-main :where(form, [role="form"]) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(form *, [role="form"] *) {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea
+  ) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"]
+  ) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding-inline-end: 0.6rem;
+    font-size: 16px;
+  }
+
+  /* Third-party date wrappers */
+  .mobile-ui-pro .mobile-pro-main :where(.react-datepicker-wrapper, .react-datepicker__input-container) {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Keep form rows from forcing horizontal overflow */
+  .mobile-ui-pro .mobile-pro-main :where(form .flex, form .grid) {
+    min-width: 0;
+  }
+
+  .mobile-ui-pro .mobile-pro-main :where(form .flex > *, form .grid > *) {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
