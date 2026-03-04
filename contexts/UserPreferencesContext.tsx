@@ -114,12 +114,12 @@ export interface UserPreferences {
 // Default preferences
 const defaultPreferences: UserPreferences = {
   pageViews: {
-    inventory: 'grid',
-    patients: 'grid',
-    doctors: 'grid',
-    suppliers: 'grid',
+    inventory: 'list',
+    patients: 'list',
+    doctors: 'list',
+    suppliers: 'list',
     purchaseOrders: 'list',
-    expenses: 'grid',
+    expenses: 'list',
     appointments: 'list',
     treatments: 'list',
     prescriptions: 'list',
@@ -212,6 +212,21 @@ const UserPreferencesContext = createContext<UserPreferencesContextType | undefi
 
 // Storage key
 const STORAGE_KEY = 'curasoft_user_preferences';
+const PAGE_VIEW_OVERRIDE_KEY = 'curasoft_page_view_overrides_v1';
+const MOBILE_MEDIA_QUERY = '(max-width: 767px)';
+
+type DeviceViewBucket = 'mobile' | 'desktop';
+type DevicePageViewOverrides = Record<DeviceViewBucket, Partial<PageViewPreferences>>;
+
+const getDeviceViewBucket = (): DeviceViewBucket => {
+  if (typeof window === 'undefined') return 'desktop';
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches ? 'mobile' : 'desktop';
+};
+
+const getDefaultPageViewForDevice = (bucket: DeviceViewBucket): ViewMode => {
+  // Mobile should default to cards (grid), desktop/tablet to list.
+  return bucket === 'mobile' ? 'grid' : 'list';
+};
 
 // Provider component
 interface UserPreferencesProviderProps {
@@ -395,11 +410,79 @@ export const useUserPreferences = (): UserPreferencesContextType => {
 // Hook for getting/setting a specific page view
 export const usePageView = (page: keyof PageViewPreferences): [ViewMode, (view: ViewMode) => void] => {
   const { preferences, updatePageView } = useUserPreferences();
-  const view = preferences.pageViews[page];
+  const [deviceBucket, setDeviceBucket] = useState<DeviceViewBucket>(() => getDeviceViewBucket());
+  const [deviceOverrides, setDeviceOverrides] = useState<DevicePageViewOverrides>(() => {
+    const emptyOverrides: DevicePageViewOverrides = { mobile: {}, desktop: {} };
+    if (typeof window === 'undefined') return emptyOverrides;
+
+    try {
+      const raw = localStorage.getItem(PAGE_VIEW_OVERRIDE_KEY);
+      if (!raw) return emptyOverrides;
+      const parsed = JSON.parse(raw) as Partial<DevicePageViewOverrides>;
+      return {
+        mobile: parsed?.mobile || {},
+        desktop: parsed?.desktop || {},
+      };
+    } catch (error) {
+      console.error('Failed to parse page view overrides:', error);
+      return emptyOverrides;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+    const handleChange = () => {
+      setDeviceBucket(mediaQuery.matches ? 'mobile' : 'desktop');
+    };
+
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  const activeDeviceView =
+    deviceOverrides[deviceBucket]?.[page] ?? getDefaultPageViewForDevice(deviceBucket);
+
+  useEffect(() => {
+    // Keep preferences state aligned with the active device view
+    // so settings and other consumers remain consistent.
+    if (preferences.pageViews[page] !== activeDeviceView) {
+      updatePageView(page, activeDeviceView);
+    }
+  }, [activeDeviceView, page, preferences.pageViews, updatePageView]);
+
   const setView = useCallback((newView: ViewMode) => {
+    setDeviceOverrides(prev => {
+      const next: DevicePageViewOverrides = {
+        ...prev,
+        [deviceBucket]: {
+          ...(prev[deviceBucket] || {}),
+          [page]: newView,
+        },
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(PAGE_VIEW_OVERRIDE_KEY, JSON.stringify(next));
+        } catch (error) {
+          console.error('Failed to persist page view overrides:', error);
+        }
+      }
+
+      return next;
+    });
+
     updatePageView(page, newView);
-  }, [page, updatePageView]);
-  return [view, setView];
+  }, [deviceBucket, page, updatePageView]);
+
+  return [activeDeviceView, setView];
 };
 
 export default UserPreferencesContext;

@@ -979,7 +979,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
     const dentalLabs = suppliers.filter(s => s.type === 'Dental Lab').length;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
+        <div className="suppliers-page min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Enhanced Header with Cyan + Violet Theme */}
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-cyan-200 dark:border-cyan-700 shadow-sm mb-6 relative overflow-hidden">
@@ -1035,7 +1035,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                 
                 {/* Controls Section */}
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-cyan-100 dark:border-cyan-700 mb-6">
-                    <div className="flex flex-col md:flex-row gap-4 items-center">
+                    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center">
                         <div className="flex-1 w-full">
                             <div className="relative">
                                 <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1050,50 +1050,53 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                 />
                             </div>
                         </div>
-                        <div>
+                        <div className="w-full sm:w-auto">
                             <select
                                 value={selectedType}
                                 onChange={(e) => setSelectedType(e.target.value as 'ALL' | 'Material Supplier' | 'Dental Lab')}
-                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full sm:w-auto p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 <option value="ALL">{t('suppliers.allTypes')}</option>
                                 <option value="Material Supplier">{t('supplierType.materialSupplier')}</option>
                                 <option value="Dental Lab">{t('supplierType.dentalLab')}</option>
                             </select>
                         </div>
-                        <div>
+                        <div className="w-full sm:w-auto">
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value as 'name' | 'balance' | 'type')}
-                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full sm:w-auto p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 <option value="name">{t('suppliers.sortByName')}</option>
                                 <option value="balance">{t('suppliers.sortByBalance')}</option>
                                 <option value="type">{t('suppliers.sortByType')}</option>
                             </select>
                         </div>
-                        <div>
+                        <div className="w-full sm:w-auto">
                             <button
                                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                className="p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg hover:bg-cyan-50 dark:hover:bg-cyan-900/30 focus:ring-2 focus:ring-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
+                                className="w-full sm:w-auto p-2 border border-cyan-200 dark:border-cyan-600 rounded-lg hover:bg-cyan-50 dark:hover:bg-cyan-900/30 focus:ring-2 focus:ring-cyan-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all duration-200"
                             >
                                 {sortOrder === 'asc' ? '↑' : '↓'}
                             </button>
                         </div>
                         <button 
                             onClick={resetFilters}
-                            className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-2 text-sm font-medium transition-all duration-200"
+                            className="w-full sm:w-auto justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-2 text-sm font-medium transition-all duration-200"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {t('financialFilters.clearAll')}
+                            <span className="hidden sm:inline">{t('financialFilters.clearAll')}</span>
+                            <span className="sm:hidden">{locale === 'ar' ? 'مسح' : 'Clear'}</span>
                         </button>
                         <button
                             onClick={() => setIsAddSupplierModalOpen(true)}
-                            className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-violet-600 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                            className="w-full sm:w-auto justify-center bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-violet-600 flex items-center gap-2 text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-300"
                         >
-                            <AddIcon /> {t('suppliers.addSupplier')}
+                            <AddIcon />
+                            <span className="hidden sm:inline">{t('suppliers.addSupplier')}</span>
+                            <span className="sm:hidden">{locale === 'ar' ? 'إضافة' : 'Add'}</span>
                         </button>
                     </div>
                 </div>
@@ -1106,7 +1109,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                 <PackageIcon />
                             </div>
                             <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('suppliers.noSuppliersTitle')}</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-4">{t('suppliers.noSuppliersDescription')}</p>
+                            <p className="text-slate-700 dark:text-slate-300 mb-4">{t('suppliers.noSuppliersDescription')}</p>
                             <button
                                 onClick={() => setIsAddSupplierModalOpen(true)}
                                 className="bg-gradient-to-r from-cyan-500 to-violet-500 text-white px-4 py-2 rounded-lg hover:from-cyan-600 hover:to-violet-600 focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-200"
@@ -1173,7 +1176,7 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400 mb-6">
+                                            <div className="space-y-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300 mb-6">
                                                 <p className="dark:text-slate-300 flex items-center gap-2">
                                                     <span className="text-cyan-600 dark:text-cyan-400">👤</span>
                                                     <strong>{t('suppliers.contactPerson')}:</strong> {s.contact_person || '-'}
@@ -1192,7 +1195,9 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                                                     onClick={() => setViewingSupplier(s)}
                                                     className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:from-cyan-600 hover:to-violet-600 font-semibold px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 transition-all duration-300 flex items-center justify-center group-hover:shadow-md"
                                                 >
-                                                    <EyeIcon /> {t('suppliers.viewDetails')}
+                                                    <EyeIcon />
+                                                    <span className="hidden sm:inline">{t('suppliers.viewDetails')}</span>
+                                                    <span className="sm:hidden">{locale === 'ar' ? 'عرض' : 'View'}</span>
                                                 </button>
                                                 <button
                                                     onClick={() => setViewingSupplierReport(s)}

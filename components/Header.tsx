@@ -415,6 +415,15 @@ const Header: React.FC<HeaderProps> = ({
                 <div className={`absolute inset-0 rounded-xl ${isDark ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/10' : 'bg-gradient-to-br from-blue-500/10 to-violet-500/10'} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
               </button>
 
+              {/* Mobile Language Toggle */}
+              <button
+                onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
+                className="sm:hidden inline-flex h-10 min-w-[3.1rem] items-center justify-center rounded-xl border border-slate-200 bg-white/85 px-2 text-[11px] font-semibold text-slate-700 transition-all duration-200 hover:border-violet-200 hover:text-violet-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-violet-700 dark:hover:text-violet-300"
+                aria-label={locale === 'ar' ? 'Switch language to English' : 'تبديل اللغة إلى العربية'}
+              >
+                {locale === 'ar' ? 'EN' : 'AR'}
+              </button>
+
               {/* Language Switcher */}
               <div className="relative hidden sm:block" ref={langMenuRef}>
                 <button

@@ -1075,3 +1075,55 @@ iframe {
     transform: scale(0.97);
   }
 }
+
+/* ========================================
+   MOBILE LIGHT-MODE CONTRAST BOOST
+   ======================================== */
+@media (max-width: 767px) {
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main {
+    color: #0f172a;
+  }
+
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main :where(.text-slate-500, .text-slate-400) {
+    color: #334155 !important;
+  }
+
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main :where(.text-slate-300) {
+    color: #475569 !important;
+  }
+
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main :where([class*="bg-white/"], .bg-white) {
+    background-color: rgba(255, 255, 255, 0.97) !important;
+  }
+
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main :where([class*="border-slate-100"], [class*="border-slate-200"]) {
+    border-color: #cbd5e1 !important;
+  }
+
+  html:not(.dark) .mobile-ui-pro .mobile-pro-main :where(input, textarea, select)::placeholder {
+    color: #64748b;
+    opacity: 1;
+  }
+
+  /* Suppliers page specific light-mode contrast fixes */
+  html:not(.dark) .suppliers-page :where(.text-slate-500, .text-slate-400) {
+    color: #334155 !important;
+  }
+
+  html:not(.dark) .suppliers-page :where(.text-slate-600) {
+    color: #1e293b !important;
+  }
+
+  html:not(.dark) .suppliers-page :where(.bg-white, [class*="bg-white/"]) {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+  }
+
+  html:not(.dark) .suppliers-page :where([class*="border-cyan-100"], [class*="border-cyan-200"], [class*="border-slate-100"], [class*="border-slate-200"]) {
+    border-color: #cbd5e1 !important;
+  }
+
+  html:not(.dark) .suppliers-page input::placeholder {
+    color: #64748b;
+    opacity: 1;
+  }
+}
