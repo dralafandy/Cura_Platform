@@ -273,10 +273,10 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
       />
       
       {/* Drawer panel - slides from left - Enhanced with glassmorphism and better shadows */}
-      <div className="fixed inset-y-0 left-0 w-80 max-w-[90vw] text-slate-800 dark:text-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 border-r border-slate-200/70 dark:border-slate-700/60 backdrop-blur-xl z-50 md:hidden transform transition-transform duration-300 ease-out overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+      <div className="fixed inset-y-0 left-0 w-[88vw] max-w-[22rem] text-slate-800 dark:text-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 border-r border-slate-200/70 dark:border-slate-700/60 backdrop-blur-xl z-50 md:hidden transform transition-transform duration-300 ease-out overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
 
         {/* Header with enhanced gradient background */}
-        <div className="relative overflow-hidden px-5 py-6 border-b border-violet-200/60 dark:border-violet-800/60 bg-gradient-to-br from-violet-400 via-fuchsia-400 to-indigo-500">
+        <div className="relative overflow-hidden px-4 py-5 border-b border-violet-200/60 dark:border-violet-800/60 bg-gradient-to-br from-violet-400 via-fuchsia-400 to-indigo-500">
           <div className="absolute -top-16 -right-14 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -bottom-16 -left-12 w-32 h-32 rounded-full bg-violet-200/30 blur-3xl" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.16),transparent_45%)]" />

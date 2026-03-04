@@ -6,6 +6,7 @@ import Scheduler from './components/Scheduler';
 import DoctorList from './components/DoctorList';
 import DoctorDetailsPage from './components/DoctorDetailsPage';
 import Header from './components/Header';
+import MobileQuickNav from './components/MobileQuickNav';
 
 import UserManagement from './components/UserManagement';
 import { useClinicData, ClinicData } from './hooks/useClinicData';
@@ -238,7 +239,7 @@ const AppContent: React.FC = () => {
   console.log('Rendering main app content');
 
   return (
-    <div className="app-shell bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh]">
+    <div className="app-shell mobile-ui-pro bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh]">
       <div className="md:flex min-h-screen min-h-[100dvh]">
         <Sidebar currentView={currentView} setCurrentView={setCurrentView} clinicData={clinicData} />
         <div className="flex-1 flex flex-col min-w-0 w-full print:block">
@@ -250,11 +251,20 @@ const AppContent: React.FC = () => {
               isMobileDrawerOpen={isMobileDrawerOpen}
               setIsMobileDrawerOpen={setIsMobileDrawerOpen}
             />
-            <main className="app-main flex-1 min-w-0 bg-neutral dark:bg-slate-900 p-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6 print:p-0 print:block">
-              {renderView()}
+            <main className="app-main mobile-pro-main flex-1 min-w-0 bg-neutral dark:bg-slate-900 p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6 print:p-0 print:block">
+              <div className="view-stage w-full max-w-[1800px] mx-auto animate-fade-in">
+                {renderView()}
+              </div>
             </main>
         </div>
       </div>
+
+      <MobileQuickNav
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        onOpenMenu={() => setIsMobileDrawerOpen(true)}
+        hasPermission={hasPermission}
+      />
 
       {/* Mobile Drawer - replaces BottomNavBar */}
       <MobileDrawer

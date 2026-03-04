@@ -358,13 +358,13 @@ const Header: React.FC<HeaderProps> = ({
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
-        <div className="px-4 py-2.5">
+        <div className="px-3 py-2 pt-[calc(0.4rem+env(safe-area-inset-top))] sm:px-4 sm:py-2.5 sm:pt-2.5">
           <div className="flex items-center justify-between">
             {/* Left: Logo & Mobile Menu */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="md:hidden p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
+                className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
                 aria-label="القائمة"
               >
                 <MenuIcon />
@@ -402,7 +402,7 @@ const Header: React.FC<HeaderProps> = ({
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group relative overflow-hidden border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group relative overflow-hidden border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
                 aria-label={isDark ? (locale === 'ar' ? 'الوضع الفاتح' : 'Light mode') : (locale === 'ar' ? 'الوضع الداكن' : 'Dark mode')}
               >
                 <div className="relative z-10">
@@ -416,7 +416,7 @@ const Header: React.FC<HeaderProps> = ({
               </button>
 
               {/* Language Switcher */}
-              <div className="relative" ref={langMenuRef}>
+              <div className="relative hidden sm:block" ref={langMenuRef}>
                 <button
                   onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
                   className="p-2 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/25 active:scale-95 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700"
@@ -465,7 +465,7 @@ const Header: React.FC<HeaderProps> = ({
               {/* Clinic Selector */}
               <ClinicSelector
                 variant="compact"
-                className="w-[44vw] max-w-[170px] sm:w-auto sm:max-w-none"
+                className="hidden sm:block w-auto max-w-none"
               />
 
               {/* Notification Bell - Enhanced */}
@@ -482,7 +482,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="group relative flex items-center w-auto p-2 sm:p-2.5 rounded-2xl bg-gradient-to-r from-violet-100 to-fuchsia-50 dark:from-violet-900/35 dark:to-indigo-900/30 border border-violet-200/80 dark:border-violet-700/70 hover:from-violet-200 hover:to-fuchsia-100 dark:hover:from-violet-800/45 dark:hover:to-indigo-800/40 transition-all duration-200 max-w-[44vw] sm:max-w-none"
+                  className="group relative flex items-center w-auto p-1.5 sm:p-2.5 rounded-2xl bg-gradient-to-r from-violet-100 to-fuchsia-50 dark:from-violet-900/35 dark:to-indigo-900/30 border border-violet-200/80 dark:border-violet-700/70 hover:from-violet-200 hover:to-fuchsia-100 dark:hover:from-violet-800/45 dark:hover:to-indigo-800/40 transition-all duration-200 max-w-[44vw] sm:max-w-none"
                   aria-label={locale === 'ar' ? 'قائمة المستخدم' : 'User menu'}
                   aria-expanded={isUserMenuOpen}
                 >
@@ -622,6 +622,17 @@ const Header: React.FC<HeaderProps> = ({
 
 
             </div>
+          </div>
+          <div className="mt-2 space-y-2 sm:hidden">
+            <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-r from-blue-50/80 via-violet-50/90 to-fuchsia-50/80 px-3 py-2 dark:border-violet-700/60 dark:from-blue-900/20 dark:via-violet-900/25 dark:to-purple-900/20">
+              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {currentPage.title || title || t('appName')}
+              </p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                {currentPage.description || subtitle || ''}
+              </p>
+            </div>
+            <ClinicSelector variant="compact" className="w-full" />
           </div>
         </div>
       </header>
