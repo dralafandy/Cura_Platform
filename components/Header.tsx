@@ -5,7 +5,6 @@ import { useClinicData, ClinicData } from '../hooks/useClinicData';
 import { useTheme } from '../contexts/ThemeContext';
 import { View, UserRole } from '../types';
 import NotificationBell from './NotificationBell';
-import { ClinicSelector } from './clinic/ClinicSelector';
 
 interface HeaderProps {
   currentView: View;
@@ -89,15 +88,26 @@ const Header: React.FC<HeaderProps> = ({
   setIsMobileDrawerOpen
 }) => {
   const { t, locale, setLocale, direction } = useI18n();
-  const { userProfile, logout, isAdmin } = useAuth();
+  const {
+    userProfile,
+    logout,
+    isAdmin,
+    currentClinic,
+    currentBranch,
+    accessibleClinics,
+    isSwitchingClinic,
+    switchBranch,
+  } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  const branchMenuRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll effect with smooth transition
   useEffect(() => {
@@ -130,6 +140,17 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close branch menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (branchMenuRef.current && !branchMenuRef.current.contains(event.target as Node)) {
+        setIsBranchMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Handle escape key to close menus
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -137,11 +158,35 @@ const Header: React.FC<HeaderProps> = ({
         setIsUserMenuOpen(false);
         setIsMobileDrawerOpen(false);
         setIsLangMenuOpen(false);
+        setIsBranchMenuOpen(false);
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
+
+  const branchOptions = useMemo(() => {
+    if (!currentClinic?.id) return [];
+
+    const map = new Map<string, { id: string; name: string; isDefault: boolean }>();
+    (accessibleClinics || []).forEach((entry: any) => {
+      if (!entry?.branchId) return;
+      if (entry?.clinicId !== currentClinic.id) return;
+      if (entry?.isActive === false) return;
+      if (!map.has(entry.branchId)) {
+        map.set(entry.branchId, {
+          id: entry.branchId,
+          name: entry.branchName || `Branch ${String(entry.branchId).slice(0, 8)}`,
+          isDefault: entry.isDefault === true,
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [accessibleClinics, currentClinic?.id]);
 
   // Page descriptions in Arabic
   const pageDescriptions: Partial<Record<View, { title: string; description: string; icon: string }>> = {
@@ -471,11 +516,64 @@ const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* Clinic Selector */}
-              <ClinicSelector
-                variant="compact"
-                className="hidden sm:block w-auto max-w-none"
-              />
+              {/* Branch Selector (branch-only) */}
+              <div className="relative hidden sm:block" ref={branchMenuRef}>
+                <button
+                  onClick={() => setIsBranchMenuOpen((v) => !v)}
+                  disabled={branchOptions.length === 0 || isSwitchingClinic}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-60"
+                  aria-expanded={isBranchMenuOpen}
+                  aria-label={locale === 'ar' ? 'اختيار الفرع' : 'Select branch'}
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <div className="flex flex-col leading-tight text-left">
+                    <span className="max-w-[150px] truncate">
+                      {isSwitchingClinic
+                        ? (locale === 'ar' ? 'جاري التبديل...' : 'Switching...')
+                        : (currentBranch?.name || (locale === 'ar' ? 'اختر الفرع' : 'Select branch'))}
+                    </span>
+                    <span className="max-w-[150px] truncate text-xs text-slate-500 dark:text-slate-400">
+                      {currentClinic?.name || (locale === 'ar' ? 'لا يوجد عيادة' : 'No clinic')}
+                    </span>
+                  </div>
+                  <svg className={`w-4 h-4 text-slate-400 transition-transform ${isBranchMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isBranchMenuOpen && branchOptions.length > 0 && (
+                  <div
+                    className={`absolute mt-2 w-64 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 z-50 py-1 ${
+                      direction === 'rtl' ? 'left-0' : 'right-0'
+                    }`}
+                  >
+                    {branchOptions.map((branch) => (
+                      <button
+                        key={branch.id}
+                        onClick={async () => {
+                          setIsBranchMenuOpen(false);
+                          if (branch.id === currentBranch?.id) return;
+                          try {
+                            await switchBranch(branch.id);
+                          } catch (error) {
+                            console.error('Failed to switch branch:', error);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+                          branch.id === currentBranch?.id
+                            ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
+                            : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/50'
+                        }`}
+                      >
+                        {branch.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Notification Bell - Enhanced */}
               <div className="relative group">
@@ -645,7 +743,37 @@ const Header: React.FC<HeaderProps> = ({
                 {currentPage.description || subtitle || ''}
               </p>
             </div>
-            <ClinicSelector variant="compact" className="w-full" />
+            <div className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                {locale === 'ar' ? 'الفرع' : 'Branch'}
+              </label>
+              <select
+                value={currentBranch?.id || ''}
+                onChange={async (e) => {
+                  const nextBranchId = e.target.value;
+                  if (!nextBranchId || nextBranchId === currentBranch?.id) return;
+                  try {
+                    await switchBranch(nextBranchId);
+                  } catch (error) {
+                    console.error('Failed to switch branch:', error);
+                  }
+                }}
+                disabled={branchOptions.length === 0 || isSwitchingClinic}
+                className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              >
+                <option value="" disabled>
+                  {locale === 'ar' ? 'اختر الفرع' : 'Select branch'}
+                </option>
+                {branchOptions.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                {currentClinic?.name || (locale === 'ar' ? 'لا يوجد عيادة' : 'No clinic')}
+              </p>
+            </div>
           </div>
         </div>
       </header>

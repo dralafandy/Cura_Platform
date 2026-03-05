@@ -48,27 +48,27 @@ const DeleteTreatmentRecordConfirmationModal: React.FC<DeleteTreatmentRecordConf
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-                <header className="p-4 border-b flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-slate-700">{t('treatmentDelete.confirmTitle')}</h2>
-                    <button onClick={onCancel} className="p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300" aria-label={t('common.closeForm')}>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg">
+                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-slate-700 dark:text-slate-100">{t('treatmentDelete.confirmTitle')}</h2>
+                    <button onClick={onCancel} className="p-1 rounded-full text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600" aria-label={t('common.closeForm')}>
                         <CloseIcon />
                     </button>
                 </header>
                 <div className="p-6 space-y-4">
-                    <p className="text-slate-700">{t('treatmentDelete.confirmMessage')}</p>
-                    <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                        <p className="text-sm text-red-800 font-medium">{treatmentDef?.name || t('common.unknownTreatment')}</p>
-                        <p className="text-sm text-red-800">{dateFormatter.format(new Date(record.treatmentDate))}</p>
-                        <p className="text-sm text-red-800 font-medium mt-2">{t('treatmentDelete.financialImpact')}</p>
-                        <p className="text-sm text-red-800">{t('treatmentDelete.doctorShareImpact').replace('{amount}', record.doctorShare.toFixed(2))}</p>
-                        <p className="text-sm text-red-800">{t('treatmentDelete.clinicShareImpact').replace('{amount}', record.clinicShare.toFixed(2))}</p>
+                    <p className="text-slate-700 dark:text-slate-200">{t('treatmentDelete.confirmMessage')}</p>
+                    <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <p className="text-sm text-red-800 dark:text-red-300 font-medium">{treatmentDef?.name || t('common.unknownTreatment')}</p>
+                        <p className="text-sm text-red-800 dark:text-red-300">{dateFormatter.format(new Date(record.treatmentDate))}</p>
+                        <p className="text-sm text-red-800 dark:text-red-300 font-medium mt-2">{t('treatmentDelete.financialImpact')}</p>
+                        <p className="text-sm text-red-800 dark:text-red-300">{t('treatmentDelete.doctorShareImpact').replace('{amount}', record.doctorShare.toFixed(2))}</p>
+                        <p className="text-sm text-red-800 dark:text-red-300">{t('treatmentDelete.clinicShareImpact').replace('{amount}', record.clinicShare.toFixed(2))}</p>
                         
                         {associatedPayments.length > 0 && (
                             <div className="mt-3">
-                                <p className="text-sm text-red-800 font-medium">{t('treatmentDelete.associatedPayments')} ({associatedPayments.length})</p>
+                                <p className="text-sm text-red-800 dark:text-red-300 font-medium">{t('treatmentDelete.associatedPayments')} ({associatedPayments.length})</p>
                                 {associatedPayments.map(payment => (
-                                    <p key={payment.id} className="text-sm text-red-800 ml-2">
+                                    <p key={payment.id} className="text-sm text-red-800 dark:text-red-300 ml-2">
                                         {t('treatmentDelete.paymentAmount').replace('{amount}', payment.amount.toFixed(2))} - {t(`paymentMethod.${payment.method}`)}
                                     </p>
                                 ))}
@@ -77,9 +77,9 @@ const DeleteTreatmentRecordConfirmationModal: React.FC<DeleteTreatmentRecordConf
 
                         {associatedPayments.length > 0 && (
                             <div className="mt-3">
-                                <p className="text-sm text-red-800 font-medium">{t('treatmentDelete.associatedClinicPayments')} ({associatedPayments.length})</p>
+                                <p className="text-sm text-red-800 dark:text-red-300 font-medium">{t('treatmentDelete.associatedClinicPayments')} ({associatedPayments.length})</p>
                                 {associatedPayments.map(payment => (
-                                    <p key={payment.id} className="text-sm text-red-800 ml-2">
+                                    <p key={payment.id} className="text-sm text-red-800 dark:text-red-300 ml-2">
                                         {t('treatmentDelete.clinicShareAmount').replace('{amount}', payment.clinicShare.toFixed(2))} - {t(`paymentMethod.${payment.method}`)}
                                     </p>
                                 ))}
@@ -88,9 +88,9 @@ const DeleteTreatmentRecordConfirmationModal: React.FC<DeleteTreatmentRecordConf
 
                         {associatedDoctorPayments.length > 0 && (
                             <div className="mt-3">
-                                <p className="text-sm text-red-800 font-medium">{t('treatmentDelete.associatedDoctorPayments')} ({associatedDoctorPayments.length})</p>
+                                <p className="text-sm text-red-800 dark:text-red-300 font-medium">{t('treatmentDelete.associatedDoctorPayments')} ({associatedDoctorPayments.length})</p>
                                 {associatedDoctorPayments.map(doctorPayment => (
-                                    <p key={doctorPayment.id} className="text-sm text-red-800 ml-2">
+                                    <p key={doctorPayment.id} className="text-sm text-red-800 dark:text-red-300 ml-2">
                                         {t('treatmentDelete.paymentAmount').replace('{amount}', doctorPayment.amount.toFixed(2))}
                                     </p>
                                 ))}
@@ -98,7 +98,7 @@ const DeleteTreatmentRecordConfirmationModal: React.FC<DeleteTreatmentRecordConf
                         )}
                     </div>
                     <div className="flex justify-end space-x-4">
-                        <button onClick={onCancel} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                        <button onClick={onCancel} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600">
                             {t('common.cancel')}
                         </button>
                         <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">

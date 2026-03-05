@@ -44,15 +44,15 @@ const PatientInsuranceLinkPage: React.FC = () => {
     fetchPatients();
     fetchInsuranceCompanies();
     fetchPatientInsuranceLinks();
-  }, [user?.id]);
+  }, [user?.id, activeClinicId]);
 
   const fetchPatients = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       const { data, error } = await supabase
         .from('patients')
         .select('id, name')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
       setPatients(data || []);
@@ -63,11 +63,11 @@ const PatientInsuranceLinkPage: React.FC = () => {
 
   const fetchInsuranceCompanies = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       const { data, error } = await supabase
         .from('insurance_companies')
         .select('id, name')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
       setInsuranceCompanies(data || []);
@@ -78,12 +78,12 @@ const PatientInsuranceLinkPage: React.FC = () => {
 
   const fetchPatientInsuranceLinks = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       setLoading(true);
       const { data, error } = await supabase
         .from('patient_insurance_link')
         .select('*, patients(name), insurance_companies(name)')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
 
@@ -169,10 +169,10 @@ const PatientInsuranceLinkPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">{t('patient_insurance_links')}</h1>
+    <div className="p-4 text-slate-800 dark:text-slate-200">
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">{t('patient_insurance_links')}</h1>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      {error && <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">{error}</div>}
 
       <button
         onClick={handleAddLink}
@@ -186,29 +186,29 @@ const PatientInsuranceLinkPage: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <table className="min-w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b">{t('patient')}</th>
-                <th className="py-2 px-4 border-b">{t('insurance_company')}</th>
-                <th className="py-2 px-4 border-b">{t('policy_number')}</th>
-                <th className="py-2 px-4 border-b">{t('coverage_percentage')}</th>
-                <th className="py-2 px-4 border-b">{t('effective_date')}</th>
-                <th className="py-2 px-4 border-b">{t('expiry_date')}</th>
-                <th className="py-2 px-4 border-b">{t('actions')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('patient')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('insurance_company')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('policy_number')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('coverage_percentage')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('effective_date')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('expiry_date')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {patientInsuranceLinks.map((link) => (
-                <tr key={link.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{link.patient_name}</td>
-                  <td className="py-2 px-4 border-b">{link.insurance_company_name}</td>
-                  <td className="py-2 px-4 border-b">{link.policy_number}</td>
-                  <td className="py-2 px-4 border-b">{link.coverage_percentage}%</td>
-                  <td className="py-2 px-4 border-b">{link.effective_date}</td>
-                  <td className="py-2 px-4 border-b">{link.expiry_date}</td>
-                  <td className="py-2 px-4 border-b">
+                <tr key={link.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/60">
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.patient_name}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.insurance_company_name}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.policy_number}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.coverage_percentage}%</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.effective_date}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.expiry_date}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700">
                     <button
                       onClick={() => handleEditLink(link)}
                       className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -230,21 +230,21 @@ const PatientInsuranceLinkPage: React.FC = () => {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold mb-4">
+        <div className="fixed inset-0 bg-gray-600/50 dark:bg-black/60 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border border-slate-200 dark:border-slate-700 w-96 shadow-lg rounded-md bg-white dark:bg-slate-800">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
               {currentLink?.id ? t('edit_patient_insurance_link') : t('add_patient_insurance_link')}
             </h3>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="patient_id">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="patient_id">
                 {t('patient')}
               </label>
               <select
                 id="patient_id"
                 value={currentLink.patient_id || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, patient_id: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="">{t('select_patient')}</option>
                 {patients.map((patient) => (
@@ -254,14 +254,14 @@ const PatientInsuranceLinkPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="insurance_company_id">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="insurance_company_id">
                 {t('insurance_company')}
               </label>
               <select
                 id="insurance_company_id"
                 value={currentLink.insurance_company_id || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, insurance_company_id: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="">{t('select_insurance_company')}</option>
                 {insuranceCompanies.map((company) => (
@@ -271,7 +271,7 @@ const PatientInsuranceLinkPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="policy_number">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="policy_number">
                 {t('policy_number')}
               </label>
               <input
@@ -279,12 +279,12 @@ const PatientInsuranceLinkPage: React.FC = () => {
                 type="text"
                 value={currentLink.policy_number || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, policy_number: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="coverage_percentage">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="coverage_percentage">
                 {t('coverage_percentage')}
               </label>
               <input
@@ -295,12 +295,12 @@ const PatientInsuranceLinkPage: React.FC = () => {
                 max="100"
                 value={currentLink.coverage_percentage || 100}
                 onChange={(e) => setCurrentLink({ ...currentLink, coverage_percentage: parseFloat(e.target.value) })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="effective_date">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="effective_date">
                 {t('effective_date')}
               </label>
               <input
@@ -308,12 +308,12 @@ const PatientInsuranceLinkPage: React.FC = () => {
                 type="date"
                 value={currentLink.effective_date || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, effective_date: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="expiry_date">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="expiry_date">
                 {t('expiry_date')}
               </label>
               <input
@@ -321,26 +321,26 @@ const PatientInsuranceLinkPage: React.FC = () => {
                 type="date"
                 value={currentLink.expiry_date || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, expiry_date: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="notes">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="notes">
                 {t('notes')}
               </label>
               <textarea
                 id="notes"
                 value={currentLink.notes || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, notes: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="flex justify-end">
               <button
                 onClick={() => setShowModal(false)}
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+                className="bg-gray-500 hover:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-bold py-2 px-4 rounded mr-2"
               >
                 {t('cancel')}
               </button>

@@ -46,15 +46,15 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ tenantId, onUpg
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800';
       case 'TRIAL':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
       case 'EXPIRED':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
       case 'SUSPENDED':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600';
     }
   };
 
@@ -85,14 +85,14 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ tenantId, onUpg
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="h-32 bg-gray-200 rounded-lg"></div>
+        <div className="h-32 bg-gray-200 dark:bg-slate-700 rounded-lg"></div>
       </div>
     );
   }
 
   if (!tenantInfo) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-300">
         فشل تحميل معلومات الاشتراك
       </div>
     );
@@ -117,7 +117,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ tenantId, onUpg
           
           {tenantInfo.subscription_status === 'TRIAL' && (
             <div className="text-center">
-              <div className="text-4xl font-bold text-blue-600">
+              <div className="text-4xl font-bold text-blue-600 dark:text-blue-300">
                 {tenantInfo.trial_days_remaining}
               </div>
               <div className="text-sm">يوم متبقي</div>
@@ -162,7 +162,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ tenantId, onUpg
 
       {/* Usage Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-gray-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
           <div className="text-sm text-gray-500">المستخدمون</div>
           <div className="text-xl font-semibold">
             {tenantInfo.current_users} / {tenantInfo.max_users}
@@ -175,7 +175,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ tenantId, onUpg
           </div>
         </div>
 
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-gray-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
           <div className="text-sm text-gray-500">المرضى</div>
           <div className="text-xl font-semibold">
             {tenantInfo.current_patients} / {tenantInfo.max_patients}

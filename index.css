@@ -455,6 +455,7 @@ input, textarea, select, button {
     @apply bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 transition-all duration-200 ease-in-out;
     background: var(--color-bg-tertiary);
     border-color: var(--color-border);
+    color: var(--color-text-primary);
     box-shadow: var(--shadow-lg);
   }
 
@@ -473,6 +474,8 @@ input, textarea, select, button {
   .card-compact {
     @apply rounded-xl shadow-md border border-slate-200 dark:border-slate-700 transition-all duration-200 ease-in-out;
     background: var(--color-bg-tertiary);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
   }
 
   .card-compact:hover {
@@ -1427,14 +1430,16 @@ input, textarea, select, button {
 
 /* Report card styles */
 .report-card {
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   border-radius: 12px;
   padding: 1rem;
 }
 
 .report-card-header {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  color: var(--color-text-primary);
   border-radius: 8px;
   padding: 0.75rem 1rem;
 }

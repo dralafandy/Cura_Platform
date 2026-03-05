@@ -105,28 +105,28 @@ const AddDoctorPaymentModal: React.FC<AddDoctorPaymentModalProps> = ({ dentistId
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-                <header className="p-4 border-b flex justify-between items-center flex-shrink-0">
-                    <h2 className="text-xl font-bold text-slate-700">{t('addDoctorPaymentModal.title')}</h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300" aria-label={t('common.closeForm')}>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md max-h-[90vh] flex flex-col">
+                <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0">
+                    <h2 className="text-xl font-bold text-slate-700 dark:text-slate-100">{t('addDoctorPaymentModal.title')}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600" aria-label={t('common.closeForm')}>
                         <CloseIcon />
                     </button>
                 </header>
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4">
                     <div>
-                        <label htmlFor="paymentDate" className="block text-sm font-medium text-slate-600 mb-1">{t('addDoctorPaymentModal.paymentDate')}</label>
-                        <input id="paymentDate" name="date" type="date" value={formData.date} onChange={handleChange} className="p-2 border border-slate-300 rounded-lg w-full focus:ring-primary focus:border-primary" required />
+                        <label htmlFor="paymentDate" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t('addDoctorPaymentModal.paymentDate')}</label>
+                        <input id="paymentDate" name="date" type="date" value={formData.date} onChange={handleChange} className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg w-full bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-primary focus:border-primary" required />
                     </div>
                     <div>
-                        <label htmlFor="amount" className="block text-sm font-medium text-slate-600 mb-1">{t('addDoctorPaymentModal.amount')}</label>
-                        <input id="amount" name="amount" type="number" step="0.01" value={formData.amount} onChange={handleChange} className="p-2 border border-slate-300 rounded-lg w-full focus:ring-primary focus:border-primary" required min="0.01" />
+                        <label htmlFor="amount" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t('addDoctorPaymentModal.amount')}</label>
+                        <input id="amount" name="amount" type="number" step="0.01" value={formData.amount} onChange={handleChange} className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg w-full bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-primary focus:border-primary" required min="0.01" />
                     </div>
                     <div>
-                        <label htmlFor="notes" className="block text-sm font-medium text-slate-600 mb-1">{t('addDoctorPaymentModal.notes')}</label>
-                        <textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange} placeholder={t('addDoctorPaymentModal.notesPlaceholder')} className="p-2 border border-slate-300 rounded-lg w-full h-20 focus:ring-primary focus:border-primary" />
+                        <label htmlFor="notes" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t('addDoctorPaymentModal.notes')}</label>
+                        <textarea id="notes" name="notes" value={formData.notes || ''} onChange={handleChange} placeholder={t('addDoctorPaymentModal.notesPlaceholder')} className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg w-full h-20 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-primary focus:border-primary" />
                     </div>
                     <footer className="pt-2 flex justify-end space-x-4 flex-shrink-0">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-dark rounded-lg hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300">{t('common.cancel')}</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600">{t('common.cancel')}</button>
                         <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light">{t('addDoctorPaymentModal.savePayment')}</button>
                     </footer>
                 </form>

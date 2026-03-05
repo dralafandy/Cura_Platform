@@ -102,16 +102,16 @@ const EmployeesManagement: React.FC = () => {
     }).format(v || 0);
 
   const load = useCallback(async () => {
-    if (!user || !supabase) {
+    if (!user || !supabase || !activeClinicId) {
       setLoading(false);
       return;
     }
     setLoading(true);
     const [e, d, a, c] = await Promise.all([
-      supabase.from('employees').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('dentists').select('id,name').eq('user_id', user.id).order('name', { ascending: true }),
-      supabase.from('employee_attendance').select('*').eq('user_id', user.id).order('attendance_date', { ascending: false }),
-      supabase.from('employee_compensations').select('*').eq('user_id', user.id).order('entry_date', { ascending: false }),
+      supabase.from('employees').select('*').eq('clinic_id', activeClinicId).order('created_at', { ascending: false }),
+      supabase.from('dentists').select('id,name').eq('clinic_id', activeClinicId).order('name', { ascending: true }),
+      supabase.from('employee_attendance').select('*').eq('clinic_id', activeClinicId).order('attendance_date', { ascending: false }),
+      supabase.from('employee_compensations').select('*').eq('clinic_id', activeClinicId).order('entry_date', { ascending: false }),
     ]);
     if (e.error || d.error || a.error || c.error) {
       setError(e.error?.message || d.error?.message || a.error?.message || c.error?.message || tr('فشل تحميل البيانات.', 'Failed to load data.'));
@@ -123,7 +123,7 @@ const EmployeesManagement: React.FC = () => {
     setAttendance((a.data || []) as Attendance[]);
     setCompensations((c.data || []) as Compensation[]);
     setLoading(false);
-  }, [user, isAr]);
+  }, [user, isAr, activeClinicId]);
 
   useEffect(() => {
     load();
@@ -299,7 +299,7 @@ const EmployeesManagement: React.FC = () => {
   };
 
   const generateSalaries = async () => {
-    if (!user) return;
+    if (!user || !activeClinicId) return;
     setWorking(true);
     setError(null);
 
@@ -338,7 +338,7 @@ const EmployeesManagement: React.FC = () => {
     const { data: activeEmployees, error: employeesError } = await supabase
       .from('employees')
       .select('id,base_salary,clinic_id')
-      .eq('user_id', user.id)
+      .eq('clinic_id', activeClinicId)
       .eq('status', 'ACTIVE');
 
     if (employeesError) {
@@ -350,7 +350,7 @@ const EmployeesManagement: React.FC = () => {
     const { data: existingSalaries, error: existingError } = await supabase
       .from('employee_compensations')
       .select('employee_id')
-      .eq('user_id', user.id)
+      .eq('clinic_id', activeClinicId)
       .eq('entry_type', 'SALARY')
       .gte('entry_date', monthStart)
       .lt('entry_date', nextMonthStart);

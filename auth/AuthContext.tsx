@@ -12,6 +12,7 @@ import type { Session as SupabaseSession, User as SupabaseUser } from '@supabase
 import { supabase } from '../supabaseClient';
 import { Permission, UserRole, UserStatus } from './types';
 import { ROLE_PERMISSIONS } from '../utils/permissions';
+import { applyBranchSession, resetBranchSessionCache } from '../services/branchSessionService';
 import type {
   User,
   LoginCredentials,
@@ -54,6 +55,28 @@ const EMPTY_AUTH_STATE: AuthStateWithClinic = {
 };
 
 const AUTH_OP_TIMEOUT_MS = 20000;
+let clinicSettingsTableMissing = false;
+type DbObjectState = 'unknown' | 'available' | 'missing';
+let userClinicAccessTableState: DbObjectState = 'unknown';
+let userClinicsTableState: DbObjectState = 'unknown';
+
+const isMissingDbObjectError = (error: any, objectName: string): boolean => {
+  if (!error) return false;
+  const code = String(error.code || '');
+  const message = String(error.message || '').toLowerCase();
+  const target = objectName.toLowerCase();
+  return (
+    code === 'PGRST205' ||
+    code === '42P01' ||
+    message.includes('could not find the table') ||
+    (message.includes('does not exist') && message.includes(target))
+  );
+};
+
+const isBranchAccessDeniedError = (error: unknown): boolean => {
+  const message = String((error as any)?.message || '').toLowerCase();
+  return message.includes('access denied to branch');
+};
 
 const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
   return await new Promise<T>((resolve, reject) => {
@@ -218,17 +241,218 @@ const fetchUserPermissionContextFromDB = async (
   }
 };
 
+const mapAccessRowToUserClinic = (
+  row: any,
+  clinicName?: string | null,
+  branchName?: string | null,
+): UserClinicAccess => ({
+  id: row.id,
+  userId: row.user_id,
+  clinicId: row.clinic_id,
+  clinicName: clinicName || row.clinic_name,
+  branchId: row.branch_id,
+  branchName: branchName || row.branch_name,
+  roleAtClinic: normalizeRole(row.role_at_clinic),
+  customPermissions: row.custom_permissions || [],
+  isDefault: row.is_default === true,
+  isActive: row.access_active === true || row.is_active === true || row.access_active == null,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  createdBy: row.created_by,
+});
+
+const mergeUserClinicAccessRows = (rows: UserClinicAccess[]): UserClinicAccess[] => {
+  const merged = new Map<string, UserClinicAccess>();
+
+  for (const row of rows) {
+    const key = `${row.clinicId}::${row.branchId || 'all'}::${row.roleAtClinic || ''}`;
+    const prev = merged.get(key);
+    if (!prev) {
+      merged.set(key, row);
+      continue;
+    }
+
+    merged.set(key, {
+      ...prev,
+      ...row,
+      clinicName: row.clinicName || prev.clinicName,
+      branchName: row.branchName || prev.branchName,
+      customPermissions:
+        row.customPermissions && row.customPermissions.length > 0
+          ? row.customPermissions
+          : prev.customPermissions,
+      isDefault: prev.isDefault || row.isDefault,
+      isActive: prev.isActive || row.isActive,
+    });
+  }
+
+  return Array.from(merged.values())
+    .filter((row) => row.isActive)
+    .sort((a, b) => {
+      if (a.isDefault === b.isDefault) {
+        return String(a.clinicName || '').localeCompare(String(b.clinicName || ''));
+      }
+      return a.isDefault ? -1 : 1;
+    });
+};
+
+const expandClinicWideAccessToBranches = async (rows: UserClinicAccess[]): Promise<UserClinicAccess[]> => {
+  if (!supabase || rows.length === 0) return rows;
+
+  const clinicWideByClinic = new Map<string, UserClinicAccess>();
+  const existingBranchKeys = new Set<string>();
+
+  for (const row of rows) {
+    if (!row?.clinicId) continue;
+    if (row.branchId) {
+      existingBranchKeys.add(`${row.clinicId}::${row.branchId}`);
+      continue;
+    }
+    if (!clinicWideByClinic.has(row.clinicId)) {
+      clinicWideByClinic.set(row.clinicId, row);
+    }
+  }
+
+  if (clinicWideByClinic.size === 0) return rows;
+
+  const clinicIds = Array.from(clinicWideByClinic.keys());
+  const { data: branchesData, error } = await supabase
+    .from('clinic_branches')
+    .select('id,clinic_id,name,is_active')
+    .in('clinic_id', clinicIds)
+    .eq('is_active', true);
+
+  if (error || !branchesData || branchesData.length === 0) {
+    return rows;
+  }
+
+  const syntheticRows: UserClinicAccess[] = [];
+  const nowIso = new Date().toISOString();
+
+  for (const branch of branchesData as any[]) {
+    const clinicId = branch.clinic_id as string;
+    const branchId = branch.id as string;
+    const branchKey = `${clinicId}::${branchId}`;
+
+    if (existingBranchKeys.has(branchKey)) continue;
+
+    const base = clinicWideByClinic.get(clinicId);
+    if (!base) continue;
+
+    syntheticRows.push({
+      ...base,
+      id: `${base.id || clinicId}-synthetic-${branchId}`,
+      branchId,
+      branchName: branch.name || `Branch ${String(branchId).slice(0, 8)}`,
+      isDefault: false,
+      createdAt: base.createdAt || nowIso,
+      updatedAt: base.updatedAt || nowIso,
+    });
+  }
+
+  return [...rows, ...syntheticRows];
+};
+
+const fetchUserClinicsDirectFromTables = async (userIds: string[]): Promise<UserClinicAccess[]> => {
+  if (!supabase || userIds.length === 0) return [];
+
+  const rawRows: any[] = [];
+
+  if (userClinicAccessTableState !== 'missing') {
+    const ucaRes = await supabase
+      .from('user_clinic_access')
+      .select(
+        'id,user_id,clinic_id,branch_id,role_at_clinic,custom_permissions,is_default,is_active,created_at,updated_at,created_by',
+      )
+      .in('user_id', userIds)
+      .eq('is_active', true);
+
+    if (ucaRes.error) {
+      if (isMissingDbObjectError(ucaRes.error, 'user_clinic_access')) {
+        userClinicAccessTableState = 'missing';
+      }
+    } else {
+      userClinicAccessTableState = 'available';
+      if (ucaRes.data) rawRows.push(...ucaRes.data);
+    }
+  }
+
+  if (userClinicsTableState !== 'missing') {
+    const ucRes = await supabase
+      .from('user_clinics')
+      .select(
+        'id,user_id,clinic_id,branch_id,role_at_clinic,custom_permissions,is_default,access_active,created_at,updated_at,created_by',
+      )
+      .in('user_id', userIds)
+      .eq('access_active', true);
+
+    if (ucRes.error) {
+      if (isMissingDbObjectError(ucRes.error, 'user_clinics')) {
+        userClinicsTableState = 'missing';
+      }
+    } else {
+      userClinicsTableState = 'available';
+      if (ucRes.data) rawRows.push(...ucRes.data);
+    }
+  }
+
+  if (rawRows.length === 0) return [];
+
+  const clinicIds = Array.from(new Set(rawRows.map((r) => r.clinic_id).filter(Boolean)));
+  const branchIds = Array.from(new Set(rawRows.map((r) => r.branch_id).filter(Boolean)));
+
+  const clinicMap = new Map<string, { name?: string | null; status?: string | null }>();
+  const branchMap = new Map<string, { name?: string | null }>();
+
+  if (clinicIds.length > 0) {
+    const { data: clinicsData } = await supabase
+      .from('clinics')
+      .select('id,name,status')
+      .in('id', clinicIds);
+    (clinicsData || []).forEach((c: any) => {
+      clinicMap.set(c.id, { name: c.name, status: c.status });
+    });
+  }
+
+  if (branchIds.length > 0) {
+    const { data: branchesData } = await supabase
+      .from('clinic_branches')
+      .select('id,name,is_active')
+      .in('id', branchIds);
+    (branchesData || []).forEach((b: any) => {
+      if (b.is_active === false) return;
+      branchMap.set(b.id, { name: b.name });
+    });
+  }
+
+  return rawRows
+    .filter((row) => {
+      const clinicMeta = clinicMap.get(row.clinic_id);
+      if (!clinicMeta) return true;
+      return !clinicMeta.status || clinicMeta.status === 'ACTIVE';
+    })
+    .map((row) =>
+      mapAccessRowToUserClinic(
+        row,
+        clinicMap.get(row.clinic_id)?.name || null,
+        branchMap.get(row.branch_id)?.name || null,
+      ),
+    );
+};
+
 /**
  * Fetch user's accessible clinics from database.
  */
-const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[]> => {
+const fetchUserClinicsFromDB = async (userId: string, authId?: string | null): Promise<UserClinicAccess[]> => {
   if (!supabase) return [];
+
+  const userIds = Array.from(new Set([userId, authId || null].filter(Boolean) as string[]));
 
   try {
     let { data, error } = await supabase
       .from('user_clinics_view')
       .select('*')
-      .eq('user_id', userId)
+      .in('user_id', userIds)
       .eq('access_active', true)
       .eq('clinic_status', 'ACTIVE')
       .order('is_default', { ascending: false })
@@ -238,36 +462,32 @@ const fetchUserClinicsFromDB = async (userId: string): Promise<UserClinicAccess[
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('user_clinics_view')
         .select('*')
-        .eq('user_id', userId)
+        .in('user_id', userIds)
         .eq('access_active', true)
         .order('is_default', { ascending: false })
         .order('clinic_name');
 
       if (fallbackError) {
-        return [];
+        const directRows = await fetchUserClinicsDirectFromTables(userIds);
+        const mergedFallback = mergeUserClinicAccessRows(directRows);
+        const expandedFallback = await expandClinicWideAccessToBranches(mergedFallback);
+        return mergeUserClinicAccessRows(expandedFallback);
       }
 
       data = fallbackData;
     }
 
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      userId: row.user_id,
-      clinicId: row.clinic_id,
-      clinicName: row.clinic_name,
-      branchId: row.branch_id,
-      branchName: row.branch_name,
-      roleAtClinic: normalizeRole(row.role_at_clinic),
-      customPermissions: row.custom_permissions || [],
-      isDefault: row.is_default,
-      isActive: row.access_active,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      createdBy: row.created_by,
-    }));
+    const viewRows = (data || []).map((row: any) => mapAccessRowToUserClinic(row));
+    const directRows = await fetchUserClinicsDirectFromTables(userIds);
+    const mergedRows = mergeUserClinicAccessRows([...viewRows, ...directRows]);
+    const expandedRows = await expandClinicWideAccessToBranches(mergedRows);
+    return mergeUserClinicAccessRows(expandedRows);
   } catch (error) {
     console.error('Error fetching user clinics:', error);
-    return [];
+    const directRows = await fetchUserClinicsDirectFromTables(userIds);
+    const mergedRows = mergeUserClinicAccessRows(directRows);
+    const expandedRows = await expandClinicWideAccessToBranches(mergedRows);
+    return mergeUserClinicAccessRows(expandedRows);
   }
 };
 
@@ -356,6 +576,7 @@ const fetchBranchFromDB = async (branchId: string): Promise<ClinicBranch | null>
 
 const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): Promise<ClinicSettings | null> => {
   if (!supabase) return null;
+  if (clinicSettingsTableMissing) return null;
 
   try {
     let query = supabase.from('clinic_settings').select('*').eq('clinic_id', clinicId);
@@ -369,6 +590,9 @@ const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): P
     const { data, error } = await query.single();
 
     if (error || !data) {
+      if (isMissingDbObjectError(error, 'clinic_settings')) {
+        clinicSettingsTableMissing = true;
+      }
       return null;
     }
 
@@ -475,13 +699,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const clearAuthState = useCallback(() => {
     localStorage.removeItem('currentClinicId');
     localStorage.removeItem('currentBranchId');
+    resetBranchSessionCache();
+    void applyBranchSession(null, true).catch((error) => {
+      console.warn('Failed to clear branch session context:', error);
+    });
     setAuthState({ ...EMPTY_AUTH_STATE, isLoading: false });
   }, []);
 
   const ensureUserProfile = useCallback(async (authUser: SupabaseUser): Promise<DBUserProfile | null> => {
     if (!supabase) return null;
 
-    const { data: existing, error: selectError } = await supabase
+    const { data: byId, error: selectError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', authUser.id)
@@ -493,6 +721,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const now = new Date().toISOString();
 
+    let existing = byId as DBUserProfile | null;
+    if (!existing) {
+      const { data: byAuthId, error: byAuthIdError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('auth_id', authUser.id)
+        .maybeSingle();
+      if (!byAuthIdError && byAuthId) {
+        existing = byAuthId as DBUserProfile;
+      }
+    }
+
     if (existing) {
       const patch: Record<string, unknown> = {};
       if ((existing as any).auth_id !== authUser.id) patch.auth_id = authUser.id;
@@ -500,7 +740,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!existing.username) patch.username = usernameFromEmail(authUser.email);
 
       if (Object.keys(patch).length > 0) {
-        const { error: updateErr } = await supabase.from('user_profiles').update(patch).eq('id', authUser.id);
+        const { error: updateErr } = await supabase.from('user_profiles').update(patch).eq('id', existing.id);
         if (updateErr) {
           console.warn('Failed to patch profile columns:', updateErr.message);
         }
@@ -545,8 +785,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    const { data: fallback } = await supabase.from('user_profiles').select('*').eq('id', authUser.id).maybeSingle();
-    return (fallback as DBUserProfile) || null;
+    const { data: fallbackById } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    if (fallbackById) {
+      return fallbackById as DBUserProfile;
+    }
+
+    const { data: fallbackByAuthId } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('auth_id', authUser.id)
+      .maybeSingle();
+    return (fallbackByAuthId as DBUserProfile) || null;
   }, []);
 
   const hydrateFromSession = useCallback(
@@ -576,7 +829,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        const accessibleClinics = await fetchUserClinicsFromDB(profile.id);
+        const accessibleClinics = await fetchUserClinicsFromDB(profile.id, authUser.id);
 
         const preferredClinicId = localStorage.getItem('currentClinicId');
         const preferredBranchId = localStorage.getItem('currentBranchId');
@@ -614,9 +867,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
-        const clinicSettings = currentClinic
-          ? await fetchClinicSettingsFromDB(currentClinic.id, currentBranch?.id)
-          : null;
+        if (currentBranch?.id) {
+          try {
+            await applyBranchSession(currentBranch.id, true);
+          } catch (error) {
+            if (!isBranchAccessDeniedError(error)) {
+              throw error;
+            }
+            console.warn('Branch session denied during hydration, falling back to clinic-level context:', error);
+            currentBranch = null;
+            localStorage.removeItem('currentBranchId');
+            await applyBranchSession(null, true);
+          }
+        } else {
+          await applyBranchSession(null, true);
+        }
+
+        const clinicSettings = currentClinic ? await fetchClinicSettingsFromDB(currentClinic.id, currentBranch?.id) : null;
 
         if (currentClinic?.id) {
           localStorage.setItem('currentClinicId', currentClinic.id);
@@ -858,6 +1125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           localStorage.removeItem('currentBranchId');
         }
+        await applyBranchSession(branch?.id || null, true);
 
         setAuthState(prev => ({
           ...prev,
@@ -903,7 +1171,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAuthState(prev => ({ ...prev, isLoadingClinics: true }));
 
     try {
-      const accessibleClinics = await fetchUserClinicsFromDB(authState.user.id);
+      const accessibleClinics = await fetchUserClinicsFromDB(
+        authState.user.id,
+        (authState.user as any)?.auth_id || authState.user.id,
+      );
 
       setAuthState(prev => ({
         ...prev,

@@ -7,6 +7,7 @@ import {
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { applyBranchSession } from '../services/branchSessionService';
 
 const createEmptyChart = (): DentalChartData => {
     const chart: DentalChartData = {};
@@ -250,14 +251,25 @@ export const useClinicData = (): ClinicData => {
         return { clinicId: userClinicIds[0] || null, branchId: null };
     }, [currentClinic, currentBranch, accessibleClinics, getUserClinicIds]);
 
-    const requireActiveClinic = useCallback(async (resourceLabel: string): Promise<{ clinicId: string; branchId: string | null } | null> => {
+    const requireActiveClinic = useCallback(async (resourceLabel: string): Promise<{ clinicId: string; branchId: string } | null> => {
         const context = await getActiveClinicContext();
         if (!context.clinicId) {
             addNotification(`Cannot add ${resourceLabel}: no active clinic is assigned to your account`, NotificationType.ERROR);
             return null;
         }
-        return { clinicId: context.clinicId, branchId: context.branchId };
-    }, [getActiveClinicContext, addNotification]);
+        let resolvedBranchId = context.branchId || null;
+        if (!resolvedBranchId) {
+            const defaultBranchAccess = accessibleClinics.find(c => c.clinicId === context.clinicId && c.isDefault && c.branchId);
+            const firstBranchAccess = accessibleClinics.find(c => c.clinicId === context.clinicId && c.branchId);
+            resolvedBranchId = defaultBranchAccess?.branchId || firstBranchAccess?.branchId || null;
+        }
+        if (!resolvedBranchId) {
+            addNotification(`Cannot add ${resourceLabel}: select a branch first`, NotificationType.ERROR);
+            return null;
+        }
+        await applyBranchSession(resolvedBranchId);
+        return { clinicId: context.clinicId, branchId: resolvedBranchId };
+    }, [getActiveClinicContext, addNotification, accessibleClinics]);
 
     const normalizePatientAttachmentPath = useCallback((rawUrl?: string | null): string => {
         if (!rawUrl) return '';
@@ -309,6 +321,7 @@ export const useClinicData = (): ClinicData => {
 
         console.log('Fetching data from all tables...');
         setIsLoading(true);
+        await applyBranchSession(currentBranch?.id || null);
 
         // Get user's accessible clinic IDs for filtering
         const userClinicIds = await getUserClinicIds();
@@ -332,25 +345,6 @@ export const useClinicData = (): ClinicData => {
             'payments', 'supplier_invoices', 'doctor_payments', 'prescriptions', 'prescription_items',
             'patient_attachments', 'clinics', 'treatment_doctor_percentages'
         ];
-
-        const userOwnedTables = new Set<string>([
-            'patients',
-            'dentists',
-            'appointments',
-            'suppliers',
-            'inventory_items',
-            'expenses',
-            'treatment_definitions',
-            'treatment_records',
-            'lab_cases',
-            'payments',
-            'supplier_invoices',
-            'doctor_payments',
-            'prescriptions',
-            'prescription_items',
-            'patient_attachments',
-            'treatment_doctor_percentages',
-        ]);
 
         const clinicScopedTables = new Set<string>([
             'patients',
@@ -376,11 +370,6 @@ export const useClinicData = (): ClinicData => {
         // Build queries with clinic filtering where applicable
         const queries = tables.map((table: string) => {
             let query = supabase!.from(table).select('*');
-
-            // Strict self isolation: always scope user-owned tables to current auth user.
-            if (userOwnedTables.has(table)) {
-                query = query.eq('user_id', user.id);
-            }
             
             // Filter by clinic_id: use currentClinic for active clinic isolation
             if (currentClinic?.id && clinicScopedTables.has(table)) {
@@ -831,6 +820,7 @@ export const useClinicData = (): ClinicData => {
     const addData = async <T extends { id: string }>(table: string, data: Partial<T>, setState: React.Dispatch<React.SetStateAction<T[]>>): Promise<void> => {
         if (!user || !supabase) return;
         const activeClinic = await getActiveClinicContext();
+        await applyBranchSession(activeClinic.branchId || null);
         const insertPayload: Record<string, unknown> = { ...data, user_id: user.id };
         if (activeClinic.clinicId) {
             insertPayload.clinic_id = activeClinic.clinicId;
@@ -2675,7 +2665,11 @@ export const useClinicData = (): ClinicData => {
             ];
 
             for (const table of tables) {
-                await supabase.from(table).delete().eq('user_id', user.id);
+                let purgeQuery = supabase.from(table).delete().eq('clinic_id', activeClinic.clinicId);
+                if (activeClinic.branchId) {
+                    purgeQuery = purgeQuery.eq('branch_id', activeClinic.branchId);
+                }
+                await purgeQuery;
             }
 
             if (data.patients) {

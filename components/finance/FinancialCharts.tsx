@@ -17,9 +17,9 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data, title, colorCla
 
   if (data.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        <h3 className="text-xl font-semibold text-slate-800 mb-4">{title}</h3>
-        <div className="text-center py-8 text-slate-500">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+        <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">{title}</h3>
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
           {t('financialCharts.noData')}
         </div>
       </div>
@@ -29,8 +29,8 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data, title, colorCla
   const maxValue = Math.max(...data.map(d => d.value));
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg">
-      <h3 className="text-xl font-semibold text-slate-800 mb-6">{title}</h3>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
+      <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-6">{title}</h3>
 
       <div className="space-y-4">
         {data.map((item, index) => {
@@ -38,11 +38,11 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data, title, colorCla
 
           return (
             <div key={index} className="flex items-center space-x-4">
-              <div className="w-32 text-sm font-medium text-slate-700 truncate">
+              <div className="w-32 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
                 {item.label}
               </div>
               <div className="flex-1">
-                <div className="w-full bg-slate-200 rounded-full h-6 relative">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-6 relative">
                   <div
                     className={`h-6 rounded-full ${colorClass} transition-all duration-500 ease-out`}
                     style={{ width: `${percentage}%` }}
@@ -60,8 +60,8 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data, title, colorCla
         })}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-slate-200">
-        <div className="text-sm text-slate-600 text-center">
+      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-600 dark:text-slate-300 text-center">
           {t('financialCharts.total')}: {data.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
         </div>
       </div>

@@ -58,11 +58,11 @@ export const ClinicSelector: React.FC<ClinicSelectorProps> = ({
         access: access,
       };
     }
-    if (access.branchId && access.branchName) {
+    if (access.branchId) {
       if (!acc[access.clinicId].branches.some((b) => b.id === access.branchId)) {
         acc[access.clinicId].branches.push({
           id: access.branchId,
-          name: access.branchName,
+          name: access.branchName || `Branch ${access.branchId.slice(0, 8)}`,
           clinicId: access.clinicId,
         } as ClinicBranch);
       }

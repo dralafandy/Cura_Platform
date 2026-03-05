@@ -8,7 +8,7 @@
  * - Password hashing
  */
 
-import { supabase } from '../supabaseClient';
+import { createEphemeralSupabaseClient, supabase } from '../supabaseClient';
 import { 
   UserProfile, 
   UserRole, 
@@ -27,6 +27,8 @@ export interface CreateUserRequest {
   password: string;
   role: UserRole;
   status?: UserStatus;
+  clinicId?: string;
+  branchId?: string | null;
 }
 
 export interface UpdateUserRequest {
@@ -53,6 +55,15 @@ const getCurrentAuthUserId = async (): Promise<string | null> => {
 };
 
 const getSelfScopeFilter = (authUserId: string): string => `id.eq.${authUserId},auth_id.eq.${authUserId}`;
+
+const getCurrentClinicScope = (): { clinicId: string | null; branchId: string | null } => {
+  const clinicId = localStorage.getItem('currentClinicId');
+  const branchId = localStorage.getItem('currentBranchId');
+  return {
+    clinicId: clinicId && clinicId.trim().length > 0 ? clinicId : null,
+    branchId: branchId && branchId.trim().length > 0 ? branchId : null,
+  };
+};
 
 // ============================================================================
 // Password Hashing Utility
@@ -92,15 +103,28 @@ export const getAllUsers = async (): Promise<UserServiceResponse<UserProfile[]>>
       return { success: false, error: 'Authentication required' };
     }
 
-    const { data, error } = await supabase
+    const { clinicId, branchId } = getCurrentClinicScope();
+
+    if (clinicId) {
+      const { data, error } = await supabase.rpc('admin_list_users_for_clinic', {
+        p_clinic_id: clinicId,
+        p_include_admins: true,
+        p_branch_id: branchId,
+      });
+      if (!error && Array.isArray(data)) {
+        return { success: true, data: data as UserProfile[] };
+      }
+    }
+
+    const { data: selfData, error: selfError } = await supabase
       .from('user_profiles')
       .select('*')
       .or(getSelfScopeFilter(authUserId))
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (selfError) throw selfError;
 
-    return { success: true, data: data || [] };
+    return { success: true, data: selfData || [] };
   } catch (error: any) {
     console.error('Error fetching users:', error);
     return { success: false, error: error.message || 'Failed to fetch users' };
@@ -174,11 +198,75 @@ export const getUserByUsername = async (username: string): Promise<UserServiceRe
  * Create new user
  */
 export const createUser = async (request: CreateUserRequest): Promise<UserServiceResponse<UserProfile>> => {
-  void request;
-  return {
-    success: false,
-    error: 'Creating additional users is disabled while account isolation is active.',
-  };
+  try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
+
+    const { clinicId: scopedClinicId, branchId: scopedBranchId } = getCurrentClinicScope();
+    const clinicId = request.clinicId || scopedClinicId;
+    const branchId = request.branchId !== undefined ? request.branchId : scopedBranchId;
+    if (!clinicId) {
+      return { success: false, error: 'Clinic scope is required to create users' };
+    }
+    if (!branchId) {
+      return { success: false, error: 'Clinic branch scope is required to create users' };
+    }
+
+    const ephemeral = createEphemeralSupabaseClient();
+    if (!ephemeral) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
+
+    const signUpResult = await ephemeral.auth.signUp({
+      email: request.email.trim().toLowerCase(),
+      password: request.password,
+      options: {
+        data: {
+          username: request.username.trim(),
+        },
+      },
+    });
+
+    if (signUpResult.error || !signUpResult.data.user?.id) {
+      throw new Error(signUpResult.error?.message || 'Failed to create auth user');
+    }
+
+    const newAuthUserId = signUpResult.data.user.id;
+    const rpcResult = await supabase.rpc('admin_create_non_admin_user_for_clinic', {
+      p_auth_user_id: newAuthUserId,
+      p_username: request.username.trim(),
+      p_email: request.email.trim().toLowerCase(),
+      p_role: request.role,
+      p_status: request.status || UserStatus.ACTIVE,
+      p_clinic_id: clinicId,
+      p_branch_id: branchId,
+      p_is_default: true,
+    });
+
+    if (rpcResult.error) {
+      throw new Error(rpcResult.error.message || 'Failed to assign created user to clinic branch');
+    }
+
+    const { data: createdRows, error: listError } = await supabase.rpc('admin_list_users_for_clinic', {
+      p_clinic_id: clinicId,
+      p_include_admins: true,
+      p_branch_id: branchId,
+    });
+    if (listError) {
+      throw new Error(listError.message || 'User created but failed to load created record');
+    }
+
+    const createdUser = (createdRows || []).find((row: any) => row.id === newAuthUserId) as UserProfile | undefined;
+    if (!createdUser) {
+      throw new Error('User was created but not visible in current clinic/branch scope');
+    }
+
+    return { success: true, data: createdUser };
+  } catch (error: any) {
+    console.error('Error creating user:', error);
+    return { success: false, error: error.message || 'Failed to create user' };
+  }
 };
 
 /**
@@ -195,7 +283,24 @@ export const updateUser = async (request: UpdateUserRequest): Promise<UserServic
       return { success: false, error: 'Authentication required' };
     }
     if (request.id !== authUserId) {
-      return { success: false, error: 'Access denied: self-only scope' };
+      const { clinicId, branchId } = getCurrentClinicScope();
+      if (!clinicId) {
+        return { success: false, error: 'Clinic scope is required to update another user' };
+      }
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_profile_for_scope', {
+        p_target_user_id: request.id,
+        p_username: request.username ?? null,
+        p_status: request.status ?? null,
+        p_role: request.role ?? null,
+        p_clinic_id: clinicId,
+        p_branch_id: branchId,
+      });
+      if (rpcError) {
+        throw rpcError;
+      }
+      const updated = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      return { success: true, data: updated as UserProfile };
     }
 
     // Check if username is being changed and if it already exists
@@ -334,7 +439,23 @@ export const updateUserRole = async (id: string, role: UserRole): Promise<UserSe
       return { success: false, error: 'Authentication required' };
     }
     if (id !== authUserId) {
-      return { success: false, error: 'Access denied: self-only scope' };
+      const { clinicId, branchId } = getCurrentClinicScope();
+      if (!clinicId) {
+        return { success: false, error: 'Clinic scope is required to update another user role' };
+      }
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_role_for_scope', {
+        p_target_user_id: id,
+        p_new_role: role,
+        p_clinic_id: clinicId,
+        p_branch_id: branchId,
+        p_dentist_id: null,
+      });
+      if (rpcError) {
+        throw rpcError;
+      }
+      const updated = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      return { success: true, data: updated as UserProfile };
     }
 
     const { data, error } = await supabase
@@ -374,7 +495,22 @@ export const updateUserPermissions = async (
       return { success: false, error: 'Authentication required' };
     }
     if (id !== authUserId) {
-      return { success: false, error: 'Access denied: self-only scope' };
+      const { clinicId, branchId } = getCurrentClinicScope();
+      if (!clinicId) {
+        return { success: false, error: 'Clinic scope is required to update another user permissions' };
+      }
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_permissions_for_scope', {
+        p_target_user_id: id,
+        p_custom_permissions: permissions,
+        p_override_permissions: overrideMode,
+        p_clinic_id: clinicId,
+        p_branch_id: branchId,
+      });
+      if (rpcError) {
+        throw rpcError;
+      }
+      const updated = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      return { success: true, data: updated as UserProfile };
     }
 
     const { data, error } = await supabase

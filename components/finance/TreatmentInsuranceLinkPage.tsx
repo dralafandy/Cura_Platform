@@ -44,15 +44,15 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
     fetchTreatmentRecords();
     fetchInsuranceCompanies();
     fetchTreatmentInsuranceLinks();
-  }, [user?.id]);
+  }, [user?.id, activeClinicId]);
 
   const fetchTreatmentRecords = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       const { data, error } = await supabase
         .from('treatment_records')
         .select('id, notes')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
 
@@ -69,11 +69,11 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
 
   const fetchInsuranceCompanies = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       const { data, error } = await supabase
         .from('insurance_companies')
         .select('id, name')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
       setInsuranceCompanies(data || []);
@@ -84,12 +84,12 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
 
   const fetchTreatmentInsuranceLinks = async () => {
     try {
-      if (!supabase || !user?.id) return;
+      if (!supabase || !user?.id || !activeClinicId) return;
       setLoading(true);
       const { data, error } = await supabase
         .from('treatment_insurance_link')
         .select('*, treatment_records(notes), insurance_companies(name)')
-        .eq('user_id', user.id);
+        .eq('clinic_id', activeClinicId);
 
       if (error) throw error;
 
@@ -168,10 +168,10 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">{t('treatment_insurance_links')}</h1>
+    <div className="p-4 text-slate-800 dark:text-slate-200">
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">{t('treatment_insurance_links')}</h1>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      {error && <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">{error}</div>}
 
       <button
         onClick={handleAddLink}
@@ -185,29 +185,29 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <table className="min-w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b">{t('treatment_record')}</th>
-                <th className="py-2 px-4 border-b">{t('insurance_company')}</th>
-                <th className="py-2 px-4 border-b">{t('claim_amount')}</th>
-                <th className="py-2 px-4 border-b">{t('claim_status')}</th>
-                <th className="py-2 px-4 border-b">{t('claim_date')}</th>
-                <th className="py-2 px-4 border-b">{t('payment_date')}</th>
-                <th className="py-2 px-4 border-b">{t('actions')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('treatment_record')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('insurance_company')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('claim_amount')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('claim_status')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('claim_date')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('payment_date')}</th>
+                <th className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {treatmentInsuranceLinks.map((link) => (
-                <tr key={link.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{link.treatment_record_details}</td>
-                  <td className="py-2 px-4 border-b">{link.insurance_company_name}</td>
-                  <td className="py-2 px-4 border-b">{link.claim_amount}</td>
-                  <td className="py-2 px-4 border-b">{link.claim_status}</td>
-                  <td className="py-2 px-4 border-b">{link.claim_date}</td>
-                  <td className="py-2 px-4 border-b">{link.payment_date}</td>
-                  <td className="py-2 px-4 border-b">
+                <tr key={link.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/60">
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.treatment_record_details}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.insurance_company_name}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.claim_amount}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.claim_status}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.claim_date}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">{link.payment_date}</td>
+                  <td className="py-2 px-4 border-b border-slate-200 dark:border-slate-700">
                     <button
                       onClick={() => handleEditLink(link)}
                       className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -229,21 +229,21 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold mb-4">
+        <div className="fixed inset-0 bg-gray-600/50 dark:bg-black/60 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border border-slate-200 dark:border-slate-700 w-96 shadow-lg rounded-md bg-white dark:bg-slate-800">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
               {currentLink?.id ? t('edit_treatment_insurance_link') : t('add_treatment_insurance_link')}
             </h3>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="treatment_record_id">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="treatment_record_id">
                 {t('treatment_record')}
               </label>
               <select
                 id="treatment_record_id"
                 value={currentLink.treatment_record_id || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, treatment_record_id: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="">{t('select_treatment_record')}</option>
                 {treatmentRecords.map((record) => (
@@ -253,14 +253,14 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="insurance_company_id">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="insurance_company_id">
                 {t('insurance_company')}
               </label>
               <select
                 id="insurance_company_id"
                 value={currentLink.insurance_company_id || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, insurance_company_id: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="">{t('select_insurance_company')}</option>
                 {insuranceCompanies.map((company) => (
@@ -270,7 +270,7 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="claim_amount">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="claim_amount">
                 {t('claim_amount')}
               </label>
               <input
@@ -279,19 +279,19 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
                 step="0.01"
                 value={currentLink.claim_amount || 0}
                 onChange={(e) => setCurrentLink({ ...currentLink, claim_amount: parseFloat(e.target.value) })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="claim_status">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="claim_status">
                 {t('claim_status')}
               </label>
               <select
                 id="claim_status"
                 value={currentLink.claim_status || 'PENDING'}
                 onChange={(e) => setCurrentLink({ ...currentLink, claim_status: e.target.value as 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="PENDING">{t('pending')}</option>
                 <option value="APPROVED">{t('approved')}</option>
@@ -301,7 +301,7 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="claim_date">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="claim_date">
                 {t('claim_date')}
               </label>
               <input
@@ -309,12 +309,12 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
                 type="date"
                 value={currentLink.claim_date || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, claim_date: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="payment_date">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="payment_date">
                 {t('payment_date')}
               </label>
               <input
@@ -322,26 +322,26 @@ const TreatmentInsuranceLinkPage: React.FC = () => {
                 type="date"
                 value={currentLink.payment_date || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, payment_date: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="notes">
+              <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="notes">
                 {t('notes')}
               </label>
               <textarea
                 id="notes"
                 value={currentLink.notes || ''}
                 onChange={(e) => setCurrentLink({ ...currentLink, notes: e.target.value })}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                className="shadow appearance-none border border-slate-300 dark:border-slate-600 rounded w-full py-2 px-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 leading-tight focus:outline-none focus:shadow-outline"
               />
             </div>
 
             <div className="flex justify-end">
               <button
                 onClick={() => setShowModal(false)}
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+                className="bg-gray-500 hover:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-bold py-2 px-4 rounded mr-2"
               >
                 {t('cancel')}
               </button>

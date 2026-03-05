@@ -1092,7 +1092,7 @@ const DoctorList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: any)
         const { data, error } = await supabase
             .from('employees')
             .select('dentist_id')
-            .eq('user_id', user.id)
+            .eq('clinic_id', activeClinicId)
             .not('dentist_id', 'is', null);
 
         if (error) return;

@@ -155,6 +155,8 @@ export const UserManagement: React.FC = () => {
       password: formData.password,
       role: formData.role,
       status: formData.status,
+      clinicId: formData.clinicId,
+      branchId: formData.branchId || null,
     };
 
     const result = await createUser(request);

@@ -17,6 +17,7 @@ import {
   getRoleColor 
 } from '../../utils/permissions';
 import { hashPassword } from '../../services/userService';
+import { useAuth } from '../../contexts/AuthContext';
 
 // ============================================================================
 // Types & Interfaces
@@ -36,6 +37,8 @@ export interface UserFormData {
   confirmPassword: string;
   role: UserRole;
   status: UserStatus;
+  clinicId: string;
+  branchId: string;
 }
 
 interface FormErrors {
@@ -43,6 +46,7 @@ interface FormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
+  branchId?: string;
 }
 
 // ============================================================================
@@ -72,6 +76,13 @@ export const UserForm: React.FC<UserFormProps> = ({
   onSubmit,
 }) => {
   const isEditing = !!user;
+  const { accessibleClinics, currentClinic, currentBranch } = useAuth();
+
+  const clinicOptions = Array.from(
+    new Map(
+      (accessibleClinics || []).map((item) => [item.clinicId, { id: item.clinicId, name: item.clinicName || 'Clinic' }]),
+    ).values(),
+  );
 
   // Form state
   const [formData, setFormData] = useState<UserFormData>({
@@ -81,6 +92,8 @@ export const UserForm: React.FC<UserFormProps> = ({
     confirmPassword: '',
     role: UserRole.ASSISTANT,
     status: UserStatus.ACTIVE,
+    clinicId: currentClinic?.id || clinicOptions[0]?.id || '',
+    branchId: currentBranch?.id || '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -98,6 +111,8 @@ export const UserForm: React.FC<UserFormProps> = ({
         confirmPassword: '',
         role: user.role,
         status: user.status,
+        clinicId: currentClinic?.id || clinicOptions[0]?.id || '',
+        branchId: currentBranch?.id || '',
       });
     } else {
       setFormData({
@@ -107,11 +122,13 @@ export const UserForm: React.FC<UserFormProps> = ({
         confirmPassword: '',
         role: UserRole.ASSISTANT,
         status: UserStatus.ACTIVE,
+        clinicId: currentClinic?.id || clinicOptions[0]?.id || '',
+        branchId: currentBranch?.id || '',
       });
     }
     setErrors({});
     setGeneratedPassword('');
-  }, [user, isOpen]);
+  }, [user, isOpen, currentClinic?.id, currentBranch?.id, clinicOptions]);
 
   // Validation
   const validateForm = useCallback((): boolean => {
@@ -146,6 +163,13 @@ export const UserForm: React.FC<UserFormProps> = ({
       // Confirm password validation
       if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
+      }
+
+      if (!formData.clinicId) {
+        newErrors.email = 'Clinic selection is required';
+      }
+      if (!formData.branchId) {
+        newErrors.branchId = 'Branch selection is required';
       }
     }
 
@@ -365,6 +389,55 @@ export const UserForm: React.FC<UserFormProps> = ({
               </select>
             </div>
           </div>
+
+          {!isEditing && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Clinic *
+                </label>
+                <select
+                  value={formData.clinicId}
+                  onChange={(e) => {
+                    const selectedClinicId = e.target.value;
+                    const firstBranch = (accessibleClinics || []).find((item) => item.clinicId === selectedClinicId)?.branchId || '';
+                    setFormData((prev) => ({ ...prev, clinicId: selectedClinicId, branchId: firstBranch || '' }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select clinic</option>
+                  {clinicOptions.map((clinic) => (
+                    <option key={clinic.id} value={clinic.id}>
+                      {clinic.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Branch *
+                </label>
+                <select
+                  value={formData.branchId}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, branchId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select branch</option>
+                  {(accessibleClinics || [])
+                    .filter((item) => item.clinicId === formData.clinicId && item.branchId)
+                    .map((item) => (
+                      <option key={item.id} value={item.branchId || ''}>
+                        {item.branchName || 'Branch'}
+                      </option>
+                    ))}
+                </select>
+                {errors.branchId && (
+                  <p className="text-red-500 text-xs mt-1">{errors.branchId}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Role description */}
           <div className={`p-3 rounded-lg text-sm ${getRoleColor(formData.role)}`}>

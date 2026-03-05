@@ -170,7 +170,7 @@ const InsuranceManagementPage: React.FC = () => {
   }, [companies, accounts, transactions, patientLinks, treatmentLinks]);
 
   const load = async () => {
-    if (!supabase || !user?.id) return;
+    if (!supabase || !user?.id || !activeClinicId) return;
     try {
       setLoading(true);
       setError(null);
@@ -181,7 +181,7 @@ const InsuranceManagementPage: React.FC = () => {
         supabase.from('patient_insurance_link').select('id,patient_id,insurance_company_id,coverage_percentage,user_id,policy_number,effective_date,expiry_date').order('created_at', { ascending: false }),
         supabase.from('treatment_insurance_link').select('id,treatment_record_id,insurance_company_id,claim_amount,claim_status,user_id,claim_date,payment_date').order('created_at', { ascending: false }),
         supabase.from('patients').select('id,name').order('name'),
-        supabase.from('treatment_records').select('id,notes,treatment_definitions(name),patient_id,patients(name)').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('treatment_records').select('id,notes,treatment_definitions(name),patient_id,patients(name)').eq('clinic_id', activeClinicId).order('created_at', { ascending: false }),
       ]);
       const firstErr = co.error || ac.error || tx.error || pl.error || tl.error || pa.error || tr.error;
       if (firstErr) throw firstErr;
@@ -206,7 +206,7 @@ const InsuranceManagementPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { void load(); }, [user?.id]);
+  useEffect(() => { void load(); }, [user?.id, activeClinicId]);
 
   const del = async (table: string, id: string) => {
     if (!supabase) return;

@@ -142,42 +142,42 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
       {/* Expenses Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 border-l-4 border-l-red-500">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('expensesTab.totalExpenses')}</p>
-              <p className="text-3xl font-bold text-slate-800">{currencyFormatter.format(totalExpenses)}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{t('expensesTab.totalExpenses')}</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">{currencyFormatter.format(totalExpenses)}</p>
             </div>
             <div className="text-4xl opacity-20">💸</div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-orange-500">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 border-l-4 border-l-orange-500">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('expensesTab.operatingExpenses')}</p>
-              <p className="text-3xl font-bold text-slate-800">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{t('expensesTab.operatingExpenses')}</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {currencyFormatter.format(expensesData.filter(e => e.type === 'Expense').reduce((sum, e) => sum + e.amount, 0))}
               </p>
             </div>
             <div className="text-4xl opacity-20">🏢</div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 border-l-4 border-l-purple-500">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('expensesTab.doctorPayments')}</p>
-              <p className="text-3xl font-bold text-slate-800">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{t('expensesTab.doctorPayments')}</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {currencyFormatter.format(expensesData.filter(e => e.type === 'Doctor Payment').reduce((sum, e) => sum + e.amount, 0))}
               </p>
             </div>
             <div className="text-4xl opacity-20">👨‍⚕️</div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-500">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('expensesTab.supplierInvoices')}</p>
-              <p className="text-3xl font-bold text-slate-800">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{t('expensesTab.supplierInvoices')}</p>
+              <p className="text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {currencyFormatter.format(expensesData.filter(e => e.type === 'Supplier Invoice').reduce((sum, e) => sum + e.amount, 0))}
               </p>
             </div>

@@ -114,10 +114,10 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center py-8">
           <div className="text-6xl mb-4">🔒</div>
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
             {t('common.accessDenied')}
           </h3>
-          <p className="text-slate-600">
+          <p className="text-slate-600 dark:text-slate-400">
             You don't have permission to view financial accounts.
           </p>
         </div>
@@ -158,10 +158,10 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
             {t('financialAccounts.title')}
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Comprehensive financial overview and management
           </p>
         </div>
@@ -175,14 +175,14 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
           </button>
           <button 
             onClick={resetFilters}
-            className="inline-flex items-center px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             {t('financialFilters.clearAll')}
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+          <button className="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
             <span className="mr-2">📊</span>
             {t('financialAccounts.export')}
           </button>
@@ -211,9 +211,9 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
       />
 
       {/* Tabs Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Tab Headers */}
-        <div className="border-b border-slate-200 bg-slate-50/50">
+        <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/60">
           <nav className="flex">
             {tabs.map((tab) => (
               <button
@@ -221,8 +221,8 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center px-6 py-4 text-sm font-medium transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'border-b-2 border-primary text-primary bg-white'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
+                    ? 'border-b-2 border-primary text-primary bg-white dark:bg-slate-800'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-700/60'
                 }`}
                 title={tab.description}
               >
@@ -273,7 +273,7 @@ const FinancialAccounts: React.FC<FinancialAccountsProps> = ({ setCurrentView })
       </div>
 
       {/* Footer Info */}
-      <div className="text-center text-sm text-slate-500 py-4">
+      <div className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">
         <p>
           Financial data is updated in real-time. Last updated: {new Date().toLocaleString(locale)}
         </p>

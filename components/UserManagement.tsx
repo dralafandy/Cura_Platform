@@ -34,10 +34,16 @@ interface FormErrors {
   confirmPassword?: string;
   dentist_id?: string;
   clinic_id?: string;
+  branch_id?: string;
   role?: string;
 }
 
 interface ClinicOption {
+  id: string;
+  name: string;
+}
+
+interface BranchOption {
   id: string;
   name: string;
 }
@@ -103,6 +109,8 @@ const UserManagement: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; userId: string | null; type: 'single' | 'bulk' }>({ isOpen: false, userId: null, type: 'single' });
   const [oauthUnlinkConfirm, setOauthUnlinkConfirm] = useState<{ isOpen: boolean; userId: string | null; provider: string | null }>({ isOpen: false, userId: null, provider: null });
   const [selectedClinicId, setSelectedClinicId] = useState('');
+  const [selectedCreateBranchId, setSelectedCreateBranchId] = useState('');
+  const [clinicBranchOptions, setClinicBranchOptions] = useState<BranchOption[]>([]);
 
   // Form state
 
@@ -157,6 +165,55 @@ const UserManagement: React.FC = () => {
       return clinicOptions[0].id;
     });
   }, [clinicOptions, currentClinic?.id]);
+
+  useEffect(() => {
+    if (SELF_ONLY_MODE || !selectedClinicId) {
+      setClinicBranchOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadClinicBranches = async () => {
+      const { data, error } = await supabase
+        .from('clinic_branches')
+        .select('id, name, is_main_branch')
+        .eq('clinic_id', selectedClinicId)
+        .eq('is_active', true)
+        .order('is_main_branch', { ascending: false })
+        .order('name', { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('Failed to fetch clinic branches:', error);
+        setClinicBranchOptions([]);
+        return;
+      }
+
+      const options = ((data || []) as any[]).map((row) => ({
+        id: String(row.id),
+        name: String(row.name || `Branch ${String(row.id).slice(0, 8)}`),
+      }));
+      setClinicBranchOptions(options);
+    };
+
+    loadClinicBranches();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [SELF_ONLY_MODE, selectedClinicId]);
+
+  useEffect(() => {
+    if (editingUser || !showModal) return;
+
+    setSelectedCreateBranchId((prev) => {
+      if (prev && clinicBranchOptions.some((branch) => branch.id === prev)) return prev;
+      if (selectedBranchId && clinicBranchOptions.some((branch) => branch.id === selectedBranchId)) return selectedBranchId;
+      return clinicBranchOptions[0]?.id || '';
+    });
+  }, [editingUser, showModal, clinicBranchOptions, selectedBranchId]);
 
   const isSelfTarget = useCallback((targetUserId?: string | null): boolean => {
     return Boolean(currentUserId && targetUserId && targetUserId === currentUserId);
@@ -304,6 +361,9 @@ const UserManagement: React.FC = () => {
       if (!selectedClinicId) {
         errors.clinic_id = 'Clinic is required';
       }
+      if (!selectedCreateBranchId) {
+        errors.branch_id = 'Clinic branch is required';
+      }
 
       if (!formData.email.trim()) {
         errors.email = 'Email is required';
@@ -352,7 +412,7 @@ const UserManagement: React.FC = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData, editingUser, isResettingPassword, selectedClinicId]);
+  }, [formData, editingUser, isResettingPassword, selectedClinicId, selectedCreateBranchId]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -397,6 +457,9 @@ const UserManagement: React.FC = () => {
     if (!selectedClinicId) {
       throw new Error('Please select a clinic');
     }
+    if (!selectedCreateBranchId) {
+      throw new Error('Please select a clinic branch');
+    }
     if (formData.role === UserRole.ADMIN) {
       throw new Error('Only non-admin users can be created from this page.');
     }
@@ -435,7 +498,7 @@ const UserManagement: React.FC = () => {
         p_role: formData.role,
         p_status: formData.status,
         p_clinic_id: selectedClinicId,
-        p_branch_id: selectedBranchId,
+        p_branch_id: selectedCreateBranchId,
         p_dentist_id: formData.role === UserRole.DOCTOR ? (formData.dentist_id || null) : null,
         p_is_default: true,
       });
@@ -631,6 +694,7 @@ const UserManagement: React.FC = () => {
       status: UserStatus.ACTIVE,
       dentist_id: null,
     });
+    setSelectedCreateBranchId('');
     setIsResettingPassword(false);
     setFormErrors({});
   };
@@ -1015,7 +1079,7 @@ const UserManagement: React.FC = () => {
 
         {!SELF_ONLY_MODE && (
           <div className={`${theme === 'dark' ? 'bg-blue-900/20 border-blue-700 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'} border rounded-lg p-4 mb-6`}>
-            New users are created as non-admin and linked to the selected clinic only.
+            New users are created as non-admin and linked to the selected clinic branch.
           </div>
         )}
 
@@ -1366,7 +1430,7 @@ const UserManagement: React.FC = () => {
                   </div>
 
                   {!editingUser && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                       <div>
                         <label className="block text-sm font-medium mb-2">
                           Email *
@@ -1423,6 +1487,29 @@ const UserManagement: React.FC = () => {
                         </select>
                         {formErrors.clinic_id && (
                           <p className="mt-1 text-sm text-red-600">{formErrors.clinic_id}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Branch *
+                        </label>
+                        <select
+                          value={selectedCreateBranchId}
+                          onChange={(e) => setSelectedCreateBranchId(e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            formErrors.branch_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          } ${theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-white'}`}
+                        >
+                          <option value="">Select branch</option>
+                          {clinicBranchOptions.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.branch_id && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.branch_id}</p>
                         )}
                       </div>
                     </div>

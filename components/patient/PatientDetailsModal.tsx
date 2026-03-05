@@ -382,91 +382,91 @@ export const PatientDetailsModal: React.FC<{
 
                             {/* Medical Information Cards */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                         <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                         </svg>
                                         {t('patientDetails.medicalHistory')}
                                     </h3>
-                                    <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{patient.medicalHistory || t('common.na')}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{patient.medicalHistory || t('common.na')}</p>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                         <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                         </svg>
                                         {t('patientDetails.allergies')}
                                     </h3>
-                                    <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{patient.allergies || t('common.na')}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{patient.allergies || t('common.na')}</p>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                         <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                                         </svg>
                                         {t('patientDetails.currentMedications')}
                                     </h3>
-                                    <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{patient.medications || t('common.na')}</p>
+                                    <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{patient.medications || t('common.na')}</p>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                         <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         {t('patientDetails.emergencyContact')}
                                     </h3>
                                     <div className="space-y-2">
-                                        <p className="text-sm"><span className="font-medium text-slate-600">{t('patientDetails.emergencyContactName')}:</span> {patient.emergencyContactName || '-'}</p>
-                                        <p className="text-sm"><span className="font-medium text-slate-600">{t('patientDetails.emergencyContactPhone')}:</span> {patient.emergencyContactPhone || '-'}</p>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300"><span className="font-medium text-slate-600 dark:text-slate-400">{t('patientDetails.emergencyContactName')}:</span> {patient.emergencyContactName || '-'}</p>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300"><span className="font-medium text-slate-600 dark:text-slate-400">{t('patientDetails.emergencyContactPhone')}:</span> {patient.emergencyContactPhone || '-'}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Insurance Card */}
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
                                     {t('patientDetails.insurance')}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-slate-50 p-3 rounded-lg">
-                                        <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">{t('patientDetails.insuranceProvider')}</span>
-                                        <p className="text-sm font-medium text-slate-800 mt-1">{patient.insuranceProvider || '-'}</p>
+                                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.insuranceProvider')}</span>
+                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patient.insuranceProvider || '-'}</p>
                                     </div>
-                                    <div className="bg-slate-50 p-3 rounded-lg">
-                                        <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">{t('patientDetails.policyNumber')}</span>
-                                        <p className="text-sm font-medium text-slate-800 mt-1">{patient.insurancePolicyNumber || '-'}</p>
+                                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.policyNumber')}</span>
+                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patient.insurancePolicyNumber || '-'}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Notes Card */}
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                     {t('patientDetails.unstructuredNotes')}
                                 </h3>
                                 {patient.treatmentNotes ? (
-                                    <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-primary shadow-sm">
-                                        <p className="text-slate-800 text-base whitespace-pre-wrap leading-relaxed font-medium">{patient.treatmentNotes}</p>
+                                    <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg border-l-4 border-primary shadow-sm">
+                                        <p className="text-slate-800 dark:text-slate-100 text-base whitespace-pre-wrap leading-relaxed font-medium">{patient.treatmentNotes}</p>
                                     </div>
                                 ) : (
-                                    <p className="text-slate-500 text-sm italic">{t('common.na')}</p>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm italic">{t('common.na')}</p>
                                 )}
                             </div>
 
                             {/* Images Card */}
                             {patient.images && patient.images.length > 0 && (
-                                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                                         <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
@@ -496,13 +496,13 @@ export const PatientDetailsModal: React.FC<{
                     )}
 
                     {activeTab === 'chart' && (
-                        <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
                             <DentalChart chartData={patient.dentalChart} onUpdate={handleUpdateDentalChart} />
                         </div>
                     )}
 
                     {activeTab === 'treatments' && (
-                        <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
                             <div className="flex justify-end mb-4">
                                 <button
                                     onClick={() => setIsAddTreatmentModalOpen(true)}
@@ -518,7 +518,7 @@ export const PatientDetailsModal: React.FC<{
                     )}
 
                     {activeTab === 'prescriptions' && (
-                        <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
                             <div className="flex justify-end mb-4">
                                 <button
                                     onClick={() => setIsAddPrescriptionModalOpen(true)}

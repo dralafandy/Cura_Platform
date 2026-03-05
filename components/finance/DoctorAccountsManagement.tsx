@@ -72,43 +72,43 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
    return (
      <div className="space-y-6">
        <div className="flex justify-between items-center">
-         <h2 className="text-2xl font-bold text-slate-800">{t('doctorAccounts.title')}</h2>
+         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('doctorAccounts.title')}</h2>
        </div>
 
-       <div className="bg-white rounded-lg shadow overflow-hidden">
-         <table className="min-w-full divide-y divide-slate-200">
-           <thead className="bg-slate-50">
+       <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 overflow-hidden">
+         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+           <thead className="bg-slate-50 dark:bg-slate-700/60">
              <tr>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctorAccounts.doctor')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctorAccounts.amount')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctorAccounts.date')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctorAccounts.notes')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctorAccounts.actions')}
                </th>
              </tr>
            </thead>
-           <tbody className="bg-white divide-y divide-slate-200">
+           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
              {doctorPayments.map((payment) => (
                <tr key={payment.id}>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    {getDentistName(payment.dentistId)}
                  </td>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    ${payment.amount.toFixed(2)}
                  </td>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    {new Date(payment.date).toLocaleDateString()}
                  </td>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    {payment.notes || '-'}
                  </td>
                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -134,38 +134,38 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
            </tbody>
          </table>
          {doctorPayments.length === 0 && (
-           <div className="text-center py-8 text-slate-500">
+           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
              {t('doctorAccounts.noPayments')}
            </div>
          )}
        </div>
 
        {/* Doctors List with Print Option */}
-       <div className="bg-white rounded-lg shadow overflow-hidden">
-         <div className="px-6 py-4 border-b border-slate-200">
-           <h3 className="text-lg font-medium text-slate-800">{t('doctorStatement.treatments')}</h3>
+       <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 overflow-hidden">
+         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">{t('doctorStatement.treatments')}</h3>
          </div>
-         <table className="min-w-full divide-y divide-slate-200">
-           <thead className="bg-slate-50">
+         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+           <thead className="bg-slate-50 dark:bg-slate-700/60">
              <tr>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctors.name')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('doctors.specialization')}
                </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                  {t('common.actions')}
                </th>
              </tr>
            </thead>
-           <tbody className="bg-white divide-y divide-slate-200">
+           <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
              {dentists.map((dentist) => (
                <tr key={dentist.id}>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    {dentist.name}
                  </td>
-                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-slate-100">
                    {dentist.specialty || '-'}
                  </td>
                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -197,9 +197,9 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
        {/* Print Dialog */}
        {showPrintDialog && selectedDentist && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
-             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-               <h3 className="text-lg font-medium text-slate-800">
+           <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 w-full max-w-4xl max-h-[90vh] overflow-auto">
+             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+               <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">
                  {t('doctorStatement.title')} - {selectedDentist.name}
                </h3>
                <div className="flex gap-2">
@@ -214,7 +214,7 @@ const DoctorAccountsManagement: React.FC<{}> = () => {
                  </button>
                  <button
                    onClick={() => setShowPrintDialog(false)}
-                   className="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-300"
+                   className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600"
                  >
                    {t('common.close')}
                  </button>
