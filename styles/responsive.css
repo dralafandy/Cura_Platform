@@ -927,8 +927,8 @@ iframe {
   a,
   td,
   th {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   /* Keep tables stable while allowing horizontal scroll in wrappers */
@@ -1141,8 +1141,8 @@ iframe {
 
   .mobile-ui-pro .mobile-pro-main :where(p, span, label, strong, h1, h2, h3, h4) {
     max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   /* Many pages use truncate/nowrap utilities that can break Arabic on phones */
@@ -1199,6 +1199,38 @@ iframe {
 
   .mobile-ui-pro .mobile-pro-main :where(.overflow-hidden) {
     overflow-x: hidden;
+  }
+
+  /* Arabic shaping and line breaking on small screens */
+  html[lang="ar"] .mobile-ui-pro .mobile-pro-main :where(
+    p, span, label, button, a, td, th, h1, h2, h3, h4, h5, h6
+  ) {
+    line-height: 1.5;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-break: auto;
+  }
+
+  html[lang="ar"] .mobile-quick-nav .mobile-quick-nav-label,
+  html[lang="ar"] .bottom-nav-label {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+}
+
+@media (max-width: 420px) {
+  /* On very narrow phones, keep nav readable by showing icons only for Arabic labels */
+  html[lang="ar"] .mobile-quick-nav .mobile-quick-nav-label,
+  html[lang="ar"] .bottom-nav-label {
+    display: none;
+  }
+
+  html[lang="ar"] .mobile-quick-nav .mobile-quick-nav-item,
+  html[lang="ar"] .bottom-nav-item-button {
+    justify-content: center;
+    gap: 0;
   }
 }
 

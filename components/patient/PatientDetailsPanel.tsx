@@ -476,14 +476,16 @@ export const PatientDetailsPanel: React.FC<{
                             <li key={key}>
                                 <button
                                     onClick={() => setActiveTab(key as PatientDetailTab)}
-                                    className={`inline-flex items-center gap-2 px-4 py-4 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap ${
+                                    className={`inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap ${
                                         activeTab === key
                                             ? 'border-primary text-primary'
                                             : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500'
                                     }`}
+                                    aria-label={t(label)}
+                                    title={t(label)}
                                 >
                                     <Icon />
-                                    {t(label)}
+                                    <span className="hidden sm:inline">{t(label)}</span>
                                 </button>
                             </li>
                         ))}

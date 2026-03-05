@@ -130,7 +130,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
               aria-label={item.label}
             >
               <Icon active={isActive} />
-              <span className={`mt-1 max-w-full truncate text-[11px] font-medium ${isActive ? 'text-white' : ''}`}>
+              <span className={`mobile-quick-nav-label mt-1 max-w-full truncate text-[11px] font-medium ${isActive ? 'text-white' : ''}`}>
                 {item.label}
               </span>
             </button>
@@ -147,7 +147,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
           aria-label={isDark ? (locale === 'ar' ? 'الوضع الفاتح' : 'Light mode') : (locale === 'ar' ? 'الوضع الداكن' : 'Dark mode')}
         >
           {isDark ? <SunIcon /> : <MoonIcon />}
-          <span className="mt-1 text-[11px] font-medium">{darkModeLabel}</span>
+          <span className="mobile-quick-nav-label mt-1 text-[11px] font-medium">{darkModeLabel}</span>
         </button>
 
         <button
@@ -156,7 +156,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
           aria-label={menuLabel}
         >
           <MenuIcon />
-          <span className="mt-1 text-[11px] font-medium">{menuLabel}</span>
+          <span className="mobile-quick-nav-label mt-1 text-[11px] font-medium">{menuLabel}</span>
         </button>
       </div>
     </nav>

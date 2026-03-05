@@ -349,7 +349,9 @@ export const useClinicData = (): ClinicData => {
         const clinicScopedTables = new Set<string>([
             'patients',
             'appointments',
+            'treatment_definitions',
             'treatment_records',
+            'treatment_doctor_percentages',
             'payments',
             'expenses',
             'suppliers',
@@ -359,7 +361,9 @@ export const useClinicData = (): ClinicData => {
         const branchScopedTables = new Set<string>([
             'patients',
             'appointments',
+            'treatment_definitions',
             'treatment_records',
+            'treatment_doctor_percentages',
             'payments',
             'expenses',
             'suppliers',
@@ -1492,6 +1496,8 @@ export const useClinicData = (): ClinicData => {
     };
     const updateTreatmentRecord = async (patientId: string, record: TreatmentRecord) => {
         if (!supabase) return;
+        const activeClinic = await requireActiveClinic('treatment record');
+        if (!activeClinic) return;
 
         const { id, patientId: pid, dentistId, treatmentDate, treatmentDefinitionId, notes, inventoryItemsUsed, affectedTeeth } = record;
         const totalTreatmentCost = Number(record.totalTreatmentCost) || (Number(record.doctorShare) + Number(record.clinicShare));
@@ -1512,7 +1518,12 @@ export const useClinicData = (): ClinicData => {
         };
 
         console.log(`Updating treatment record data:`, { id, supabaseData });
-        const { error } = await supabase.from('treatment_records').update(supabaseData).eq('id', id);
+        const { error } = await supabase
+            .from('treatment_records')
+            .update(supabaseData)
+            .eq('id', id)
+            .eq('clinic_id', activeClinic.clinicId)
+            .eq('branch_id', activeClinic.branchId);
 
         if (error) {
             console.error(`Error updating treatment record:`, error);
@@ -2751,7 +2762,8 @@ export const useClinicData = (): ClinicData => {
                         ...def,
                         id: def.id.startsWith('sample-') ? undefined : def.id,
                         user_id: user.id,
-                        clinic_id: activeClinic.clinicId
+                        clinic_id: activeClinic.clinicId,
+                        branch_id: activeClinic.branchId
                     };
                     await supabase.from('treatment_definitions').insert(defData);
                 }
@@ -2762,7 +2774,8 @@ export const useClinicData = (): ClinicData => {
                         ...record,
                         id: record.id.startsWith('sample-') ? undefined : record.id,
                         user_id: user.id,
-                        clinic_id: activeClinic.clinicId
+                        clinic_id: activeClinic.clinicId,
+                        branch_id: activeClinic.branchId
                     };
                     await supabase.from('treatment_records').insert(recordData);
                 }

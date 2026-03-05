@@ -675,25 +675,27 @@ export const PatientDetailsModal: React.FC<{
                             {/* Financial Sub-tabs */}
                             <div className="flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0 overflow-x-auto scrollbar-minimal">
                                 {[
-                                    { key: 'summary' as const, label: 'الملخص المالي', icon: DollarSignIcon },
-                                    { key: 'payments' as const, label: 'سجل المدفوعات', icon: DollarSignIcon },
-                                    { key: 'charges' as const, label: 'سجل الرسوم', icon: FileInvoiceIcon }
+                                    { key: 'summary' as const, label: t('financials.summary'), icon: FinancialsIcon },
+                                    { key: 'payments' as const, label: t('financials.payments'), icon: DollarSignIcon },
+                                    { key: 'charges' as const, label: t('financials.charges'), icon: FileInvoiceIcon }
                                 ].map(({ key, label, icon: Icon }) => (
                                     <button
                                         key={key}
                                         onClick={() => setActiveFinancialTab(key)}
                                         className={`
-                                            flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200
+                                            flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200
                                             ${activeFinancialTab === key
                                                 ? 'text-primary border-b-2 border-primary bg-primary/5 dark:bg-slate-800'
                                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                                             }
                                         `}
+                                        aria-label={label}
+                                        title={label}
                                     >
                                         <span className={activeFinancialTab === key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}>
                                             <Icon />
                                         </span>
-                                        {label}
+                                        <span className="hidden sm:inline">{label}</span>
                                     </button>
                                 ))}
                             </div>

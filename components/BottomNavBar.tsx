@@ -267,7 +267,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
                 onMouseDown={() => handlePressStart(item.id)}
                 onMouseUp={handlePressEnd}
                 onMouseLeave={handlePressEnd}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group ${
+                className={`bottom-nav-item-button flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group ${
                   isActive
                     ? 'text-purple-600'
                     : 'text-slate-400 hover:text-purple-600'
@@ -299,7 +299,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
                 </div>
                 
                 {/* Label */}
-                <span className={`text-[10px] font-medium transition-all duration-200 ${
+                <span className={`bottom-nav-label text-[10px] font-medium transition-all duration-200 ${
                   isActive 
                     ? 'text-purple-600 font-semibold' 
                     : 'text-slate-500 group-hover:text-purple-600'
@@ -318,7 +318,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
             onMouseDown={() => handlePressStart('darkmode')}
             onMouseUp={handlePressEnd}
             onMouseLeave={handlePressEnd}
-            className={`flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group ${
+            className={`bottom-nav-item-button flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group ${
               isDark ? 'text-purple-600' : 'text-slate-400 hover:text-purple-600'
             } ${pressedItem === 'darkmode' ? 'scale-95' : ''}`}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -339,7 +339,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
               )}
             </div>
             
-            <span className={`text-[10px] font-medium transition-all duration-200 ${
+            <span className={`bottom-nav-label text-[10px] font-medium transition-all duration-200 ${
               isDark 
                 ? 'text-purple-600 font-semibold' 
                 : 'text-slate-500 group-hover:text-purple-600'
@@ -352,7 +352,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
           {filteredSecondaryItems.length > 0 && (
             <button
               onClick={() => setIsMoreMenuOpen(true)}
-              className="flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group text-slate-400 hover:text-purple-600"
+              className="bottom-nav-item-button flex flex-col items-center justify-center flex-1 h-full min-w-[60px] max-w-[80px] transition-all duration-200 focus:outline-none relative group text-slate-400 hover:text-purple-600"
               aria-label="More options"
               aria-expanded={isMoreMenuOpen}
             >
@@ -363,7 +363,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
                   <circle cx="12" cy="19" r="1" />
                 </svg>
               </div>
-              <span className="text-[10px] font-medium text-slate-500 group-hover:text-purple-600">
+              <span className="bottom-nav-label text-[10px] font-medium text-slate-500 group-hover:text-purple-600">
                 More
               </span>
             </button>

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
 @import './styles/responsive.css';
 
 @tailwind base;
@@ -98,6 +99,7 @@
 
   /* Typography */
   --font-family-primary: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-family-arabic: 'Cairo', 'Tajawal', 'Noto Kufi Arabic', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
   
   /* Font weights */
@@ -163,11 +165,34 @@ body {
   transition: var(--transition-colors);
 }
 
-/* Remove all Arabic font references */
+/* Arabic text rendering defaults */
 [dir="rtl"], .arabic-text, .rtl-text, .arabic,
 .lang-ar, [lang="ar"], .language-ar,
 .arabic-ui, .arabic-interface, .arabic-menu, .arabic-form {
-  font-family: var(--font-family-primary) !important;
+  font-family: var(--font-family-arabic) !important;
+  letter-spacing: normal;
+  line-height: 1.65;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+}
+
+html[lang="ar"] [class*="tracking-"] {
+  letter-spacing: normal !important;
+}
+
+@media (max-width: 767px) {
+  html[lang="ar"] body,
+  html[dir="rtl"] body {
+    line-height: 1.7;
+  }
+
+  html[lang="ar"] :is(p, span, label, button, a, td, th, h1, h2, h3, h4, h5, h6),
+  html[dir="rtl"] :is(p, span, label, button, a, td, th, h1, h2, h3, h4, h5, h6) {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-break: auto;
+    letter-spacing: normal;
+  }
 }
 
 /* Typography enhancements */
