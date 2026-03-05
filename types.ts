@@ -250,7 +250,7 @@ export type FilterOptions = {
 
 export type PatientDetailTab = 'details' | 'chart' | 'treatments' | 'prescriptions' | 'financials' | 'attachments'; // Added 'attachments' tab
 export type DoctorDetailTab = 'details' | 'treatments' | 'financials' | 'schedule';
-export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement';
+export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement' | 'subscriptionOverview';
 
 
 
@@ -600,6 +600,23 @@ export interface UserActivityLog {
 }
 
 // Clinic interface for database
+// Patient Insurance Debt Interface
+export interface PatientInsuranceDebt {
+  id: string;
+  patient_id: string;
+  treatment_record_id: string;
+  insurance_company_id: string;
+  claim_id?: string;
+  original_amount: number;
+  remaining_amount: number;
+  status: 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED';
+  notes?: string;
+  user_id: string;
+  clinic_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Clinic {
     id: string;
     name: string;

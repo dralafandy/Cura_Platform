@@ -28,6 +28,7 @@ import type {
 type DBUserProfile = {
   id: string;
   auth_id?: string | null;
+  tenant_id?: string | null;
   username?: string | null;
   email?: string | null;
   role?: string | null;
@@ -36,6 +37,93 @@ type DBUserProfile = {
   override_permissions?: boolean | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+type TenantAccessValidation = {
+  isValid: boolean;
+  message?: string;
+};
+
+const formatDateForMessage = (value?: string | null): string => {
+  if (!value) return 'an unknown date';
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const buildTenantAccessDeniedMessage = (
+  status?: string | null,
+  trialEndDate?: string | null,
+  subscriptionEndDate?: string | null,
+): string => {
+  const normalizedStatus = String(status || '').toUpperCase();
+
+  if (normalizedStatus === 'TRIAL') {
+    if (trialEndDate) {
+      return `Your trial period ended on ${formatDateForMessage(trialEndDate)}. Please renew your subscription to continue.`;
+    }
+    return 'Your trial period has ended. Please renew your subscription to continue.';
+  }
+
+  if (normalizedStatus === 'ACTIVE') {
+    if (subscriptionEndDate) {
+      return `Your subscription expired on ${formatDateForMessage(subscriptionEndDate)}. Please renew your subscription to continue.`;
+    }
+    return 'Your subscription is inactive. Please contact your administrator.';
+  }
+
+  if (normalizedStatus === 'SUSPENDED') {
+    return 'Your subscription is suspended. Please contact your administrator.';
+  }
+
+  if (normalizedStatus === 'CANCELLED') {
+    return 'Your subscription was cancelled. Please contact your administrator.';
+  }
+
+  if (normalizedStatus === 'EXPIRED') {
+    return 'Your subscription has expired. Please renew your subscription to continue.';
+  }
+
+  return 'Your subscription is inactive. Please contact your administrator.';
+};
+
+const normalizeLoginErrorMessage = (error: unknown): string => {
+  const rawMessage = String((error as any)?.message || '').trim();
+  if (!rawMessage) {
+    return 'Login failed. Please try again.';
+  }
+
+  const message = rawMessage.toLowerCase();
+  const code = String((error as any)?.code || '').toLowerCase();
+
+  if (
+    message.includes('trial period') ||
+    message.includes('subscription expired') ||
+    message.includes('subscription is inactive') ||
+    message.includes('subscription was cancelled') ||
+    message.includes('subscription is suspended')
+  ) {
+    return rawMessage;
+  }
+
+  if (
+    code === 'invalid_credentials' ||
+    message.includes('invalid login credentials') ||
+    message.includes('invalid username or password') ||
+    message.includes('invalid email or password')
+  ) {
+    return 'Invalid email/username or password.';
+  }
+
+  if (code === 'email_not_confirmed' || message.includes('email not confirmed')) {
+    return 'Please verify your email address before signing in.';
+  }
+
+  if (message.includes('too many requests') || code === 'over_request_rate_limit') {
+    return 'Too many login attempts. Please try again in a few minutes.';
+  }
+
+  return rawMessage;
 };
 
 const EMPTY_AUTH_STATE: AuthStateWithClinic = {
@@ -116,6 +204,29 @@ const usernameFromEmail = (email?: string | null): string => {
   if (!email) return `user_${Math.random().toString(36).slice(2, 10)}`;
   const base = email.split('@')[0]?.trim();
   return base || `user_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const extractTenantIdFromPayload = (payload: unknown): string | null => {
+  if (!payload) return null;
+  if (typeof payload === 'string') {
+    const trimmed = payload.trim();
+    return trimmed || null;
+  }
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const fromArray = extractTenantIdFromPayload(item);
+      if (fromArray) return fromArray;
+    }
+    return null;
+  }
+  if (typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    for (const key of ['tenant_id', 'current_user_tenant_id', 'clinic_tenant_id']) {
+      const value = obj[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return null;
 };
 
 const uniquePermissions = (permissions: Permission[]): Permission[] => {
@@ -611,8 +722,13 @@ const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): P
   }
 };
 
-const isTenantAccessValid = async (userId: string): Promise<boolean> => {
-  if (!supabase) return true;
+const isTenantAccessValid = async (userId: string): Promise<TenantAccessValidation> => {
+  if (!supabase) {
+    return {
+      isValid: false,
+      message: 'Unable to validate subscription status. Please contact support.',
+    };
+  }
 
   try {
     const { data: profile, error: profileError } = await supabase
@@ -621,34 +737,79 @@ const isTenantAccessValid = async (userId: string): Promise<boolean> => {
       .eq('id', userId)
       .maybeSingle();
 
-    if (profileError || !profile?.tenant_id) return true;
+    if (profileError) {
+      return {
+        isValid: false,
+        message: 'Unable to validate subscription status. Please contact support.',
+      };
+    }
+    if (!profile?.tenant_id) return { isValid: true };
+
+    let rpcValidity: boolean | null = null;
 
     const { data, error } = await supabase.rpc('get_tenant_info', { p_tenant_id: profile.tenant_id });
+    const rpcRow = Array.isArray(data) ? data[0] : data;
 
-    if (!error && data && data[0]) {
-      return data[0].is_subscription_valid === true;
+    if (!error && rpcRow && typeof rpcRow.is_subscription_valid === 'boolean') {
+      rpcValidity = rpcRow.is_subscription_valid === true;
+      if (rpcValidity) {
+        return { isValid: true };
+      }
     }
 
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('subscription_status, trial_end_date, subscription_end_date')
       .eq('id', profile.tenant_id)
-      .single();
+      .maybeSingle();
 
-    if (tenantError || !tenant) return true;
+    if (!tenantError && tenant) {
+      const today = new Date().toISOString().split('T')[0];
+      const status = String(tenant.subscription_status || '').toUpperCase();
 
-    const today = new Date().toISOString().split('T')[0];
-    if (tenant.subscription_status === 'TRIAL') {
-      return !!tenant.trial_end_date && tenant.trial_end_date >= today;
+      if (status === 'TRIAL') {
+        const isTrialValid = !!tenant.trial_end_date && tenant.trial_end_date >= today;
+        return {
+          isValid: isTrialValid,
+          message: isTrialValid
+            ? undefined
+            : buildTenantAccessDeniedMessage(status, tenant.trial_end_date, tenant.subscription_end_date),
+        };
+      }
+
+      if (status === 'ACTIVE') {
+        const isSubscriptionValid = !tenant.subscription_end_date || tenant.subscription_end_date >= today;
+        return {
+          isValid: isSubscriptionValid,
+          message: isSubscriptionValid
+            ? undefined
+            : buildTenantAccessDeniedMessage(status, tenant.trial_end_date, tenant.subscription_end_date),
+        };
+      }
+
+      return {
+        isValid: false,
+        message: buildTenantAccessDeniedMessage(status, tenant.trial_end_date, tenant.subscription_end_date),
+      };
     }
-    if (tenant.subscription_status === 'ACTIVE') {
-      return !tenant.subscription_end_date || tenant.subscription_end_date >= today;
+
+    if (rpcValidity === false) {
+      return {
+        isValid: false,
+        message: buildTenantAccessDeniedMessage(),
+      };
     }
 
-    return false;
+    return {
+      isValid: false,
+      message: 'Unable to validate subscription status. Please contact support.',
+    };
   } catch (error) {
     console.error('Tenant validation failed:', error);
-    return true;
+    return {
+      isValid: false,
+      message: 'Unable to validate subscription status. Please contact support.',
+    };
   }
 };
 
@@ -733,23 +894,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
+    let tenantFromUsers: string | null = null;
+    try {
+      const { data: usersRow, error: usersError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', authUser.id)
+        .maybeSingle();
+      if (!usersError && usersRow && typeof (usersRow as any).tenant_id === 'string') {
+        tenantFromUsers = (usersRow as any).tenant_id as string;
+      }
+    } catch {
+      tenantFromUsers = null;
+    }
+
+    if (!tenantFromUsers) {
+      try {
+        const { data: linkedData, error: linkedError } = await supabase.rpc('link_current_user_tenant_context');
+        if (!linkedError) {
+          const linkedTenantId = extractTenantIdFromPayload(linkedData);
+          if (linkedTenantId) {
+            tenantFromUsers = linkedTenantId;
+          }
+        }
+      } catch {
+        // Ignore missing RPC or permission errors in mixed migration states.
+      }
+    }
+
     if (existing) {
+      if (!existing.tenant_id) {
+        try {
+          const { data: linkedData, error: linkedError } = await supabase.rpc('link_current_user_tenant_context', {
+            p_preferred_tenant_id: tenantFromUsers || null,
+          });
+          if (!linkedError) {
+            const linkedTenantId = extractTenantIdFromPayload(linkedData);
+            if (linkedTenantId) {
+              existing = { ...(existing as DBUserProfile), tenant_id: linkedTenantId };
+            }
+          }
+        } catch {
+          // Ignore missing RPC or permission errors in mixed migration states.
+        }
+      }
+
       const patch: Record<string, unknown> = {};
       if ((existing as any).auth_id !== authUser.id) patch.auth_id = authUser.id;
       if (authUser.email && existing.email !== authUser.email) patch.email = authUser.email;
       if (!existing.username) patch.username = usernameFromEmail(authUser.email);
+      let patchApplied = false;
 
       if (Object.keys(patch).length > 0) {
         const { error: updateErr } = await supabase.from('user_profiles').update(patch).eq('id', existing.id);
         if (updateErr) {
           console.warn('Failed to patch profile columns:', updateErr.message);
+        } else {
+          patchApplied = true;
         }
       }
 
-      return {
-        ...(existing as DBUserProfile),
-        ...(patch as Partial<DBUserProfile>),
-      };
+      if (patchApplied) {
+        return {
+          ...(existing as DBUserProfile),
+          ...(patch as Partial<DBUserProfile>),
+        };
+      }
+
+      return existing as DBUserProfile;
     }
 
     const basePayload = {
@@ -758,6 +970,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       email: authUser.email || null,
       role: 'DOCTOR',
       status: 'ACTIVE',
+      tenant_id: tenantFromUsers,
       created_at: now,
       updated_at: now,
     } as Record<string, unknown>;
@@ -803,11 +1016,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const hydrateFromSession = useCallback(
-    async (session: SupabaseSession | null, isActive: () => boolean = () => true) => {
+    async (
+      session: SupabaseSession | null,
+      isActive: () => boolean = () => true,
+      options: { throwOnError?: boolean } = {},
+    ) => {
+      const throwOnError = options.throwOnError === true;
       if (!isActive()) return;
 
       if (!supabase || !session?.user) {
         clearAuthState();
+        if (throwOnError) {
+          throw new Error('No active session found.');
+        }
         return;
       }
 
@@ -819,14 +1040,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (!profile?.id) {
           clearAuthState();
+          if (throwOnError) {
+            throw new Error('Unable to load your user profile.');
+          }
           return;
         }
 
-        const tenantValid = await isTenantAccessValid(profile.id);
-        if (!tenantValid) {
+        const tenantAccess = await isTenantAccessValid(profile.id);
+        if (!tenantAccess.isValid) {
           await supabase.auth.signOut();
           clearAuthState();
-          return;
+          throw new Error(tenantAccess.message || buildTenantAccessDeniedMessage());
         }
 
         const accessibleClinics = await fetchUserClinicsFromDB(profile.id, authUser.id);
@@ -929,6 +1153,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Failed to hydrate auth state:', error);
         if (!isActive()) return;
         clearAuthState();
+        if (throwOnError) {
+          throw error instanceof Error ? error : new Error('Failed to load your account session.');
+        }
       }
     },
     [clearAuthState, ensureUserProfile],
@@ -1036,10 +1263,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(error?.message || 'Invalid username or password');
       }
 
-      await hydrateFromSession(data.session);
+      await hydrateFromSession(data.session, () => true, { throwOnError: true });
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
-      throw error;
+      throw new Error(normalizeLoginErrorMessage(error));
     }
   }, [hydrateFromSession]);
 

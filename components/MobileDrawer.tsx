@@ -63,6 +63,14 @@ const ClinicIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const SubscriptionIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2.5" y="6" width="19" height="12" rx="2" />
+    <path d="M2.5 10h19" />
+    <path d="M7 14h4" />
+  </svg>
+);
+
 const DoctorsIcon = ({ isActive }: { isActive: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="9" />
@@ -176,7 +184,7 @@ interface MobileDrawerProps {
 }
 
 const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView, isOpen, onClose, clinicData }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { userProfile, isAdmin, logout } = useAuth();
   const { toggleTheme, isDark } = useTheme();
   const { checkPermission } = usePermissions(userProfile);
@@ -199,6 +207,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: null, adminOnly: true }, // Admin only
     { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
     { id: 'clinicManagement', label: t('sidebar.clinicManagement') || 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW, adminOnly: false },
+    { id: 'subscriptionOverview', label: locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription', icon: SubscriptionIcon, permission: null, adminOnly: true },
   ];
 
   // Filter items based on permissions and admin-only flag
@@ -233,7 +242,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     },
     {
       label: t('sidebar.group.settings'),
-      items: filteredNavItems.filter(item => ['settings', 'userManagement', 'clinicManagement'].includes(item.id)),
+      items: filteredNavItems.filter(item => ['settings', 'userManagement', 'clinicManagement', 'subscriptionOverview'].includes(item.id)),
     },
   ];
 

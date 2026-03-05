@@ -32,55 +32,32 @@ export const tenantService = {
         return { success: false, error: 'Clinic URL can only contain lowercase letters, numbers, and dashes' };
       }
 
-      // Check if slug is available
-      const { data: existingTenant, error: existingTenantError } = await supabase
-        .from('tenants')
-        .select('id')
-        .eq('slug', input.slug)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('create_tenant_for_current_user', {
+        p_name: input.name,
+        p_slug: input.slug,
+        p_email: input.email || null,
+        p_phone: input.phone || null,
+      });
 
-      // PGRST116 = no rows, which is expected when slug is free
-      if (existingTenantError && existingTenantError.code !== 'PGRST116') {
-        throw existingTenantError;
+      if (error) {
+        throw error;
       }
 
-      if (existingTenant) {
-        return { success: false, error: 'This clinic URL is already taken. Please choose another name.' };
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.tenant_id) {
+        return { success: false, error: 'No tenant id returned from create_tenant_for_current_user' };
       }
 
-      // Calculate trial end date (14 days from now)
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 14);
+      await supabase.rpc('link_current_user_tenant_context', {
+        p_preferred_tenant_id: String(row.tenant_id),
+      });
 
-      // Create tenant
-      const { data: tenant, error: tenantError } = await supabase
-        .from('tenants')
-        .insert({
-          name: input.name,
-          slug: input.slug,
-          email: input.email,
-          phone: input.phone || '',
-          subscription_status: 'TRIAL',
-          subscription_plan: 'trial',
-          trial_start_date: new Date().toISOString().split('T')[0],
-          trial_end_date: trialEndDate.toISOString().split('T')[0],
-          max_users: 2,
-          max_patients: 100,
-        })
-        .select()
-        .single();
-
-      if (tenantError) throw tenantError;
-
-      // Note: User creation should be handled by Supabase Auth
-      // The frontend will handle creating the auth user and we'll link it here
-      
-      return { 
-        success: true, 
-        data: { 
-          tenant_id: tenant.id, 
-          user_id: '' // Will be filled after user creation
-        } 
+      return {
+        success: true,
+        data: {
+          tenant_id: String(row.tenant_id),
+          user_id: row.user_id ? String(row.user_id) : '',
+        },
       };
     } catch (error: any) {
       return {
@@ -174,19 +151,26 @@ export const tenantService = {
         return { success: false, error: 'Database not configured' };
       }
 
-      const { data, error } = await supabase
-        .from('tenants')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', tenantId)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('update_tenant_secure', {
+        p_tenant_id: tenantId,
+        p_name: updates.name ?? null,
+        p_email: updates.email ?? null,
+        p_phone: updates.phone ?? null,
+        p_address: updates.address ?? null,
+        p_description: updates.description ?? null,
+        p_logo_url: updates.logo_url ?? null,
+        p_primary_color: updates.primary_color ?? null,
+        p_secondary_color: updates.secondary_color ?? null,
+        p_brand_name: updates.brand_name ?? null,
+        p_settings: updates.settings ?? null,
+        p_features: updates.features ?? null,
+        p_payment_method: updates.payment_method ?? null,
+      });
 
       if (error) throw error;
 
-      return { success: true, data: data as Tenant };
+      const row = Array.isArray(data) ? data[0] : data;
+      return { success: true, data: row as Tenant };
     } catch (error: any) {
       return {
         success: false,
@@ -369,30 +353,23 @@ export const invitationService = {
         return { success: false, error: 'Database not configured' };
       }
 
-      // Generate invitation token
-      const token = crypto.randomUUID();
-      
-      // Set expiration (7 days from now)
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-
       const { data, error } = await supabase
-        .from('tenant_invitations')
-        .insert({
-          tenant_id: tenantId,
-          email: email,
-          role: role,
-          invited_by: invitedBy,
-          token: token,
-          expires_at: expiresAt.toISOString(),
-          status: 'PENDING',
+        .rpc('create_tenant_invitation_secure', {
+          p_tenant_id: tenantId,
+          p_email: email,
+          p_role: role,
+          p_expires_in_days: 7,
         })
-        .select()
-        .single();
+      ;
 
       if (error) throw error;
 
-      return { success: true, data: { token: data.token } };
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.token) {
+        return { success: false, error: 'No token returned from create_tenant_invitation_secure' };
+      }
+
+      return { success: true, data: { token: String(row.token) } };
     } catch (error: any) {
       return {
         success: false,
@@ -410,34 +387,18 @@ export const invitationService = {
         return { success: false, error: 'Database not configured' };
       }
 
-      // Get invitation
-      const { data: invitation, error: getError } = await supabase
-        .from('tenant_invitations')
-        .select('*')
-        .eq('token', token)
-        .single();
+      const { data, error } = await supabase.rpc('accept_tenant_invitation_secure', {
+        p_token: token,
+      });
 
-      if (getError || !invitation) {
+      if (error) {
+        return { success: false, error: error.message || 'Invalid invitation' };
+      }
+
+      const rows = Array.isArray(data) ? data : (data ? [data] : []);
+      if (rows.length === 0) {
         return { success: false, error: 'Invalid invitation' };
       }
-
-      // Check if expired
-      if (new Date(invitation.expires_at) < new Date()) {
-        return { success: false, error: 'Invitation has expired' };
-      }
-
-      // Check if already accepted
-      if (invitation.status !== 'PENDING') {
-        return { success: false, error: 'Invitation already used or cancelled' };
-      }
-
-      // Update invitation status
-      const { error: updateError } = await supabase
-        .from('tenant_invitations')
-        .update({ status: 'ACCEPTED' })
-        .eq('token', token);
-
-      if (updateError) throw updateError;
 
       // Note: User linking to tenant should be done by updating the user record
       // The frontend should handle this after successful login

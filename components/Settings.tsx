@@ -609,6 +609,51 @@ const Settings: React.FC<SettingsProps> = ({ clinicData }) => {
               </p>
             )}
           </div>
+
+          {/* Discount Password Section - Admin Only */}
+          {isAdmin && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                <ShieldIcon />
+                إعدادات كلمة مرور الخصم
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+               .configure the password required to apply discounts to patient treatments
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    كلمة المرور الجديدة
+                  </label>
+                  <input
+                    type="password"
+                    value={newDiscountPassword}
+                    onChange={(e) => setNewDiscountPassword(e.target.value)}
+                    placeholder="أدخل كلمة المرور الجديدة"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    تأكيد كلمة المرور
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmDiscountPassword}
+                    onChange={(e) => setConfirmDiscountPassword(e.target.value)}
+                    placeholder="أكد كلمة المرور"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveDiscountPassword}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  حفظ كلمة المرور
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1189,51 +1234,6 @@ const Settings: React.FC<SettingsProps> = ({ clinicData }) => {
               />
             </div>
           </div>
-
-          {/* Discount Password Section (Admin Only) */}
-          {isAdmin && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                <ShieldIcon />
-                خصم الخصم - إعدادات كلمة المرور
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-               .configure the password required to apply discounts to patient treatments
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    كلمة المرور الجديدة
-                  </label>
-                  <input
-                    type="password"
-                    value={newDiscountPassword}
-                    onChange={(e) => setNewDiscountPassword(e.target.value)}
-                    placeholder="أدخل كلمة المرور الجديدة"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    تأكيد كلمة المرور
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmDiscountPassword}
-                    onChange={(e) => setConfirmDiscountPassword(e.target.value)}
-                    placeholder="أكد كلمة المرور"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <button
-                  onClick={handleSaveDiscountPassword}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  حفظ كلمة المرور
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

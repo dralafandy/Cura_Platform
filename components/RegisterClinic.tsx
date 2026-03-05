@@ -135,6 +135,11 @@ const RegisterClinic: React.FC<RegisterClinicProps> = ({ onSuccess }) => {
         throw new Error(promoteError.message || 'فشل ربط المالك بالعيادة');
       }
 
+      // Ensure tenant context is persisted immediately for mixed legacy schemas.
+      await supabase.rpc('link_current_user_tenant_context', {
+        p_preferred_tenant_id: tenantResult.data.tenant_id,
+      });
+
       if (onSuccess) onSuccess();
       else window.location.assign('/login');
     } catch (err: any) {

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+﻿import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../hooks/useI18n';
 import { supabase } from '../../supabaseClient';
 import { useClinicData } from '../../hooks/useClinicData';
+import { ChartIcon, DocumentIcon, UserIcon, ArrowUpIcon } from '../icons';
 
 type Tab = 'companies' | 'accounts' | 'transactions' | 'patient_links' | 'treatment_links' | 'reports';
 
@@ -10,7 +11,7 @@ type Company = { id: string; name: string; phone: string | null; email: string |
 type Account = { id: string; insurance_company_id: string; account_name: string; balance: number; status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'; user_id: string };
 type Txn = { id: string; insurance_account_id: string; transaction_type: 'CREDIT' | 'DEBIT'; amount: number; transaction_date: string; user_id: string; description?: string; reference_number?: string };
 type PatientLink = { id: string; patient_id: string; insurance_company_id: string; policy_number?: string; coverage_percentage: number; effective_date?: string; expiry_date?: string; user_id: string };
-type TreatmentLink = { id: string; treatment_record_id: string; insurance_company_id: string; claim_amount: number; claim_status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'; claim_date?: string; payment_date?: string; user_id: string };
+type TreatmentLink = { id: string; treatment_record_id: string; insurance_company_id: string; claim_amount: number; claim_status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'; claim_date?: string; payment_date?: string; user_id: string; clinic_share?: number; doctor_share?: number; is_patient_debt?: boolean; paid_to_clinic?: boolean; paid_to_doctor?: boolean; patient_id?: string; };
 
 // Icons
 const CompanyIcon = () => (
@@ -78,6 +79,7 @@ const InsuranceManagementPage: React.FC = () => {
   const [tab, setTab] = useState<Tab>('companies');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -85,7 +87,7 @@ const InsuranceManagementPage: React.FC = () => {
   const [patientLinks, setPatientLinks] = useState<PatientLink[]>([]);
   const [treatmentLinks, setTreatmentLinks] = useState<TreatmentLink[]>([]);
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
-  const [treatments, setTreatments] = useState<{ id: string; notes: string | null; treatment_name: string | null; patient_id: string; patient_name?: string }[]>([]);
+  const [treatments, setTreatments] = useState<{ id: string; notes: string | null; treatment_name: string | null; patient_id: string; patient_name?: string; dentist_id?: string; clinic_share?: number; doctor_share?: number }[]>([]);
 
   const [companyForm, setCompanyForm] = useState<Partial<Company>>({ name: '' });
   const [accountForm, setAccountForm] = useState<Partial<Account>>({ insurance_company_id: '', account_name: '', balance: 0, status: 'ACTIVE' });
@@ -179,9 +181,9 @@ const InsuranceManagementPage: React.FC = () => {
         supabase.from('insurance_accounts').select('id,insurance_company_id,account_name,balance,status,user_id').order('created_at', { ascending: false }),
         supabase.from('insurance_transactions').select('id,insurance_account_id,transaction_type,amount,transaction_date,user_id,description,reference_number').order('transaction_date', { ascending: false }),
         supabase.from('patient_insurance_link').select('id,patient_id,insurance_company_id,coverage_percentage,user_id,policy_number,effective_date,expiry_date').order('created_at', { ascending: false }),
-        supabase.from('treatment_insurance_link').select('id,treatment_record_id,insurance_company_id,claim_amount,claim_status,user_id,claim_date,payment_date').order('created_at', { ascending: false }),
+        supabase.from('treatment_insurance_link').select('id,treatment_record_id,insurance_company_id,claim_amount,claim_status,user_id,claim_date,payment_date,patient_id,clinic_share,doctor_share,is_patient_debt,paid_to_clinic,paid_to_doctor').order('created_at', { ascending: false }),
         supabase.from('patients').select('id,name').order('name'),
-        supabase.from('treatment_records').select('id,notes,treatment_definitions(name),patient_id,patients(name)').eq('clinic_id', activeClinicId).order('created_at', { ascending: false }),
+        supabase.from('treatment_records').select('id,notes,treatment_definitions(name),patient_id,patients(name),dentist_id,doctor_share,clinic_share').eq('clinic_id', activeClinicId).order('created_at', { ascending: false }),
       ]);
       const firstErr = co.error || ac.error || tx.error || pl.error || tl.error || pa.error || tr.error;
       if (firstErr) throw firstErr;
@@ -194,8 +196,11 @@ const InsuranceManagementPage: React.FC = () => {
       setTreatments((tr.data || []).map((r: any) => ({
         ...r,
         treatment_name: r.treatment_definitions?.name || r.notes || null,
-        patient_name: r.patients?.name || ''
-      })) as { id: string; notes: string | null; treatment_name: string | null; patient_id: string; patient_name?: string }[]);
+        patient_name: r.patients?.name || '',
+        dentist_id: r.dentist_id || null,
+        clinic_share: r.clinic_share || 0,
+        doctor_share: r.doctor_share || 0
+      })) as { id: string; notes: string | null; treatment_name: string | null; patient_id: string; patient_name?: string; dentist_id?: string; clinic_share?: number; doctor_share?: number }[]);
     } catch (e) {
       console.error('Insurance module loading error:', e);
       const errorMessage = e instanceof Error ? e.message : 
@@ -268,18 +273,95 @@ const InsuranceManagementPage: React.FC = () => {
   
   const saveTreatmentLink = async () => {
     if (!supabase || !user?.id || !activeClinicId || !treatmentLinkForm.treatment_record_id || !treatmentLinkForm.insurance_company_id) return;
-    const payload = { 
-      user_id: user.id, 
+
+    const claimAmount = Number(treatmentLinkForm.claim_amount || 0);
+    const treatmentRecord = treatments.find(t => t.id === treatmentLinkForm.treatment_record_id);
+    let clinicShare = Number(treatmentLinkForm.clinic_share || 0);
+    let doctorShare = Number(treatmentLinkForm.doctor_share || 0);
+    const treatmentTotal = treatmentRecord ? Number(treatmentRecord.clinic_share || 0) + Number(treatmentRecord.doctor_share || 0) : 0;
+    if (treatmentTotal > 0) {
+      const doctorRatio = Number(treatmentRecord?.doctor_share || 0) / treatmentTotal;
+      doctorShare = claimAmount * doctorRatio;
+      clinicShare = claimAmount - doctorShare;
+    } else if (clinicShare === 0 && doctorShare === 0 && claimAmount > 0) {
+      clinicShare = claimAmount;
+    }
+
+    const isMarkingAsPaid = treatmentLinkForm.claim_status === 'PAID';
+    const today = new Date().toISOString().split('T')[0];
+    let existingClaim: Partial<TreatmentLink> | null = null;
+
+    if (treatmentLinkForm.id) {
+      const { data: existingData } = await supabase
+        .from('treatment_insurance_link')
+        .select('id,claim_status,payment_date,paid_to_clinic,paid_to_doctor')
+        .eq('id', treatmentLinkForm.id)
+        .single();
+      existingClaim = (existingData as Partial<TreatmentLink>) || null;
+    }
+
+    const alreadySettled = Boolean(existingClaim?.claim_status === 'PAID' && existingClaim?.paid_to_clinic && existingClaim?.paid_to_doctor);
+    const shouldSettleNow = isMarkingAsPaid && !alreadySettled;
+
+    const payload = {
+      user_id: user.id,
       clinic_id: activeClinicId,
-      treatment_record_id: treatmentLinkForm.treatment_record_id, 
-      insurance_company_id: treatmentLinkForm.insurance_company_id, 
-      claim_amount: Number(treatmentLinkForm.claim_amount || 0), 
+      treatment_record_id: treatmentLinkForm.treatment_record_id,
+      insurance_company_id: treatmentLinkForm.insurance_company_id,
+      claim_amount: claimAmount,
       claim_status: treatmentLinkForm.claim_status || 'PENDING',
       claim_date: treatmentLinkForm.claim_date || null,
-      payment_date: treatmentLinkForm.payment_date || null
+      payment_date: isMarkingAsPaid ? (treatmentLinkForm.payment_date || existingClaim?.payment_date || today) : null,
+      patient_id: treatmentRecord?.patient_id || treatmentLinkForm.patient_id || null,
+      clinic_share: clinicShare,
+      doctor_share: doctorShare,
+      is_patient_debt: !isMarkingAsPaid,
+      paid_to_clinic: isMarkingAsPaid,
+      paid_to_doctor: isMarkingAsPaid
     };
-    const q = treatmentLinkForm.id ? supabase.from('treatment_insurance_link').update(payload).eq('id', treatmentLinkForm.id) : supabase.from('treatment_insurance_link').insert([payload]);
-    const { error: saveError } = await q; if (saveError) { setError(saveError.message); return; }
+
+    const q = treatmentLinkForm.id
+      ? supabase.from('treatment_insurance_link').update(payload).eq('id', treatmentLinkForm.id).select('id').single()
+      : supabase.from('treatment_insurance_link').insert([payload]).select('id').single();
+    const { error: saveError } = await q;
+    if (saveError) { setError(saveError.message); return; }
+
+    // When claim becomes PAID for the first time, move remaining insurance amount to clinic/doctor accounts.
+    if (shouldSettleNow && treatmentRecord) {
+      try {
+        if (claimAmount > 0) {
+          const { error: paymentInsertError } = await supabase.from('payments').insert({
+            patient_id: treatmentRecord.patient_id,
+            treatment_record_id: treatmentLinkForm.treatment_record_id,
+            date: today,
+            amount: claimAmount,
+            method: 'Other',
+            notes: `Insurance claim settled - ${companyName[treatmentLinkForm.insurance_company_id] || ''}`,
+            clinic_share: clinicShare,
+            doctor_share: doctorShare,
+            user_id: user.id,
+            clinic_id: activeClinicId
+          });
+          if (paymentInsertError) throw paymentInsertError;
+        }
+
+        if (doctorShare > 0 && treatmentRecord.dentist_id) {
+          const { error: doctorPaymentInsertError } = await supabase.from('doctor_payments').insert({
+            dentist_id: treatmentRecord.dentist_id,
+            amount: doctorShare,
+            date: today,
+            notes: `Insurance claim settled - ${companyName[treatmentLinkForm.insurance_company_id] || ''}`
+          });
+          if (doctorPaymentInsertError) throw doctorPaymentInsertError;
+        }
+
+        setSuccessMessage('Claim marked as PAID. The amount was added to the patient account and distributed to clinic/doctor shares.');
+      } catch (paymentError) {
+        console.error('Failed to create payment records:', paymentError);
+        setError('Claim updated, but failed to create settlement payment records.');
+      }
+    }
+
     setTreatmentLinkForm({ treatment_record_id: '', insurance_company_id: '', claim_amount: 0, claim_status: 'PENDING', claim_date: new Date().toISOString().split('T')[0], payment_date: '' }); await load();
   };
 
@@ -337,7 +419,7 @@ const InsuranceManagementPage: React.FC = () => {
     const patient = patients.find(p => p.id === treatment?.patient_id) as any;
     const treatmentData = treatment as any;
     
-    const clinicName = clinicInfo?.name || 'مركز طبي';
+    const clinicName = clinicInfo?.name || 'ظ…ط±ظƒط² ط·ط¨ظٹ';
     const clinicAddress = clinicInfo?.address || '';
     const clinicPhone = clinicInfo?.phone || '';
     const clinicEmail = clinicInfo?.email || '';
@@ -346,7 +428,7 @@ const InsuranceManagementPage: React.FC = () => {
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>مطالبة تأمين - ${patient?.name || 'مريض'}</title>
+  <title>ظ…ط·ط§ظ„ط¨ط© طھط£ظ…ظٹظ† - ${patient?.name || 'ظ…ط±ظٹط¶'}</title>
   <style>
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     @page { size: A4; margin: 2cm; }
@@ -381,95 +463,95 @@ const InsuranceManagementPage: React.FC = () => {
   </style>
 </head>
 <body>
-  <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
+  <button class="print-btn" onclick="window.print()">ًں–¨ï¸ڈ ط·ط¨ط§ط¹ط©</button>
   
   <div class="header">
     <h1>${clinicName}</h1>
     <div class="clinic-info">
-      ${clinicAddress ? `<span>📍 ${clinicAddress}</span>` : ''}
-      ${clinicPhone ? `<span>📞 ${clinicPhone}</span>` : ''}
-      ${clinicEmail ? `<span>✉️ ${clinicEmail}</span>` : ''}
+      ${clinicAddress ? `<span>ًں“چ ${clinicAddress}</span>` : ''}
+      ${clinicPhone ? `<span>ًں“‍ ${clinicPhone}</span>` : ''}
+      ${clinicEmail ? `<span>âœ‰ï¸ڈ ${clinicEmail}</span>` : ''}
     </div>
-    <h2>نموذج مطالبة تأمين</h2>
-    <div class="claim-number">رقم المطالبة: ${claim.id.slice(0, 8).toUpperCase()}</div>
+    <h2>ظ†ظ…ظˆط°ط¬ ظ…ط·ط§ظ„ط¨ط© طھط£ظ…ظٹظ†</h2>
+    <div class="claim-number">ط±ظ‚ظ… ط§ظ„ظ…ط·ط§ظ„ط¨ط©: ${claim.id.slice(0, 8).toUpperCase()}</div>
   </div>
   
   <div class="section">
-    <div class="section-title">معلومات المريض</div>
+    <div class="section-title">ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ظ…ط±ظٹط¶</div>
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">اسم المريض</div>
+        <div class="info-label">ط§ط³ظ… ط§ظ„ظ…ط±ظٹط¶</div>
         <div class="info-value">${patient?.name || '-'}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">رقم الهاتف</div>
+        <div class="info-label">ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ</div>
         <div class="info-value">${patient?.phone || '-'}</div>
       </div>
     </div>
   </div>
   
   <div class="section">
-    <div class="section-title">معلومات شركة التأمين</div>
+    <div class="section-title">ظ…ط¹ظ„ظˆظ…ط§طھ ط´ط±ظƒط© ط§ظ„طھط£ظ…ظٹظ†</div>
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">اسم الشركة</div>
+        <div class="info-label">ط§ط³ظ… ط§ظ„ط´ط±ظƒط©</div>
         <div class="info-value">${company?.name || '-'}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">رقم البوليصة</div>
+        <div class="info-label">ط±ظ‚ظ… ط§ظ„ط¨ظˆظ„ظٹطµط©</div>
         <div class="info-value">${patientLinks.find(p => p.patient_id === treatment?.patient_id && p.insurance_company_id === claim.insurance_company_id)?.policy_number || '-'}</div>
       </div>
     </div>
   </div>
   
   <div class="section">
-    <div class="section-title">تفاصيل العلاج</div>
+    <div class="section-title">طھظپط§طµظٹظ„ ط§ظ„ط¹ظ„ط§ط¬</div>
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">نوع العلاج</div>
+        <div class="info-label">ظ†ظˆط¹ ط§ظ„ط¹ظ„ط§ط¬</div>
         <div class="info-value">${treatment?.treatment_name || treatment?.notes || '-'}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">تاريخ العلاج</div>
+        <div class="info-label">طھط§ط±ظٹط® ط§ظ„ط¹ظ„ط§ط¬</div>
         <div class="info-value">${treatmentData?.created_at ? new Date(treatmentData.created_at).toLocaleDateString('ar-EG') : '-'}</div>
       </div>
     </div>
   </div>
   
   <div class="amount-box">
-    <div class="amount-label">مبلغ المطالبة</div>
-    <div class="amount-value">${Number(claim.claim_amount || 0).toFixed(2)} ج.م</div>
+    <div class="amount-label">ظ…ط¨ظ„ط؛ ط§ظ„ظ…ط·ط§ظ„ط¨ط©</div>
+    <div class="amount-value">${Number(claim.claim_amount || 0).toFixed(2)} ط¬.ظ…</div>
   </div>
   
   <div class="section">
-    <div class="section-title">معلومات المطالبة</div>
+    <div class="section-title">ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ظ…ط·ط§ظ„ط¨ط©</div>
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">تاريخ تقديم المطالبة</div>
+        <div class="info-label">طھط§ط±ظٹط® طھظ‚ط¯ظٹظ… ط§ظ„ظ…ط·ط§ظ„ط¨ط©</div>
         <div class="info-value">${claim.claim_date ? new Date(claim.claim_date).toLocaleDateString('ar-EG') : '-'}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">حالة المطالبة</div>
-        <div class="info-value"><span class="status-badge status-${claim.claim_status.toLowerCase()}">${claim.claim_status === 'PENDING' ? 'قيد الانتظار' : claim.claim_status === 'APPROVED' ? 'معتمدة' : claim.claim_status === 'PAID' ? 'مدفوعة' : 'مرفوضة'}</span></div>
+        <div class="info-label">ط­ط§ظ„ط© ط§ظ„ظ…ط·ط§ظ„ط¨ط©</div>
+        <div class="info-value"><span class="status-badge status-${claim.claim_status.toLowerCase()}">${claim.claim_status === 'PENDING' ? 'ظ‚ظٹط¯ ط§ظ„ط§ظ†طھط¸ط§ط±' : claim.claim_status === 'APPROVED' ? 'ظ…ط¹طھظ…ط¯ط©' : claim.claim_status === 'PAID' ? 'ظ…ط¯ظپظˆط¹ط©' : 'ظ…ط±ظپظˆط¶ط©'}</span></div>
       </div>
     </div>
   </div>
   
   <div class="signature-box">
     <div class="signature">
-      <div class="signature-line">توقيع المريض</div>
+      <div class="signature-line">طھظˆظ‚ظٹط¹ ط§ظ„ظ…ط±ظٹط¶</div>
     </div>
     <div class="signature">
-      <div class="signature-line">توقيع الطبيب المعالج</div>
+      <div class="signature-line">طھظˆظ‚ظٹط¹ ط§ظ„ط·ط¨ظٹط¨ ط§ظ„ظ…ط¹ط§ظ„ط¬</div>
     </div>
     <div class="signature">
-      <div class="signature-line">ختم العيادة</div>
+      <div class="signature-line">ط®طھظ… ط§ظ„ط¹ظٹط§ط¯ط©</div>
     </div>
   </div>
   
   <div class="footer">
-    <p>تم إنشاء هذا المستند إلكترونياً من نظام إدارة العيادة</p>
-    <p>تاريخ الإصدار: ${new Date().toLocaleDateString('ar-EG')} | الوقت: ${new Date().toLocaleTimeString('ar-EG')}</p>
+    <p>طھظ… ط¥ظ†ط´ط§ط، ظ‡ط°ط§ ط§ظ„ظ…ط³طھظ†ط¯ ط¥ظ„ظƒطھط±ظˆظ†ظٹط§ظ‹ ظ…ظ† ظ†ط¸ط§ظ… ط¥ط¯ط§ط±ط© ط§ظ„ط¹ظٹط§ط¯ط©</p>
+    <p>طھط§ط±ظٹط® ط§ظ„ط¥طµط¯ط§ط±: ${new Date().toLocaleDateString('ar-EG')} | ط§ظ„ظˆظ‚طھ: ${new Date().toLocaleTimeString('ar-EG')}</p>
   </div>
 </body>
 </html>`;
@@ -487,7 +569,7 @@ const InsuranceManagementPage: React.FC = () => {
   const generatePrintWindowHTML = (data: any): string => {
     const { reportType, companies, accounts, transactions, patientLinks, treatmentLinks, selectedCompanyId, selectedAccountId, dateFrom, dateTo } = data;
     
-    const clinicName = clinicInfo?.name || 'مركز طبي';
+    const clinicName = clinicInfo?.name || 'ظ…ط±ظƒط² ط·ط¨ظٹ';
     const clinicAddress = clinicInfo?.address || '';
     const clinicPhone = clinicInfo?.phone || '';
     const clinicEmail = clinicInfo?.email || '';
@@ -495,7 +577,7 @@ const InsuranceManagementPage: React.FC = () => {
     const companyNameMap = Object.fromEntries(companies.map((c: any) => [c.id, c.name]));
     const accountNameMap = Object.fromEntries(accounts.map((a: any) => [a.id, a.account_name]));
     
-    const formatCurrency = (amount: number) => `${(amount || 0).toFixed(2)} ج.م`;
+    const formatCurrency = (amount: number) => `${(amount || 0).toFixed(2)} ط¬.ظ…`;
     const formatDate = (dateStr: string) => {
       if (!dateStr) return '-';
       try { return new Date(dateStr).toLocaleDateString('ar-EG'); } catch { return dateStr; }
@@ -503,9 +585,9 @@ const InsuranceManagementPage: React.FC = () => {
     
     const getStatusLabel = (status: string) => {
       const labels: Record<string, string> = {
-        'ACTIVE': 'نشط', 'INACTIVE': 'غير نشط', 'SUSPENDED': 'معلق',
-        'PENDING': 'قيد الانتظار', 'APPROVED': 'معتمد', 'REJECTED': 'مرفوض', 'PAID': 'مدفوع',
-        'CREDIT': 'إيداع', 'DEBIT': 'سحب'
+        'ACTIVE': 'ظ†ط´ط·', 'INACTIVE': 'ط؛ظٹط± ظ†ط´ط·', 'SUSPENDED': 'ظ…ط¹ظ„ظ‚',
+        'PENDING': 'ظ‚ظٹط¯ ط§ظ„ط§ظ†طھط¸ط§ط±', 'APPROVED': 'ظ…ط¹طھظ…ط¯', 'REJECTED': 'ظ…ط±ظپظˆط¶', 'PAID': 'ظ…ط¯ظپظˆط¹',
+        'CREDIT': 'ط¥ظٹط¯ط§ط¹', 'DEBIT': 'ط³ط­ط¨'
       };
       return labels[status] || status;
     };
@@ -520,13 +602,13 @@ const InsuranceManagementPage: React.FC = () => {
     
     const getReportTitle = () => {
       const titles: Record<string, string> = {
-        'summary': 'تقرير ملخص التأمينات',
-        'claims': 'تقرير مطالبات التأمين',
-        'patients': 'تقرير المرضى المؤمن لهم',
-        'transactions': 'تقرير معاملات التأمين',
-        'account-statement': 'كشف حساب التأمين'
+        'summary': 'طھظ‚ط±ظٹط± ظ…ظ„ط®طµ ط§ظ„طھط£ظ…ظٹظ†ط§طھ',
+        'claims': 'طھظ‚ط±ظٹط± ظ…ط·ط§ظ„ط¨ط§طھ ط§ظ„طھط£ظ…ظٹظ†',
+        'patients': 'طھظ‚ط±ظٹط± ط§ظ„ظ…ط±ط¶ظ‰ ط§ظ„ظ…ط¤ظ…ظ† ظ„ظ‡ظ…',
+        'transactions': 'طھظ‚ط±ظٹط± ظ…ط¹ط§ظ…ظ„ط§طھ ط§ظ„طھط£ظ…ظٹظ†',
+        'account-statement': 'ظƒط´ظپ ط­ط³ط§ط¨ ط§ظ„طھط£ظ…ظٹظ†'
       };
-      return titles[reportType] || 'تقرير التأمين';
+      return titles[reportType] || 'طھظ‚ط±ظٹط± ط§ظ„طھط£ظ…ظٹظ†';
     };
     
     // Filter data based on selection
@@ -626,20 +708,20 @@ const InsuranceManagementPage: React.FC = () => {
       const selectedCompany = selectedAccount ? companies.find((c: any) => c.id === selectedAccount.insurance_company_id) : null;
       if (selectedAccount) {
         accountInfo = `<div class="account-info">
-          <div class="info-row"><span>اسم الحساب:</span><strong>${selectedAccount.account_name}</strong></div>
-          <div class="info-row"><span>شركة التأمين:</span><strong>${selectedCompany?.name || '-'}</strong></div>
-          <div class="info-row"><span>الحالة:</span><span class="status-badge ${getStatusClass(selectedAccount.status)}">${getStatusLabel(selectedAccount.status)}</span></div>
-          <div class="info-row"><span>الرصيد:</span><strong class="text-blue">${formatCurrency(selectedAccount.balance)}</strong></div>
+          <div class="info-row"><span>ط§ط³ظ… ط§ظ„ط­ط³ط§ط¨:</span><strong>${selectedAccount.account_name}</strong></div>
+          <div class="info-row"><span>ط´ط±ظƒط© ط§ظ„طھط£ظ…ظٹظ†:</span><strong>${selectedCompany?.name || '-'}</strong></div>
+          <div class="info-row"><span>ط§ظ„ط­ط§ظ„ط©:</span><span class="status-badge ${getStatusClass(selectedAccount.status)}">${getStatusLabel(selectedAccount.status)}</span></div>
+          <div class="info-row"><span>ط§ظ„ط±طµظٹط¯:</span><strong class="text-blue">${formatCurrency(selectedAccount.balance)}</strong></div>
         </div>`;
       }
     }
     
     // Filter info
     const filterInfo = [];
-    if (selectedCompanyId) filterInfo.push(`شركة التأمين: ${companyNameMap[selectedCompanyId] || selectedCompanyId}`);
-    if (selectedAccountId) filterInfo.push(`الحساب: ${accountNameMap[selectedAccountId] || selectedAccountId}`);
-    if (dateFrom) filterInfo.push(`من: ${formatDate(dateFrom)}`);
-    if (dateTo) filterInfo.push(`إلى: ${formatDate(dateTo)}`);
+    if (selectedCompanyId) filterInfo.push(`ط´ط±ظƒط© ط§ظ„طھط£ظ…ظٹظ†: ${companyNameMap[selectedCompanyId] || selectedCompanyId}`);
+    if (selectedAccountId) filterInfo.push(`ط§ظ„ط­ط³ط§ط¨: ${accountNameMap[selectedAccountId] || selectedAccountId}`);
+    if (dateFrom) filterInfo.push(`ظ…ظ†: ${formatDate(dateFrom)}`);
+    if (dateTo) filterInfo.push(`ط¥ظ„ظ‰: ${formatDate(dateTo)}`);
     
     // Build report content based on type
     let reportContent = '';
@@ -647,76 +729,76 @@ const InsuranceManagementPage: React.FC = () => {
     if (reportType === 'summary') {
       reportContent = `
         <div class="summary-cards">
-          <div class="summary-card blue"><div class="print-card-title">شركات التأمين</div><div class="print-card-value">${companies.length}</div></div>
-          <div class="summary-card green"><div class="print-card-title">الحسابات النشطة</div><div class="print-card-value">${accounts.filter((a: any) => a.status === 'ACTIVE').length}</div></div>
-          <div class="summary-card purple"><div class="print-card-title">المرضى المؤمن لهم</div><div class="print-card-value">${patientLinks.length}</div></div>
-          <div class="summary-card amber"><div class="print-card-title">إجمالي المطالبات</div><div class="print-card-value">${formatCurrency(totalClaims)}</div></div>
+          <div class="summary-card blue"><div class="print-card-title">ط´ط±ظƒط§طھ ط§ظ„طھط£ظ…ظٹظ†</div><div class="print-card-value">${companies.length}</div></div>
+          <div class="summary-card green"><div class="print-card-title">ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ†ط´ط·ط©</div><div class="print-card-value">${accounts.filter((a: any) => a.status === 'ACTIVE').length}</div></div>
+          <div class="summary-card purple"><div class="print-card-title">ط§ظ„ظ…ط±ط¶ظ‰ ط§ظ„ظ…ط¤ظ…ظ† ظ„ظ‡ظ…</div><div class="print-card-value">${patientLinks.length}</div></div>
+          <div class="summary-card amber"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط·ط§ظ„ط¨ط§طھ</div><div class="print-card-value">${formatCurrency(totalClaims)}</div></div>
         </div>
         
         <div class="summary-section">
-          <div class="print-section-title">الملخص المالي</div>
+          <div class="print-section-title">ط§ظ„ظ…ظ„ط®طµ ط§ظ„ظ…ط§ظ„ظٹ</div>
           <div class="summary-cards">
-            <div class="summary-card green"><div class="print-card-title">إجمالي الإيداعات</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
-            <div class="summary-card red"><div class="print-card-title">إجمالي السحبات</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
-            <div class="summary-card blue"><div class="print-card-title">صافي الرصيد</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
+            <div class="summary-card green"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط¥ظٹط¯ط§ط¹ط§طھ</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
+            <div class="summary-card red"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط³ط­ط¨ط§طھ</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
+            <div class="summary-card blue"><div class="print-card-title">طµط§ظپظٹ ط§ظ„ط±طµظٹط¯</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
           </div>
         </div>
         
         <div class="summary-section">
-          <div class="print-section-title">حالة المطالبات</div>
+          <div class="print-section-title">ط­ط§ظ„ط© ط§ظ„ظ…ط·ط§ظ„ط¨ط§طھ</div>
           <div class="summary-cards">
-            <div class="summary-card amber"><div class="print-card-title">قيد الانتظار</div><div class="print-card-value">${pendingClaims}</div></div>
-            <div class="summary-card green"><div class="print-card-title">معتمدة</div><div class="print-card-value">${approvedClaims}</div></div>
-            <div class="summary-card blue"><div class="print-card-title">مدفوعة</div><div class="print-card-value">${paidClaims}</div></div>
-            <div class="summary-card red"><div class="print-card-title">مرفوضة</div><div class="print-card-value">${filteredTreatmentLinks.filter((t: any) => t.claim_status === 'REJECTED').length}</div></div>
+            <div class="summary-card amber"><div class="print-card-title">ظ‚ظٹط¯ ط§ظ„ط§ظ†طھط¸ط§ط±</div><div class="print-card-value">${pendingClaims}</div></div>
+            <div class="summary-card green"><div class="print-card-title">ظ…ط¹طھظ…ط¯ط©</div><div class="print-card-value">${approvedClaims}</div></div>
+            <div class="summary-card blue"><div class="print-card-title">ظ…ط¯ظپظˆط¹ط©</div><div class="print-card-value">${paidClaims}</div></div>
+            <div class="summary-card red"><div class="print-card-title">ظ…ط±ظپظˆط¶ط©</div><div class="print-card-value">${filteredTreatmentLinks.filter((t: any) => t.claim_status === 'REJECTED').length}</div></div>
           </div>
         </div>
         
-        <div class="print-section-title">شركات التأمين</div>
-        <table class="print-table"><thead><tr><th>اسم الشركة</th><th>الهاتف</th><th>البريد الإلكتروني</th><th>الحسابات</th><th>المرضى</th></tr></thead><tbody>${companiesTable}</tbody></table>
+        <div class="print-section-title">ط´ط±ظƒط§طھ ط§ظ„طھط£ظ…ظٹظ†</div>
+        <table class="print-table"><thead><tr><th>ط§ط³ظ… ط§ظ„ط´ط±ظƒط©</th><th>ط§ظ„ظ‡ط§طھظپ</th><th>ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ</th><th>ط§ظ„ط­ط³ط§ط¨ط§طھ</th><th>ط§ظ„ظ…ط±ط¶ظ‰</th></tr></thead><tbody>${companiesTable}</tbody></table>
       `;
     } else if (reportType === 'claims') {
       reportContent = `
         <div class="summary-cards">
-          <div class="summary-card slate"><div class="print-card-title">إجمالي المطالبات</div><div class="print-card-value">${filteredTreatmentLinks.length}</div></div>
-          <div class="summary-card amber"><div class="print-card-title">قيد الانتظار</div><div class="print-card-value">${pendingClaims}</div></div>
-          <div class="summary-card green"><div class="print-card-title">تم الدفع</div><div class="print-card-value">${paidClaims}</div></div>
-          <div class="summary-card blue"><div class="print-card-title">إجمالي المبالغ</div><div class="print-card-value">${formatCurrency(totalClaims)}</div></div>
+          <div class="summary-card slate"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط·ط§ظ„ط¨ط§طھ</div><div class="print-card-value">${filteredTreatmentLinks.length}</div></div>
+          <div class="summary-card amber"><div class="print-card-title">ظ‚ظٹط¯ ط§ظ„ط§ظ†طھط¸ط§ط±</div><div class="print-card-value">${pendingClaims}</div></div>
+          <div class="summary-card green"><div class="print-card-title">طھظ… ط§ظ„ط¯ظپط¹</div><div class="print-card-value">${paidClaims}</div></div>
+          <div class="summary-card blue"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط¨ط§ظ„ط؛</div><div class="print-card-value">${formatCurrency(totalClaims)}</div></div>
         </div>
-        <div class="print-section-title">تفاصيل المطالبات</div>
-        <table class="print-table"><thead><tr><th>المريض</th><th>العلاج</th><th>شركة التأمين</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>تاريخ الدفع</th></tr></thead><tbody>${claimsTable}</tbody></table>
+        <div class="print-section-title">طھظپط§طµظٹظ„ ط§ظ„ظ…ط·ط§ظ„ط¨ط§طھ</div>
+        <table class="print-table"><thead><tr><th>ط§ظ„ظ…ط±ظٹط¶</th><th>ط§ظ„ط¹ظ„ط§ط¬</th><th>ط´ط±ظƒط© ط§ظ„طھط£ظ…ظٹظ†</th><th>ط§ظ„ظ…ط¨ظ„ط؛</th><th>ط§ظ„ط­ط§ظ„ط©</th><th>ط§ظ„طھط§ط±ظٹط®</th><th>طھط§ط±ظٹط® ط§ظ„ط¯ظپط¹</th></tr></thead><tbody>${claimsTable}</tbody></table>
       `;
     } else if (reportType === 'patients') {
       reportContent = `
         <div class="summary-cards">
-          <div class="summary-card purple"><div class="print-card-title">إجمالي المرضى</div><div class="print-card-value">${filteredPatientLinks.length}</div></div>
-          <div class="summary-card green"><div class="print-card-title">متوسط التغطية</div><div class="print-card-value">${filteredPatientLinks.length > 0 ? (filteredPatientLinks.reduce((s: number, p: any) => s + p.coverage_percentage, 0) / filteredPatientLinks.length).toFixed(1) + '%' : '0%'}</div></div>
-          <div class="summary-card blue"><div class="print-card-title">الشركات</div><div class="print-card-value">${new Set(filteredPatientLinks.map((p: any) => p.insurance_company_id)).size}</div></div>
+          <div class="summary-card purple"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط±ط¶ظ‰</div><div class="print-card-value">${filteredPatientLinks.length}</div></div>
+          <div class="summary-card green"><div class="print-card-title">ظ…طھظˆط³ط· ط§ظ„طھط؛ط·ظٹط©</div><div class="print-card-value">${filteredPatientLinks.length > 0 ? (filteredPatientLinks.reduce((s: number, p: any) => s + p.coverage_percentage, 0) / filteredPatientLinks.length).toFixed(1) + '%' : '0%'}</div></div>
+          <div class="summary-card blue"><div class="print-card-title">ط§ظ„ط´ط±ظƒط§طھ</div><div class="print-card-value">${new Set(filteredPatientLinks.map((p: any) => p.insurance_company_id)).size}</div></div>
         </div>
-        <div class="print-section-title">المرضى المؤمن لهم</div>
-        <table class="print-table"><thead><tr><th>المريض</th><th>شركة التأمين</th><th>رقم البوليصة</th><th>التغطية</th><th>البداية</th><th>الانتهاء</th></tr></thead><tbody>${patientsTable}</tbody></table>
+        <div class="print-section-title">ط§ظ„ظ…ط±ط¶ظ‰ ط§ظ„ظ…ط¤ظ…ظ† ظ„ظ‡ظ…</div>
+        <table class="print-table"><thead><tr><th>ط§ظ„ظ…ط±ظٹط¶</th><th>ط´ط±ظƒط© ط§ظ„طھط£ظ…ظٹظ†</th><th>ط±ظ‚ظ… ط§ظ„ط¨ظˆظ„ظٹطµط©</th><th>ط§ظ„طھط؛ط·ظٹط©</th><th>ط§ظ„ط¨ط¯ط§ظٹط©</th><th>ط§ظ„ط§ظ†طھظ‡ط§ط،</th></tr></thead><tbody>${patientsTable}</tbody></table>
       `;
     } else if (reportType === 'transactions') {
       reportContent = `
         <div class="summary-cards">
-          <div class="summary-card slate"><div class="print-card-title">إجمالي المعاملات</div><div class="print-card-value">${filteredTransactions.length}</div></div>
-          <div class="summary-card green"><div class="print-card-title">الإيداعات</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
-          <div class="summary-card red"><div class="print-card-title">السحبات</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
-          <div class="summary-card blue"><div class="print-card-title">صافي الرصيد</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
+          <div class="summary-card slate"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط¹ط§ظ…ظ„ط§طھ</div><div class="print-card-value">${filteredTransactions.length}</div></div>
+          <div class="summary-card green"><div class="print-card-title">ط§ظ„ط¥ظٹط¯ط§ط¹ط§طھ</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
+          <div class="summary-card red"><div class="print-card-title">ط§ظ„ط³ط­ط¨ط§طھ</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
+          <div class="summary-card blue"><div class="print-card-title">طµط§ظپظٹ ط§ظ„ط±طµظٹط¯</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
         </div>
-        <div class="print-section-title">المعاملات</div>
-        <table class="print-table"><thead><tr><th>التاريخ</th><th>الحساب</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>المرجع</th></tr></thead><tbody>${transactionsTable}</tbody></table>
+        <div class="print-section-title">ط§ظ„ظ…ط¹ط§ظ…ظ„ط§طھ</div>
+        <table class="print-table"><thead><tr><th>ط§ظ„طھط§ط±ظٹط®</th><th>ط§ظ„ط­ط³ط§ط¨</th><th>ط§ظ„ظ†ظˆط¹</th><th>ط§ظ„ظ…ط¨ظ„ط؛</th><th>ط§ظ„ظˆطµظپ</th><th>ط§ظ„ظ…ط±ط¬ط¹</th></tr></thead><tbody>${transactionsTable}</tbody></table>
       `;
     } else if (reportType === 'account-statement') {
       reportContent = `
         ${accountInfo}
         <div class="summary-cards">
-          <div class="summary-card green"><div class="print-card-title">إجمالي الإيداعات</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
-          <div class="summary-card red"><div class="print-card-title">إجمالي السحبات</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
-          <div class="summary-card blue"><div class="print-card-title">صافي الحركة</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
+          <div class="summary-card green"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط¥ظٹط¯ط§ط¹ط§طھ</div><div class="print-card-value">${formatCurrency(totalCredits)}</div></div>
+          <div class="summary-card red"><div class="print-card-title">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط³ط­ط¨ط§طھ</div><div class="print-card-value">${formatCurrency(totalDebits)}</div></div>
+          <div class="summary-card blue"><div class="print-card-title">طµط§ظپظٹ ط§ظ„ط­ط±ظƒط©</div><div class="print-card-value">${formatCurrency(totalCredits - totalDebits)}</div></div>
         </div>
-        <div class="print-section-title">كشف الحساب</div>
-        <table class="print-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>الوصف</th><th>المرجع</th><th>إيداع</th><th>سحب</th><th>الرصيد</th></tr></thead><tbody>${statementTable}</tbody></table>
+        <div class="print-section-title">ظƒط´ظپ ط§ظ„ط­ط³ط§ط¨</div>
+        <table class="print-table"><thead><tr><th>ط§ظ„طھط§ط±ظٹط®</th><th>ط§ظ„ظ†ظˆط¹</th><th>ط§ظ„ظˆطµظپ</th><th>ط§ظ„ظ…ط±ط¬ط¹</th><th>ط¥ظٹط¯ط§ط¹</th><th>ط³ط­ط¨</th><th>ط§ظ„ط±طµظٹط¯</th></tr></thead><tbody>${statementTable}</tbody></table>
       `;
     }
     
@@ -792,19 +874,19 @@ const InsuranceManagementPage: React.FC = () => {
     </div>
     
     <div class="print-meta">
-      <div class="print-meta-item">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</div>
+      <div class="print-meta-item">طھط§ط±ظٹط® ط§ظ„طھظ‚ط±ظٹط±: ${new Date().toLocaleDateString('ar-EG')}</div>
       ${filterInfo.length > 0 ? `<div class="print-meta-item">${filterInfo.join(' | ')}</div>` : ''}
     </div>
     
     ${reportContent}
     
     <div class="print-footer">
-      <p>تم إنشاء هذا التقرير تلقائياً من نظام إدارة العيادة</p>
-      <p>جميع الحقوق محفوظة © ${new Date().getFullYear()}</p>
+      <p>طھظ… ط¥ظ†ط´ط§ط، ظ‡ط°ط§ ط§ظ„طھظ‚ط±ظٹط± طھظ„ظ‚ط§ط¦ظٹط§ظ‹ ظ…ظ† ظ†ط¸ط§ظ… ط¥ط¯ط§ط±ط© ط§ظ„ط¹ظٹط§ط¯ط©</p>
+      <p>ط¬ظ…ظٹط¹ ط§ظ„ط­ظ‚ظˆظ‚ ظ…ط­ظپظˆط¸ط© آ© ${new Date().getFullYear()}</p>
     </div>
     
     <div class="print-button-container no-print">
-      <button class="print-button" onclick="window.print()">طباعة التقرير</button>
+      <button class="print-button" onclick="window.print()">ط·ط¨ط§ط¹ط© ط§ظ„طھظ‚ط±ظٹط±</button>
     </div>
   </div>
 </body>
@@ -864,7 +946,10 @@ const InsuranceManagementPage: React.FC = () => {
               {t('insurance.printReport')}
             </button>
             <button 
-              onClick={load} 
+              onClick={async () => {
+                await load();
+                setSuccessMessage('Data refreshed from database.');
+              }} 
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white flex items-center gap-2 hover:bg-slate-800 transition-colors dark:bg-slate-100 dark:text-slate-900"
             >
               <RefreshIcon />
@@ -902,6 +987,13 @@ const InsuranceManagementPage: React.FC = () => {
         <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
           {error}
           <button onClick={() => setError(null)} className="ms-2 text-red-500 hover:text-red-700">×</button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300">
+          {successMessage}
+          <button onClick={() => setSuccessMessage(null)} className="ms-2 text-emerald-600 hover:text-emerald-800">×</button>
         </div>
       )}
 
@@ -1202,11 +1294,11 @@ const InsuranceManagementPage: React.FC = () => {
                     <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{accountName[x.insurance_account_id] || '-'}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${x.transaction_type === 'CREDIT' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {x.transaction_type === 'CREDIT' ? 'إيداع' : 'سحب'}
+                        {x.transaction_type === 'CREDIT' ? 'ط¥ظٹط¯ط§ط¹' : 'ط³ط­ط¨'}
                       </span>
                     </td>
                     <td className={`p-3 font-semibold ${x.transaction_type === 'CREDIT' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {x.transaction_type === 'CREDIT' ? '+' : '-'}{Number(x.amount || 0).toFixed(2)} ج.م
+                      {x.transaction_type === 'CREDIT' ? '+' : '-'}{Number(x.amount || 0).toFixed(2)} ط¬.ظ…
                     </td>
                     <td className="p-3 text-slate-600 dark:text-slate-400">{x.description || '-'}</td>
                     <td className="p-3 space-x-2 rtl:space-x-reverse">
@@ -1214,13 +1306,13 @@ const InsuranceManagementPage: React.FC = () => {
                         className="rounded-lg bg-amber-500 px-3 py-1.5 text-white text-xs font-medium hover:bg-amber-600 transition-colors" 
                         onClick={() => setTxnForm(x)}
                       >
-                        تعديل
+                        طھط¹ط¯ظٹظ„
                       </button>
                       <button 
                         className="rounded-lg bg-red-600 px-3 py-1.5 text-white text-xs font-medium hover:bg-red-700 transition-colors" 
                         onClick={() => void del('insurance_transactions', x.id)}
                       >
-                        حذف
+                        ط­ط°ظپ
                       </button>
                     </td>
                   </tr>
@@ -1364,14 +1456,14 @@ const InsuranceManagementPage: React.FC = () => {
       {!loading && tab === 'treatment_links' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{treatmentLinkForm.id ? 'تعديل مطالبة' : 'إضافة مطالبة جديدة'}</h3>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">{treatmentLinkForm.id ? t('insurance.editClaimTitle') : t('insurance.addNewClaimTitle')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
 <select 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
                 value={treatmentLinkForm.treatment_record_id || ''} 
                 onChange={e => setTreatmentLinkForm({ ...treatmentLinkForm, treatment_record_id: e.target.value })}
               >
-                <option value="">اختر العلاج *</option>
+                <option value="">{t('insurance.selectTreatment')}</option>
                 {availableTreatmentsForClaim.map(x => (
                   <option key={x.id} value={x.id}>
                     {x.patient_name} - {(x.treatment_name || x.notes || x.id).slice(0, 30)}
@@ -1383,14 +1475,14 @@ const InsuranceManagementPage: React.FC = () => {
                 value={treatmentLinkForm.insurance_company_id || ''} 
                 onChange={e => setTreatmentLinkForm({ ...treatmentLinkForm, insurance_company_id: e.target.value })}
               >
-                <option value="">اختر الشركة *</option>
+                <option value="">{t('insurance.selectCompany')}</option>
                 {companies.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
               <input 
                 type="number" 
                 step="0.01" 
                 className="rounded-lg border border-slate-200 p-3 dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" 
-                placeholder="مبلغ المطالبة" 
+                placeholder={t('insurance.claimAmountPlaceholder')} 
                 value={treatmentLinkForm.claim_amount || 0} 
                 onChange={e => setTreatmentLinkForm({ ...treatmentLinkForm, claim_amount: Number(e.target.value) })} 
               />
@@ -1399,10 +1491,10 @@ const InsuranceManagementPage: React.FC = () => {
                 value={treatmentLinkForm.claim_status || 'PENDING'} 
                 onChange={e => setTreatmentLinkForm({ ...treatmentLinkForm, claim_status: e.target.value as TreatmentLink['claim_status'] })}
               >
-                <option value="PENDING">قيد الانتظار</option>
-                <option value="APPROVED">معتمد</option>
-                <option value="REJECTED">مرفوض</option>
-                <option value="PAID">مدفوع</option>
+                <option value="PENDING">{t('insurance.pending')}</option>
+                <option value="APPROVED">{t('insurance.approved')}</option>
+                <option value="REJECTED">{t('insurance.rejected')}</option>
+                <option value="PAID">{t('insurance.paid')}</option>
               </select>
               <input 
                 type="date" 
@@ -1415,14 +1507,14 @@ const InsuranceManagementPage: React.FC = () => {
                   onClick={saveTreatmentLink} 
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-white font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  {treatmentLinkForm.id ? 'تحديث' : 'إضافة'}
+                  {treatmentLinkForm.id ? t('insurance.update') : t('insurance.add')}
                 </button>
                 {treatmentLinkForm.id && (
                   <button 
                     onClick={() => setTreatmentLinkForm({ treatment_record_id: '', insurance_company_id: '', claim_amount: 0, claim_status: 'PENDING', claim_date: new Date().toISOString().split('T')[0], payment_date: '' })} 
                     className="rounded-lg bg-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-700 dark:text-slate-300"
                   >
-                    إلغاء
+                    {t('insurance.cancelAction')}
                   </button>
                 )}
               </div>
@@ -1492,11 +1584,11 @@ const InsuranceManagementPage: React.FC = () => {
             {/* Report Type Selection */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
               {[
-                { id: 'summary', label: t('insurance.summaryReport'), icon: '📊' },
-                { id: 'claims', label: t('insurance.claimsReport'), icon: '📋' },
-                { id: 'patients', label: t('insurance.patientsReport'), icon: '👥' },
-                { id: 'transactions', label: t('insurance.transactionsReport'), icon: '💰' },
-                { id: 'account-statement', label: t('insurance.accountStatement'), icon: '📄' },
+                { id: 'summary', label: t('insurance.summaryReport'), icon: 'ًں“ٹ' },
+                { id: 'claims', label: t('insurance.claimsReport'), icon: 'ًں“‹' },
+                { id: 'patients', label: t('insurance.patientsReport'), icon: 'ًں‘¥' },
+                { id: 'transactions', label: t('insurance.transactionsReport'), icon: 'ًں’°' },
+                { id: 'account-statement', label: t('insurance.accountStatement'), icon: 'ًں“„' },
               ].map(r => (
                 <button
                   key={r.id}
@@ -1507,7 +1599,7 @@ const InsuranceManagementPage: React.FC = () => {
                       : 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
                   }`}
                 >
-                  <span className="text-2xl">{r.icon}</span>
+                  <span>{r.icon}</span>
                   <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">{r.label}</p>
                 </button>
               ))}
@@ -1564,3 +1656,4 @@ const InsuranceManagementPage: React.FC = () => {
 };
 
 export default InsuranceManagementPage;
+

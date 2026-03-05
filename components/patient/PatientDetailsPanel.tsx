@@ -83,7 +83,7 @@ export const PatientDetailsPanel: React.FC<{
     clinicData: ClinicData;
     initialTab?: PatientDetailTab;
 }> = ({ patient, onBack, onEdit, clinicData, initialTab = 'details' }) => {
-    const { user } = useAuth();
+    const { user, currentClinic, accessibleClinics } = useAuth();
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
     const { updatePatient, addTreatmentRecord, addPayment, updatePayment, deletePayment, payments, treatmentRecords, prescriptions, prescriptionItems, addPrescription, updatePrescription, deletePrescription, addPrescriptionItem, updatePrescriptionItem, deletePrescriptionItem, attachments, addAttachment, updateAttachment, deleteAttachment } = clinicData;
@@ -100,6 +100,96 @@ export const PatientDetailsPanel: React.FC<{
     const [dentists, setDentists] = useState<Dentist[]>([]);
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [insuranceDebtHint, setInsuranceDebtHint] = useState<{ totalAmount: number; count: number; companies: string[] }>({ totalAmount: 0, count: 0, companies: [] });
+    const [insuranceDebtLoading, setInsuranceDebtLoading] = useState(false);
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
+    
+    // Patient insurance link state
+    const [patientInsuranceLink, setPatientInsuranceLink] = useState<{
+        insurance_company_id: string;
+        insurance_company_name: string;
+        coverage_percentage: number;
+        policy_number: string;
+        effective_date: string;
+        expiry_date: string;
+    } | null>(null);
+
+    // Load patient insurance link
+    useEffect(() => {
+        const loadPatientInsurance = async () => {
+            if (!supabase || !patient?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
+                    .eq('patient_id', patient.id)
+                    .single();
+                
+                if (data && !error) {
+                    setPatientInsuranceLink({
+                        insurance_company_id: data.insurance_company_id,
+                        insurance_company_name: (data.insurance_companies as any)?.name || '',
+                        coverage_percentage: data.coverage_percentage || 0,
+                        policy_number: data.policy_number || '',
+                        effective_date: data.effective_date || '',
+                        expiry_date: data.expiry_date || ''
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load patient insurance:', err);
+            }
+        };
+        void loadPatientInsurance();
+    }, [patient?.id]);
+
+    const loadInsuranceDebtHint = useCallback(async () => {
+        if (!supabase || !patient?.id) return;
+        try {
+            setInsuranceDebtLoading(true);
+            let query = supabase
+                .from('treatment_insurance_link')
+                .select('claim_amount, insurance_companies(name)')
+                .eq('patient_id', patient.id)
+                .eq('is_patient_debt', true)
+                .in('claim_status', ['PENDING', 'APPROVED']);
+
+            if (activeClinicId) {
+                query = query.eq('clinic_id', activeClinicId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const totalAmount = (data || []).reduce((sum: number, row: any) => sum + Number(row.claim_amount || 0), 0);
+            const companies = Array.from(
+                new Set((data || []).map((row: any) => (row.insurance_companies as any)?.name).filter(Boolean))
+            ) as string[];
+
+            setInsuranceDebtHint({
+                totalAmount,
+                count: (data || []).length,
+                companies
+            });
+        } catch (err) {
+            console.error('Failed to load insurance debt hint:', err);
+            setInsuranceDebtHint({ totalAmount: 0, count: 0, companies: [] });
+        } finally {
+            setInsuranceDebtLoading(false);
+        }
+    }, [patient?.id, activeClinicId]);
+
+    useEffect(() => {
+        void loadInsuranceDebtHint();
+    }, [loadInsuranceDebtHint]);
+
+    useEffect(() => {
+        if (!isAddPaymentModalOpen) {
+            void loadInsuranceDebtHint();
+        }
+    }, [isAddPaymentModalOpen, loadInsuranceDebtHint]);
 
     useEffect(() => {
         setDentists(clinicData.dentists);
@@ -121,6 +211,7 @@ export const PatientDetailsPanel: React.FC<{
         const outstandingBalance = totalCharges - totalPaid;
         return { totalCharges, totalPaid, outstandingBalance };
     }, [patientTreatmentRecords, patientPayments]);
+    const insuranceDebtDisplayAmount = Math.max(0, financialSummary.outstandingBalance);
 
     const handleUpdateDentalChart = useCallback((newChart: DentalChartData) => {
         console.log('PatientDetailsPanel: handleUpdateDentalChart called with:', newChart);
@@ -501,18 +592,50 @@ export const PatientDetailsPanel: React.FC<{
                                 title={t('patientDetails.insurance')}
                                 icon={<svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
                             >
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <InfoCard 
-                                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
-                                        label={t('patientDetails.insuranceProvider')}
-                                        value={patient.insuranceProvider || '-'}
-                                    />
-                                    <InfoCard 
-                                        icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>}
-                                        label={t('patientDetails.policyNumber')}
-                                        value={patient.insurancePolicyNumber || '-'}
-                                    />
-                                </div>
+                                {patientInsuranceLink ? (
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <InfoCard 
+                                                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+                                                label={t('patientDetails.insuranceProvider')}
+                                                value={patientInsuranceLink.insurance_company_name}
+                                            />
+                                            <InfoCard 
+                                                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>}
+                                                label={t('patientDetails.policyNumber')}
+                                                value={patientInsuranceLink.policy_number || '-'}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <InfoCard 
+                                                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>}
+                                                label="نسبة التغطية"
+                                                value={`${patientInsuranceLink.coverage_percentage}%`}
+                                            />
+                                            <InfoCard 
+                                                icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                                label="تاريخ الانتهاء"
+                                                value={patientInsuranceLink.expiry_date ? new Date(patientInsuranceLink.expiry_date).toLocaleDateString('ar-EG') : '-'}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end pt-2">
+                                            <button
+                                                onClick={() => window.location.href = `/insurance/patient-links?patientId=${patient.id}`}
+                                                className="text-sm text-primary hover:text-primary-600 dark:hover:text-primary-400 font-medium flex items-center gap-1"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                                تعديل التأمين
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">{t('common.na')}</p>
+                                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">لم يتم ربط المريض بشركة تأمين</p>
+                                    </div>
+                                )}
                             </SectionCard>
 
                             {/* Notes Card */}
@@ -690,6 +813,35 @@ export const PatientDetailsPanel: React.FC<{
                                         </p>
                                     </div>
                                 </div>
+
+                                {insuranceDebtHint.count > 0 && insuranceDebtDisplayAmount > 0 && (
+                                    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                                    تنبيه تأمين
+                                                </p>
+                                                <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                                                    المبلغ المتبقي يشمل مبلغًا يخص شركة التأمين
+                                                    {insuranceDebtHint.companies.length > 0 ? ` (${insuranceDebtHint.companies.join('، ')})` : ''}:
+                                                    {' '}
+                                                    <span className="font-bold">{currencyFormatter.format(insuranceDebtDisplayAmount)}</span>
+                                                </p>
+                                                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                                                    سيتم تسوية هذا المبلغ تلقائيًا عند تحويل المطالبة إلى حالة مدفوعة.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => void loadInsuranceDebtHint()}
+                                                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors disabled:opacity-60"
+                                                disabled={insuranceDebtLoading}
+                                            >
+                                                {insuranceDebtLoading ? 'جاري التحديث...' : 'تحديث'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Action Buttons Section */}

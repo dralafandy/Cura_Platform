@@ -267,6 +267,12 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  pageDescriptions.subscriptionOverview = {
+    title: locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription',
+    description: locale === 'ar' ? 'تفاصيل الاشتراك والحالة والمدة المتبقية' : 'Plan details, status, and remaining period',
+    icon: '💳'
+  };
+
   const currentPage = pageDescriptions[currentView] || { title: title || '', description: subtitle || '', icon: '📄' };
 
   // Get user initials

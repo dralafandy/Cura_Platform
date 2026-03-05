@@ -155,21 +155,40 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
             return;
         }
 
-        // Calculate shares based on the selected treatment record
+        // Calculate shares based on the selected treatment record.
+        // If insurance is enabled, record only patient responsibility as an immediate payment.
         const treatmentRecord = clinicData.treatmentRecords.find(tr => tr.id === formData.treatmentRecordId);
+        let doctorRatio = 0;
+        let clinicRatio = 1;
         if (treatmentRecord) {
             const recordTotal = Number(treatmentRecord.doctorShare) + Number(treatmentRecord.clinicShare);
             if (recordTotal > 0) {
-                const doctorRatio = Number(treatmentRecord.doctorShare) / recordTotal;
-                const doctorShare = formData.amount * doctorRatio;
-                const clinicShare = formData.amount - doctorShare;
-                formData.clinicShare = clinicShare;
-                formData.doctorShare = doctorShare;
+                doctorRatio = Number(treatmentRecord.doctorShare) / recordTotal;
+                clinicRatio = 1 - doctorRatio;
             }
         }
 
-        // Add payment
-        onAdd(formData);
+        const effectivePaymentAmount = useInsurance ? Math.max(0, patientResponsibility) : formData.amount;
+        const paymentDoctorShare = effectivePaymentAmount * doctorRatio;
+        const paymentClinicShare = effectivePaymentAmount - paymentDoctorShare;
+
+        if (effectivePaymentAmount > outstandingBalance) {
+            addNotification({
+                message: `المبلغ الفعلي للدفع يتجاوز الرصيد المستحق: ${outstandingBalance.toFixed(2)}`,
+                type: NotificationType.ERROR
+            });
+            return;
+        }
+
+        if (effectivePaymentAmount > 0) {
+            const paymentPayload = {
+                ...formData,
+                amount: effectivePaymentAmount,
+                clinicShare: paymentClinicShare,
+                doctorShare: paymentDoctorShare
+            };
+            onAdd(paymentPayload);
+        }
         
         // Create insurance claim if using insurance
         if (useInsurance && patientInsurance && insuranceCoverageAmount > 0 && supabase && user?.id && activeClinicId) {
@@ -183,7 +202,14 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                         claim_status: 'PENDING',
                         claim_date: formData.date,
                         user_id: user.id,
-                        clinic_id: activeClinicId
+                        clinic_id: activeClinicId,
+                        // Store only insurance portion shares for settlement when claim is paid
+                        clinic_share: insuranceCoverageAmount * clinicRatio,
+                        doctor_share: insuranceCoverageAmount * doctorRatio,
+                        patient_id: patientId,
+                        is_patient_debt: true,
+                        paid_to_clinic: false,
+                        paid_to_doctor: false
                     });
                 addNotification({ 
                     message: `تم إنشاء مطالبة تأمين بقيمة ${formatCurrency(insuranceCoverageAmount)}`, 

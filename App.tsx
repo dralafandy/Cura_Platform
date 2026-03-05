@@ -35,6 +35,7 @@ import PublicBookingPage from './components/PublicBookingPage';
 import EmployeesManagement from './components/employees/EmployeesManagement';
 import AboutPage from './components/AboutPage';
 import ClinicManagementPage from './components/clinic/ClinicManagementPage';
+import SubscriptionOverviewPage from './components/SubscriptionOverviewPage';
 
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
@@ -53,7 +54,7 @@ const AppContent: React.FC = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { isLoading: authLoading, user } = useAuth();
+  const { isLoading: authLoading, user, isAdmin } = useAuth();
   
   // Use new RBAC system for permission checking
   const { hasPermission, isReady } = useRBAC();
@@ -172,11 +173,15 @@ const AppContent: React.FC = () => {
         return hasPermission(Permission.SETTINGS_EDIT) ? (
           <ClinicManagementPage />
         ) : <AccessDenied />;
+      case 'subscriptionOverview':
+        return isAdmin ? (
+          <SubscriptionOverviewPage />
+        ) : <AccessDenied />;
 
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
     }
-  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user]);
+  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user, isAdmin]);
   
   const viewTitles: Record<View, string> = {
       dashboard: t('sidebar.dashboard'),
@@ -214,7 +219,8 @@ const AppContent: React.FC = () => {
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
       'about': 'ط¹ظ† ط§ظ„ط¨ط±ظ†ط§ظ…ط¬',
       'pendingReservations': t('adminReservations.title') || 'Pending Reservations',
-      'clinicManagement': 'Clinic & Branch Management'
+      'clinicManagement': 'Clinic & Branch Management',
+      'subscriptionOverview': locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription'
   }
 
   // Show loading state while auth is loading

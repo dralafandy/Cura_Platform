@@ -142,6 +142,14 @@ const ClinicIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const SubscriptionIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2.5" y="6" width="19" height="12" rx="2" />
+    <path d="M2.5 10h19" />
+    <path d="M7 14h4" />
+  </svg>
+);
+
 const LogoutIcon = ({ className = "h-5 w-5" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -168,7 +176,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicData }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user, logout, isAdmin: authIsAdmin, userProfile } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const { checkPermission, isAdmin: permIsAdmin } = usePermissions(userProfile);
@@ -246,6 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'about', label: 'عن البرنامج', icon: AboutIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: null, adminOnly: true },
       { id: 'clinicManagement', label: 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW },
+      { id: 'subscriptionOverview', label: locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription', icon: SubscriptionIcon, permission: null, adminOnly: true },
     ];
 
     // Filter items based on permissions and admin-only flag
@@ -262,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
   };
 
 
-  const navItems = useMemo(() => getNavItems(), [isAdmin, userProfile, checkPermission, t]);
+  const navItems = useMemo(() => getNavItems(), [isAdmin, userProfile, checkPermission, t, locale]);
 
   const groups = [
     {
@@ -283,7 +292,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
     },
     {
       label: t('sidebar.group.settings'),
-      items: navItems.filter(item => ['settings', 'userManagement', 'about', 'clinicManagement'].includes(item.id)),
+      items: navItems.filter(item => ['settings', 'userManagement', 'about', 'clinicManagement', 'subscriptionOverview'].includes(item.id)),
     },
   ];
 

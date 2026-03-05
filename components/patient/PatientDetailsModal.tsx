@@ -78,7 +78,7 @@ export const PatientDetailsModal: React.FC<{
 }> = ({ patient, onEdit, onClose, clinicData }) => {
     const { t, locale } = useI18n();
     const { addNotification } = useNotification();
-    const { checkPermission, checkCustomPermission } = useAuth();
+    const { checkPermission, checkCustomPermission, currentClinic, accessibleClinics } = useAuth();
     const { updatePatient, addTreatmentRecord, addPayment, payments, treatmentRecords, prescriptions, prescriptionItems, addPrescription, updatePrescription, deletePrescription, addPrescriptionItem, updatePrescriptionItem, deletePrescriptionItem, attachments, addAttachment, updateAttachment, deleteAttachment } = clinicData;
 
     const [activeTab, setActiveTab] = useState<PatientDetailTab>('details');
@@ -90,6 +90,96 @@ export const PatientDetailsModal: React.FC<{
     const [dentists, setDentists] = useState<Dentist[]>([]);
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [insuranceDebtHint, setInsuranceDebtHint] = useState<{ totalAmount: number; count: number; companies: string[] }>({ totalAmount: 0, count: 0, companies: [] });
+    const [insuranceDebtLoading, setInsuranceDebtLoading] = useState(false);
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
+    
+    // Patient insurance link state
+    const [patientInsuranceLink, setPatientInsuranceLink] = useState<{
+        insurance_company_id: string;
+        insurance_company_name: string;
+        coverage_percentage: number;
+        policy_number: string;
+        effective_date: string;
+        expiry_date: string;
+    } | null>(null);
+
+    // Load patient insurance link
+    useEffect(() => {
+        const loadPatientInsurance = async () => {
+            if (!supabase || !patient?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
+                    .eq('patient_id', patient.id)
+                    .single();
+                
+                if (data && !error) {
+                    setPatientInsuranceLink({
+                        insurance_company_id: data.insurance_company_id,
+                        insurance_company_name: (data.insurance_companies as any)?.name || '',
+                        coverage_percentage: data.coverage_percentage || 0,
+                        policy_number: data.policy_number || '',
+                        effective_date: data.effective_date || '',
+                        expiry_date: data.expiry_date || ''
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load patient insurance:', err);
+            }
+        };
+        void loadPatientInsurance();
+    }, [patient?.id]);
+
+    const loadInsuranceDebtHint = useCallback(async () => {
+        if (!supabase || !patient?.id) return;
+        try {
+            setInsuranceDebtLoading(true);
+            let query = supabase
+                .from('treatment_insurance_link')
+                .select('claim_amount, insurance_companies(name)')
+                .eq('patient_id', patient.id)
+                .eq('is_patient_debt', true)
+                .in('claim_status', ['PENDING', 'APPROVED']);
+
+            if (activeClinicId) {
+                query = query.eq('clinic_id', activeClinicId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const totalAmount = (data || []).reduce((sum: number, row: any) => sum + Number(row.claim_amount || 0), 0);
+            const companies = Array.from(
+                new Set((data || []).map((row: any) => (row.insurance_companies as any)?.name).filter(Boolean))
+            ) as string[];
+
+            setInsuranceDebtHint({
+                totalAmount,
+                count: (data || []).length,
+                companies
+            });
+        } catch (err) {
+            console.error('Failed to load insurance debt hint:', err);
+            setInsuranceDebtHint({ totalAmount: 0, count: 0, companies: [] });
+        } finally {
+            setInsuranceDebtLoading(false);
+        }
+    }, [patient?.id, activeClinicId]);
+
+    useEffect(() => {
+        void loadInsuranceDebtHint();
+    }, [loadInsuranceDebtHint]);
+
+    useEffect(() => {
+        if (!isAddPaymentModalOpen) {
+            void loadInsuranceDebtHint();
+        }
+    }, [isAddPaymentModalOpen, loadInsuranceDebtHint]);
 
     useEffect(() => {
         setDentists(clinicData.dentists);
@@ -434,16 +524,54 @@ export const PatientDetailsModal: React.FC<{
                                     </svg>
                                     {t('patientDetails.insurance')}
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
-                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.insuranceProvider')}</span>
-                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patient.insuranceProvider || '-'}</p>
+                                {patientInsuranceLink ? (
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.insuranceProvider')}</span>
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patientInsuranceLink.insurance_company_name}</p>
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.policyNumber')}</span>
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patientInsuranceLink.policy_number || '-'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">نسبة التغطية</span>
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patientInsuranceLink.coverage_percentage}%</p>
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">تاريخ الانتهاء</span>
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patientInsuranceLink.expiry_date ? new Date(patientInsuranceLink.expiry_date).toLocaleDateString('ar-EG') : '-'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end pt-2">
+                                            <button
+                                                onClick={() => window.location.href = `/insurance/patient-links?patientId=${patient.id}`}
+                                                className="text-sm text-primary hover:text-primary-600 dark:hover:text-primary-400 font-medium flex items-center gap-1"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                                تعديل التأمين
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
-                                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{t('patientDetails.policyNumber')}</span>
-                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{patient.insurancePolicyNumber || '-'}</p>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">لم يتم ربط المريض بشركة تأمين</p>
+                                        <button
+                                            onClick={() => window.location.href = `/insurance/patient-links?patientId=${patient.id}`}
+                                            className="mt-2 text-sm text-primary hover:text-primary-600 dark:hover:text-primary-400 font-medium flex items-center gap-1 mx-auto"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            ربط بالتأمين
+                                        </button>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Notes Card */}
@@ -676,6 +804,33 @@ export const PatientDetailsModal: React.FC<{
                                                 </p>
                                             </div>
                                         </div>
+
+                                        {insuranceDebtHint.totalAmount > 0 && (
+                                            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                                            Insurance debt notice
+                                                        </p>
+                                                        <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                                                            {currencyFormatter.format(insuranceDebtHint.totalAmount)} pending from {insuranceDebtHint.count} insurance claim(s)
+                                                            {insuranceDebtHint.companies.length > 0 ? ` with ${insuranceDebtHint.companies.join(', ')}` : ''}.
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                                                            This part of the balance is owed by insurance and will be settled when claim status becomes PAID.
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void loadInsuranceDebtHint()}
+                                                        className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors disabled:opacity-60"
+                                                        disabled={insuranceDebtLoading}
+                                                    >
+                                                        {insuranceDebtLoading ? 'Refreshing...' : 'Refresh'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </FormSection>
 
                                     <FormSection title="الإجراءات السريعة" icon={<PlusIcon />} isDark={false}>

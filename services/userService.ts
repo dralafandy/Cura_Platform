@@ -233,7 +233,7 @@ export const createUser = async (request: CreateUserRequest): Promise<UserServic
     }
 
     const newAuthUserId = signUpResult.data.user.id;
-    const rpcResult = await supabase.rpc('admin_create_non_admin_user_for_clinic', {
+    const rpcResult = await supabase.rpc('admin_create_user_for_clinic', {
       p_auth_user_id: newAuthUserId,
       p_username: request.username.trim(),
       p_email: request.email.trim().toLowerCase(),
@@ -245,7 +245,7 @@ export const createUser = async (request: CreateUserRequest): Promise<UserServic
     });
 
     if (rpcResult.error) {
-      throw new Error(rpcResult.error.message || 'Failed to assign created user to clinic branch');
+      throw new Error(rpcResult.error.message || 'Failed to create user in clinic scope');
     }
 
     const { data: createdRows, error: listError } = await supabase.rpc('admin_list_users_for_clinic', {

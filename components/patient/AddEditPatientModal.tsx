@@ -6,6 +6,7 @@ import { NotificationType } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMemo } from 'react';
 
 // Icons
 const CloseIcon = () => (
@@ -202,7 +203,12 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
     const { t } = useI18n();
     const { addNotification } = useNotification();
     const { isDark } = useTheme();
-    const { user } = useAuth();
+    const { user, currentClinic, accessibleClinics } = useAuth();
+    
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
 
     const [formData, setFormData] = useState<Omit<Patient, 'id' | 'dentalChart'> | Patient>(
         patient || {
@@ -237,12 +243,12 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
     // Load insurance companies
     useEffect(() => {
         const loadInsuranceCompanies = async () => {
-            if (!supabase || !user?.id) return;
+            if (!supabase || !user?.id || !activeClinicId) return;
             try {
                 const { data, error } = await supabase
                     .from('insurance_companies')
                     .select('id, name')
-                    .eq('user_id', user.id)
+                    .eq('clinic_id', activeClinicId)
                     .order('name');
                 if (error) throw error;
                 setInsuranceCompanies(data || []);
@@ -251,18 +257,18 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
             }
         };
         void loadInsuranceCompanies();
-    }, [user?.id]);
+    }, [user?.id, activeClinicId]);
     
     // Load existing patient insurance link if editing
     useEffect(() => {
         const loadPatientInsurance = async () => {
-            if (!patient?.id || !supabase || !user?.id) return;
+            if (!patient?.id || !supabase || !user?.id || !activeClinicId) return;
             try {
                 const { data, error } = await supabase
                     .from('patient_insurance_link')
                     .select('insurance_company_id, coverage_percentage, policy_number')
                     .eq('patient_id', patient.id)
-                    .eq('user_id', user.id)
+                    .eq('clinic_id', activeClinicId)
                     .single();
                 if (data) {
                     setSelectedInsuranceId(data.insurance_company_id || '');
@@ -274,7 +280,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
             }
         };
         void loadPatientInsurance();
-    }, [patient?.id, user?.id]);
+    }, [patient?.id, user?.id, activeClinicId]);
 
     useEffect(() => {
         if (patient && !patient.lastVisit) {
@@ -325,7 +331,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
         // Create insurance link if insurance is selected
         if (selectedInsuranceId && patient?.id) {
             try {
-                if (!supabase || !user?.id) return;
+                if (!supabase || !user?.id || !activeClinicId) return;
                 await supabase
                     .from('patient_insurance_link')
                     .upsert({
@@ -333,7 +339,8 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         insurance_company_id: selectedInsuranceId,
                         coverage_percentage: coveragePercentage,
                         policy_number: policyNumber || null,
-                        user_id: user.id
+                        user_id: user.id,
+                        clinic_id: activeClinicId
                     }, { onConflict: 'patient_id,insurance_company_id' });
             } catch (err) {
                 console.error('Failed to save insurance link:', err);

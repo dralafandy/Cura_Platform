@@ -107,6 +107,7 @@ const ClinicManagementPage: React.FC = () => {
   const [assignments, setAssignments] = useState<AssignmentViewRow[]>([]);
   const [accessTable, setAccessTable] = useState<AccessTable>('user_clinics');
   const [userTenantId, setUserTenantId] = useState<string | null>(null);
+  const [clinicSupportsTenantId, setClinicSupportsTenantId] = useState<boolean>(true);
 
   const [selectedClinicId, setSelectedClinicId] = useState<string>('');
 
@@ -193,6 +194,23 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     return 'user_clinics';
+  }, []);
+
+  const detectClinicTenantSupport = useCallback(async (): Promise<boolean> => {
+    if (!supabase) return false;
+    const probe = await supabase.from('clinics').select('tenant_id').limit(1);
+    if (!probe.error) return true;
+
+    const message = String(probe.error.message || '').toLowerCase();
+    if (
+      (message.includes('could not find') && message.includes('tenant_id')) ||
+      (message.includes('column') && message.includes('tenant_id'))
+    ) {
+      return false;
+    }
+
+    // Unknown errors should not disable tenant-aware flow.
+    return true;
   }, []);
 
   const resolveAssignmentUserId = useCallback(
@@ -295,9 +313,30 @@ const ClinicManagementPage: React.FC = () => {
       data = fallback.data || null;
     }
 
-    const tenant = (data as { tenant_id?: string | null } | null)?.tenant_id ?? null;
+    let tenant = (data as { tenant_id?: string | null } | null)?.tenant_id ?? null;
+
+    if (!tenant) {
+      const usersRow = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      tenant = (usersRow.data as { tenant_id?: string | null } | null)?.tenant_id ?? null;
+    }
+
+    if (!tenant && accessibleClinicIds.length > 0) {
+      const clinicRow = await supabase
+        .from('clinics')
+        .select('tenant_id')
+        .in('id', accessibleClinicIds)
+        .not('tenant_id', 'is', null)
+        .limit(1)
+        .maybeSingle();
+      tenant = (clinicRow.data as { tenant_id?: string | null } | null)?.tenant_id ?? null;
+    }
+
     setUserTenantId(tenant);
-  }, [user?.id]);
+  }, [accessibleClinicIds, user?.id]);
 
   const fetchClinics = useCallback(async () => {
     if (!supabase) return;
@@ -442,13 +481,14 @@ const ClinicManagementPage: React.FC = () => {
     try {
       const table = await detectAccessTable();
       setAccessTable(table);
+      setClinicSupportsTenantId(await detectClinicTenantSupport());
       await fetchCurrentUserTenant();
       await Promise.all([fetchClinics(), fetchBranches(), fetchProfiles()]);
       // Assignments are loaded by the dedicated effect once clinic selection is ready.
     } finally {
       setLoading(false);
     }
-  }, [detectAccessTable, fetchBranches, fetchClinics, fetchCurrentUserTenant, fetchProfiles, user?.id]);
+  }, [detectAccessTable, detectClinicTenantSupport, fetchBranches, fetchClinics, fetchCurrentUserTenant, fetchProfiles, user?.id]);
 
   useEffect(() => {
     refreshAll();
@@ -510,6 +550,13 @@ const ClinicManagementPage: React.FC = () => {
       addNotification({ message: 'Clinic name is required', type: NotificationType.WARNING });
       return;
     }
+    if (clinicSupportsTenantId && !userTenantId) {
+      notifyError(
+        'Cannot create clinic without tenant context',
+        'Current admin account has no tenant_id. Link tenant first, then create clinic.',
+      );
+      return;
+    }
 
     setSaving(true);
 
@@ -522,18 +569,11 @@ const ClinicManagementPage: React.FC = () => {
       email: clinicForm.email.trim() || null,
       status: (clinicForm.status || 'ACTIVE').toUpperCase(),
     };
+    if (clinicSupportsTenantId) {
+      basePayload.tenant_id = userTenantId;
+    }
 
     let insert = await supabase.from('clinics').insert(basePayload).select('*').single();
-    if (insert.error && userTenantId) {
-      const message = insert.error.message || '';
-      if (message.toLowerCase().includes('tenant')) {
-        insert = await supabase
-          .from('clinics')
-          .insert({ ...basePayload, tenant_id: userTenantId })
-          .select('*')
-          .single();
-      }
-    }
 
     // Fallback for legacy DBs where created_by/updated_by defaults point to non-matching FK targets.
     if (insert.error && isAuditFkError(insert.error.message, 'clinics')) {
@@ -542,9 +582,6 @@ const ClinicManagementPage: React.FC = () => {
         created_by: null,
         updated_by: null,
       };
-      if (userTenantId) {
-        auditSafePayload.tenant_id = userTenantId;
-      }
       insert = await supabase.from('clinics').insert(auditSafePayload).select('*').single();
     }
 

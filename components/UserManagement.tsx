@@ -74,6 +74,8 @@ const UserManagement: React.FC = () => {
 
   // Users without management permissions remain in self-only scope.
   const SELF_ONLY_MODE = !canManageUsers;
+  const PLATFORM_OWNER_EMAIL = 'dralafandy@gmail.com';
+  const isPlatformOwner = String(userProfile?.email || '').trim().toLowerCase() === PLATFORM_OWNER_EMAIL;
   
   // Check if supabase is available
   if (!supabase) {
@@ -254,6 +256,27 @@ const UserManagement: React.FC = () => {
       const from = (page - 1) * usersPerPage;
       const to = from + usersPerPage - 1;
 
+      if (isPlatformOwner) {
+        const { data, error } = await supabase.rpc('platform_owner_list_users', {
+          p_search: searchTerm || null,
+          p_role: roleFilter === 'ALL' ? null : roleFilter,
+          p_status: statusFilter === 'ALL' ? null : statusFilter,
+          p_offset: from,
+          p_limit: usersPerPage,
+        });
+        if (error) throw error;
+
+        const rows = (Array.isArray(data) ? data : []) as any[];
+        const mappedRows = rows.map((row: any) => ({
+          ...row,
+          user_id: row.user_id || row.id,
+        }));
+        const total = rows.length > 0 ? Number(rows[0].total_count || 0) : 0;
+        setUsers(mappedRows as UserProfile[]);
+        setTotalUsers(total);
+        return;
+      }
+
       if (!SELF_ONLY_MODE) {
         if (!selectedClinicId) {
           setUsers([]);
@@ -315,7 +338,7 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, searchTerm, roleFilter, selectedClinicId, selectedBranchId, statusFilter, usersPerPage, SELF_ONLY_MODE]);
+  }, [currentUserId, isPlatformOwner, searchTerm, roleFilter, selectedClinicId, selectedBranchId, statusFilter, usersPerPage, SELF_ONLY_MODE]);
 
   useEffect(() => {
     fetchUsers(currentPage);
@@ -369,10 +392,6 @@ const UserManagement: React.FC = () => {
         errors.email = 'Email is required';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         errors.email = 'Email is invalid';
-      }
-
-      if (formData.role === UserRole.ADMIN) {
-        errors.role = 'Only non-admin users can be created from this page';
       }
 
       // Password validation (only for new users) - stronger policy
@@ -460,10 +479,6 @@ const UserManagement: React.FC = () => {
     if (!selectedCreateBranchId) {
       throw new Error('Please select a clinic branch');
     }
-    if (formData.role === UserRole.ADMIN) {
-      throw new Error('Only non-admin users can be created from this page.');
-    }
-
     try {
       const email = formData.email.trim().toLowerCase();
       const isolatedSupabase = createEphemeralSupabaseClient();
@@ -491,7 +506,7 @@ const UserManagement: React.FC = () => {
 
       const requiresEmailConfirmation = !authData.session && !authData.user.email_confirmed_at;
 
-      const { error: linkError } = await supabase.rpc('admin_create_non_admin_user_for_clinic', {
+      const { error: linkError } = await supabase.rpc('admin_create_user_for_clinic', {
         p_auth_user_id: authData.user.id,
         p_username: formData.username.trim(),
         p_email: email,
@@ -503,7 +518,7 @@ const UserManagement: React.FC = () => {
         p_is_default: true,
       });
       if (linkError) {
-        throw new Error(linkError.message || 'Failed to link user to clinic');
+        throw new Error(linkError.message || 'Failed to create user in selected clinic');
       }
 
       if (requiresEmailConfirmation) {
@@ -1079,14 +1094,16 @@ const UserManagement: React.FC = () => {
 
         {!SELF_ONLY_MODE && (
           <div className={`${theme === 'dark' ? 'bg-blue-900/20 border-blue-700 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'} border rounded-lg p-4 mb-6`}>
-            New users are created as non-admin and linked to the selected clinic branch.
+            {isPlatformOwner
+              ? 'Platform owner mode: you can view users across all tenants.'
+              : 'New users are linked to the selected clinic branch with tenant context automatically.'}
           </div>
         )}
 
         {/* Search and Filters */}
         <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {!SELF_ONLY_MODE && (
+            {!SELF_ONLY_MODE && !isPlatformOwner && (
               <div>
                 <label className="block text-sm font-medium mb-2">Clinic Scope</label>
                 <select
@@ -1535,7 +1552,7 @@ const UserManagement: React.FC = () => {
                         theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                       }`}
                     >
-                      {editingUser && <option value={UserRole.ADMIN}>Admin</option>}
+                      <option value={UserRole.ADMIN}>Admin</option>
                       <option value={UserRole.DOCTOR}>Doctor</option>
                       <option value={UserRole.ASSISTANT}>Assistant</option>
                       <option value={UserRole.RECEPTIONIST}>Receptionist</option>
