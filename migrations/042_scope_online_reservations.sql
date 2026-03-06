@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS online_reservations (
   clinic_id UUID REFERENCES clinics(id) ON DELETE SET NULL,
   branch_id UUID REFERENCES clinic_branches(id) ON DELETE SET NULL,
   patient_name TEXT NOT NULL,
+  patient_dob DATE,
+  patient_gender TEXT CHECK (patient_gender IN ('Male', 'Female', 'Other')),
   patient_phone TEXT NOT NULL,
   patient_email TEXT,
   preferred_dentist_id UUID REFERENCES dentists(id) ON DELETE SET NULL,
@@ -60,7 +62,9 @@ CREATE TABLE IF NOT EXISTS online_reservations (
 
 ALTER TABLE IF EXISTS online_reservations
   ADD COLUMN IF NOT EXISTS clinic_id UUID REFERENCES clinics(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES clinic_branches(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES clinic_branches(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS patient_dob DATE,
+  ADD COLUMN IF NOT EXISTS patient_gender TEXT;
 
 ALTER TABLE IF EXISTS appointments
   ADD COLUMN IF NOT EXISTS online_reservation_id UUID REFERENCES online_reservations(id) ON DELETE SET NULL;

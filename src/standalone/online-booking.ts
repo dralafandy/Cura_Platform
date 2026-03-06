@@ -32,6 +32,11 @@ type Copy = {
   noTimes: string;
   loadingTimes: string;
   name: string;
+  dob: string;
+  gender: string;
+  male: string;
+  female: string;
+  other: string;
   phone: string;
   email: string;
   reason: string;
@@ -45,6 +50,8 @@ type Copy = {
   selectedDentist: string;
   selectedDate: string;
   selectedTime: string;
+  selectedDob: string;
+  selectedGender: string;
   contactInfo: string;
   notSelected: string;
   notesHint: string;
@@ -83,6 +90,11 @@ const copy: Copy = {
     noTimes: 'No available times for this date',
     loadingTimes: 'Loading available times...',
     name: 'Full name',
+    dob: 'Date of birth',
+    gender: 'Gender',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
     phone: 'Phone number',
     email: 'Email address',
     reason: 'Reason for visit',
@@ -96,6 +108,8 @@ const copy: Copy = {
     selectedDentist: 'Selected dentist',
     selectedDate: 'Selected date',
     selectedTime: 'Selected time',
+    selectedDob: 'Date of birth',
+    selectedGender: 'Gender',
     contactInfo: 'Contact',
     notSelected: 'Not selected yet',
     notesHint: 'Optional notes to help the clinic prepare for your visit.',
@@ -125,6 +139,11 @@ const copy: Copy = {
     noTimes: 'لا توجد أوقات متاحة في هذا التاريخ',
     loadingTimes: 'يتم تحميل الأوقات المتاحة...',
     name: 'الاسم الكامل',
+    dob: 'تاريخ الميلاد',
+    gender: 'النوع',
+    male: 'ذكر',
+    female: 'أنثى',
+    other: 'أخرى',
     phone: 'رقم الهاتف',
     email: 'البريد الإلكتروني',
     reason: 'سبب الزيارة',
@@ -138,6 +157,8 @@ const copy: Copy = {
     selectedDentist: 'الطبيب المختار',
     selectedDate: 'التاريخ المختار',
     selectedTime: 'الوقت المختار',
+    selectedDob: 'تاريخ الميلاد',
+    selectedGender: 'النوع',
     contactInfo: 'وسيلة التواصل',
     notSelected: 'لم يتم الاختيار بعد',
     notesHint: 'ملاحظات اختيارية تساعد العيادة على تجهيز زيارتك.',
@@ -365,6 +386,16 @@ const renderState = async () => {
         </div>
         <div class="booking-grid booking-grid--two">
           ${field(copy.name, `<input name="patientName" class="booking-control" placeholder="${escapeHtml(copy.name)}" required />`)}
+          ${field(copy.dob, `<input name="patientDob" class="booking-control" type="date" max="${getToday()}" required />`)}
+          ${field(
+            copy.gender,
+            `<select name="patientGender" class="booking-control" required>
+              <option value="">${escapeHtml(copy.gender)}</option>
+              <option value="Male">${escapeHtml(copy.male)}</option>
+              <option value="Female">${escapeHtml(copy.female)}</option>
+              <option value="Other">${escapeHtml(copy.other)}</option>
+            </select>`,
+          )}
           ${field(copy.phone, `<input name="patientPhone" class="booking-control" placeholder="${escapeHtml(copy.phone)}" required />`)}
           ${field(copy.email, `<input name="patientEmail" class="booking-control" type="email" placeholder="${escapeHtml(copy.email)}" />`)}
           ${field(copy.reason, `<textarea name="reason" class="booking-control booking-control--textarea" rows="5" placeholder="${escapeHtml(copy.notesHint)}"></textarea>`)}
@@ -399,12 +430,21 @@ const renderState = async () => {
     const selectedDentist = dentists.find((item) => item.id === values.get('dentistId'));
     const patientName = values.get('patientName');
     const patientPhone = values.get('patientPhone');
+    const patientGender = values.get('patientGender');
 
     const items = [
       { label: copy.selectedService, value: selectedService?.name || copy.notSelected },
       { label: copy.selectedDentist, value: selectedDentist?.name || copy.anyDentist },
       { label: copy.selectedDate, value: formatDateValue(values.get('date')) },
       { label: copy.selectedTime, value: formatDateValue(values.get('time')) },
+      { label: copy.selectedDob, value: formatDateValue(values.get('patientDob')) },
+      {
+        label: copy.selectedGender,
+        value:
+          typeof patientGender === 'string' && patientGender
+            ? escapeHtml(patientGender === 'Male' ? copy.male : patientGender === 'Female' ? copy.female : copy.other)
+            : copy.notSelected,
+      },
       {
         label: copy.contactInfo,
         value:
@@ -502,6 +542,8 @@ const renderState = async () => {
         requestedDate: String(values.get('date') || ''),
         requestedTime: String(values.get('time') || ''),
         patientName: String(values.get('patientName') || ''),
+        patientDob: String(values.get('patientDob') || '') || undefined,
+        patientGender: (String(values.get('patientGender') || '') as 'Male' | 'Female' | 'Other') || undefined,
         patientPhone: String(values.get('patientPhone') || ''),
         patientEmail: String(values.get('patientEmail') || '') || undefined,
         reason: String(values.get('reason') || '') || undefined,

@@ -36,6 +36,8 @@ const PublicBookingPage: React.FC = () => {
     date: '',
     time: '',
     patientName: '',
+    patientDob: '',
+    patientGender: '',
     patientPhone: '',
     patientEmail: '',
     reason: '',
@@ -91,7 +93,7 @@ const PublicBookingPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!form.serviceId || !form.date || !form.time || !form.patientName.trim() || !form.patientPhone.trim()) {
+    if (!form.serviceId || !form.date || !form.time || !form.patientName.trim() || !form.patientDob || !form.patientGender || !form.patientPhone.trim()) {
       return;
     }
     setSubmitting(true);
@@ -99,6 +101,8 @@ const PublicBookingPage: React.FC = () => {
       clinicId,
       branchId,
       patientName: form.patientName.trim(),
+      patientDob: form.patientDob || undefined,
+      patientGender: form.patientGender as 'Male' | 'Female' | 'Other',
       patientPhone: form.patientPhone.trim(),
       patientEmail: form.patientEmail.trim() || undefined,
       preferredDentistId: form.dentistId || undefined,
@@ -163,6 +167,13 @@ const PublicBookingPage: React.FC = () => {
                   {slots.map(slot => <option key={slot.time} value={slot.time}>{slot.time}{slot.dentistName ? ` - ${slot.dentistName}` : ''}</option>)}
                 </select>
                 <input value={form.patientName} onChange={event => handleChange('patientName', event.target.value)} placeholder={t('publicBooking.namePlaceholder') || 'Enter your full name'} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
+                <input type="date" value={form.patientDob} onChange={event => handleChange('patientDob', event.target.value)} max={new Date().toISOString().slice(0, 10)} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
+                <select value={form.patientGender} onChange={event => handleChange('patientGender', event.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{locale === 'ar' ? 'النوع' : 'Gender'}</option>
+                  <option value="Male">{locale === 'ar' ? 'ذكر' : 'Male'}</option>
+                  <option value="Female">{locale === 'ar' ? 'أنثى' : 'Female'}</option>
+                  <option value="Other">{locale === 'ar' ? 'أخرى' : 'Other'}</option>
+                </select>
                 <input value={form.patientPhone} onChange={event => handleChange('patientPhone', event.target.value)} placeholder={t('publicBooking.phonePlaceholder') || 'Enter your phone number'} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
                 <input value={form.patientEmail} onChange={event => handleChange('patientEmail', event.target.value)} placeholder={t('publicBooking.emailPlaceholder') || 'Enter your email (optional)'} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
                 <textarea value={form.reason} onChange={event => handleChange('reason', event.target.value)} rows={4} placeholder={t('publicBooking.reasonPlaceholder') || 'Describe your reason for visiting (optional)'} className="rounded-2xl border border-slate-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
@@ -180,6 +191,8 @@ const PublicBookingPage: React.FC = () => {
               <p><strong>{t('publicBooking.dentist') || 'Dentist'}:</strong> {dentists.find(item => item.id === form.dentistId)?.name || (t('publicBooking.anyDentist') || 'Any Available Dentist')}</p>
               <p><strong>{t('publicBooking.date') || 'Date'}:</strong> {form.date || '-'}</p>
               <p><strong>{t('publicBooking.time') || 'Time'}:</strong> {form.time || '-'}</p>
+              <p><strong>{locale === 'ar' ? 'تاريخ الميلاد' : 'Date of birth'}:</strong> {form.patientDob || '-'}</p>
+              <p><strong>{locale === 'ar' ? 'النوع' : 'Gender'}:</strong> {form.patientGender || '-'}</p>
               <p><strong>{t('publicBooking.duration') || 'Duration'}:</strong> {service?.duration || 30} min</p>
             </div>
           </aside>

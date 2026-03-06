@@ -392,8 +392,8 @@ const PendingReservationsPage: React.FC<PendingReservationsPageProps> = ({ clini
       if (!patientId) {
         await clinicData.addPatient({
           name: reservation.patientName.trim(),
-          dob: '',
-          gender: 'Other',
+          dob: reservation.patientDob || '',
+          gender: reservation.patientGender || 'Other',
           phone: reservation.patientPhone.trim(),
           email: reservation.patientEmail?.trim() || '',
           address: '',
@@ -630,6 +630,30 @@ const PendingReservationsPage: React.FC<PendingReservationsPageProps> = ({ clini
                         )}
                       </div>
                       <div className="grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+                        {reservation.patientDob && (
+                          <p>
+                            <span className="font-semibold text-slate-800 dark:text-slate-100">
+                              {locale === 'ar' ? 'تاريخ الميلاد' : 'Date of birth'}:
+                            </span>{' '}
+                            {new Date(`${reservation.patientDob}T00:00:00`).toLocaleDateString(locale, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        )}
+                        {reservation.patientGender && (
+                          <p>
+                            <span className="font-semibold text-slate-800 dark:text-slate-100">
+                              {locale === 'ar' ? 'النوع' : 'Gender'}:
+                            </span>{' '}
+                            {reservation.patientGender === 'Male'
+                              ? (locale === 'ar' ? 'ذكر' : 'Male')
+                              : reservation.patientGender === 'Female'
+                                ? (locale === 'ar' ? 'أنثى' : 'Female')
+                                : (locale === 'ar' ? 'أخرى' : 'Other')}
+                          </p>
+                        )}
                         <p>
                           <span className="font-semibold text-slate-800 dark:text-slate-100">
                             {t('publicBooking.date') || 'Date'}:

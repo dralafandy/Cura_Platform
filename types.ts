@@ -393,6 +393,8 @@ export interface OnlineReservation {
     clinicId?: string;
     branchId?: string;
     patientName: string;
+    patientDob?: string;
+    patientGender?: 'Male' | 'Female' | 'Other';
     patientPhone: string;
     patientEmail?: string;
     preferredDentistId?: string;
@@ -437,6 +439,8 @@ export interface CreateReservationRequest {
     clinicId?: string;
     branchId?: string;
     patientName: string;
+    patientDob?: string;
+    patientGender?: 'Male' | 'Female' | 'Other';
     patientPhone: string;
     patientEmail?: string;
     preferredDentistId?: string;
