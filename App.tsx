@@ -37,6 +37,7 @@ import EmployeesManagement from './components/employees/EmployeesManagement';
 import AboutPage from './components/AboutPage';
 import ClinicManagementPage from './components/clinic/ClinicManagementPage';
 import SubscriptionOverviewPage from './components/SubscriptionOverviewPage';
+import { getPendingReservations } from './services/publicBookingService';
 
 // Import RBAC for centralized permission management
 import { RBACProvider, useRBAC } from './src/rbac/RBACContext';
@@ -53,9 +54,10 @@ const AppContent: React.FC = () => {
   const [selectedPatientInitialTab, setSelectedPatientInitialTab] = useState<PatientDetailTab>('details');
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [pendingReservationsCount, setPendingReservationsCount] = useState(0);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { isLoading: authLoading, user, isAdmin } = useAuth();
+  const { isLoading: authLoading, user, isAdmin, currentClinic, currentBranch } = useAuth();
   
   // Use new RBAC system for permission checking
   const { hasPermission, isReady } = useRBAC();
@@ -79,6 +81,37 @@ const AppContent: React.FC = () => {
       localStorage.setItem('notificationBellPosition', 'floating');
     }
   }, []);
+
+  const loadPendingReservationsCount = useCallback(async () => {
+    if (!hasPermission(Permission.APPOINTMENT_VIEW)) {
+      setPendingReservationsCount(0);
+      return;
+    }
+
+    const reservations = await getPendingReservations({
+      clinicId: currentClinic?.id,
+      branchId: currentBranch?.id || undefined,
+    });
+    setPendingReservationsCount(reservations.length);
+  }, [currentBranch?.id, currentClinic?.id, hasPermission]);
+
+  useEffect(() => {
+    void loadPendingReservationsCount();
+
+    const refreshInterval = window.setInterval(() => {
+      void loadPendingReservationsCount();
+    }, 30000);
+
+    const handleFocus = () => {
+      void loadPendingReservationsCount();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [loadPendingReservationsCount]);
 
   const renderView = useCallback(() => {
     console.log('Rendering view:', currentView);
@@ -252,7 +285,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="app-shell mobile-ui-pro bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh]">
       <div className="md:flex min-h-screen min-h-[100dvh]">
-        <Sidebar currentView={currentView} setCurrentView={setCurrentView} clinicData={clinicData} />
+        <Sidebar currentView={currentView} setCurrentView={setCurrentView} clinicData={clinicData} pendingReservationsCount={pendingReservationsCount} />
         <div className="flex-1 flex flex-col min-w-0 w-full print:block">
             {/* Header - Modern with user profile, notifications, and page context */}
             <Header 
@@ -284,6 +317,7 @@ const AppContent: React.FC = () => {
         isOpen={isMobileDrawerOpen}
         onClose={() => setIsMobileDrawerOpen(false)}
         clinicData={clinicData}
+        pendingReservationsCount={pendingReservationsCount}
       />
     </div>
 

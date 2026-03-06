@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/online-booking",
+      "destination": "/online-booking.html"
+    }
+  ]
+}

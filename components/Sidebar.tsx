@@ -180,9 +180,10 @@ interface SidebarProps {
   currentView: View;
   setCurrentView: (view: View) => void;
   clinicData: ClinicData;
+  pendingReservationsCount?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicData }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicData, pendingReservationsCount = 0 }) => {
   const { t, locale } = useI18n();
   const { user, logout, isAdmin: authIsAdmin, userProfile } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
@@ -280,6 +281,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
 
 
   const navItems = useMemo(() => getNavItems(), [isAdmin, userProfile, checkPermission, t, locale]);
+  const pendingReservationsBadgeLabel = pendingReservationsCount > 99 ? '99+' : String(pendingReservationsCount);
 
   const groups = [
     {
@@ -393,11 +395,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
                           hoveredItem === item.id && !isActive ? 'translate-x-0.5 scale-105' : ''
                         } ${isActive ? 'scale-105' : ''}`}>
                           <IconComponent isActive={isActive} />
+                          {isCollapsed && item.id === 'pendingReservations' && pendingReservationsCount > 0 && (
+                            <span className={`absolute -top-1 -right-1 min-w-[1.1rem] rounded-full px-1 text-center text-[10px] font-bold leading-5 ${
+                              isActive ? 'bg-amber-300 text-violet-950' : 'bg-rose-500 text-white'
+                            }`}>
+                              {pendingReservationsBadgeLabel}
+                            </span>
+                          )}
                         </span>
 
                         {!isCollapsed && (
-                          <span className="ms-3 font-medium whitespace-nowrap relative z-10">
-                            {item.label}
+                          <span className="ms-3 font-medium whitespace-nowrap relative z-10 flex items-center gap-2">
+                            <span>{item.label}</span>
+                            {item.id === 'pendingReservations' && pendingReservationsCount > 0 && (
+                              <span className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                isActive ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'
+                              }`}>
+                                {pendingReservationsBadgeLabel}
+                              </span>
+                            )}
                           </span>
                         )}
 

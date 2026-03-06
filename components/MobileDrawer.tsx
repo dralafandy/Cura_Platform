@@ -188,14 +188,16 @@ interface MobileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   clinicData: ClinicData;
+  pendingReservationsCount?: number;
 }
 
-const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView, isOpen, onClose, clinicData }) => {
+const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView, isOpen, onClose, clinicData, pendingReservationsCount = 0 }) => {
   const { t, locale } = useI18n();
   const { userProfile, isAdmin, logout } = useAuth();
   const { toggleTheme, isDark } = useTheme();
   const { checkPermission } = usePermissions(userProfile);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const pendingReservationsBadgeLabel = pendingReservationsCount > 99 ? '99+' : String(pendingReservationsCount);
   
   // Navigation items for mobile drawer with permission requirements
   const navItems = [
@@ -364,7 +366,16 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
                           </span>
 
                           <span className="ms-3 font-medium whitespace-nowrap relative z-10 text-base">
-                            {item.label}
+                            <span className="flex items-center gap-2">
+                              <span>{item.label}</span>
+                              {item.id === 'pendingReservations' && pendingReservationsCount > 0 && (
+                                <span className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                  isActive ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'
+                                }`}>
+                                  {pendingReservationsBadgeLabel}
+                                </span>
+                              )}
+                            </span>
                           </span>
 
                           {isActive && (
