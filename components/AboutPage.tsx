@@ -242,7 +242,7 @@ const AboutPage: React.FC = () => {
             </svg>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-4">
-            CuraSoft
+            كيورا دنت | CuraDent
           </h1>
           <p className="text-xl text-violet-600 dark:text-violet-400 font-medium mb-4">
             نظام إدارة عيادات الأسنان
@@ -296,7 +296,7 @@ const AboutPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center mt-12 text-slate-500 dark:text-slate-400">
-          <p className="font-medium">CuraSoft - الحل الأمثل لإدارة عيادات الأسنان بكفاءة واحترافية</p>
+          <p className="font-medium">كيورا دنت | CuraDent - الحل الأمثل لإدارة عيادات الأسنان بكفاءة واحترافية</p>
           <p className="text-sm mt-2">© 2024 جميع الحقوق محفوظة</p>
         </div>
       </div>

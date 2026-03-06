@@ -431,7 +431,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 <div className="hidden sm:block">
                   <span className="text-base font-bold bg-gradient-to-r from-blue-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
-                    كيوراسوفت
+                    {t('appName')}
                   </span>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">
                     نظام إدارة العيادات

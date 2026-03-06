@@ -390,6 +390,8 @@ export interface WorkingHours {
 
 export interface OnlineReservation {
     id: string;
+    clinicId?: string;
+    branchId?: string;
     patientName: string;
     patientPhone: string;
     patientEmail?: string;
@@ -432,6 +434,8 @@ export interface BookingService {
 }
 
 export interface CreateReservationRequest {
+    clinicId?: string;
+    branchId?: string;
     patientName: string;
     patientPhone: string;
     patientEmail?: string;
@@ -447,6 +451,11 @@ export interface CreateReservationResponse {
     success: boolean;
     reservationId: string;
     message: string;
+}
+
+export interface PublicBookingScope {
+    clinicId?: string;
+    branchId?: string;
 }
 
 export interface ReservationStatusResponse {

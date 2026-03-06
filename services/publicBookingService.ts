@@ -8,7 +8,8 @@ import {
     AvailabilityResponse,
     TimeSlot,
     BookingService,
-    WorkingHours
+    WorkingHours,
+    PublicBookingScope
 } from '../types';
 
 // Get the Supabase client - always returns a valid client or throws
@@ -17,6 +18,19 @@ const getClient = (): SupabaseClient => {
         throw new Error('Supabase client not initialized');
     }
     return supabase;
+};
+
+const applyScope = <T>(query: T, scope?: PublicBookingScope): T => {
+    if (!scope) return query;
+
+    let scopedQuery: any = query;
+    if (scope.clinicId) {
+        scopedQuery = scopedQuery.eq('clinic_id', scope.clinicId);
+    }
+    if (scope.branchId) {
+        scopedQuery = scopedQuery.eq('branch_id', scope.branchId);
+    }
+    return scopedQuery as T;
 };
 
 /**
@@ -29,7 +43,8 @@ const getClient = (): SupabaseClient => {
  */
 export const getAvailableSlots = async (
     date: string,
-    _dentistId?: string
+    dentistId?: string,
+    scope?: PublicBookingScope
 ): Promise<AvailabilityResponse> => {
     try {
         const client = getClient();
@@ -42,9 +57,27 @@ export const getAvailableSlots = async (
             .gte('start_time', `${date}T00:00:00`)
             .lt('start_time', `${date}T23:59:59`);
 
+        query = applyScope(query, scope);
+        if (dentistId) {
+            query = query.eq('dentist_id', dentistId);
+        }
+
         const { data: appointments, error } = await query;
 
         if (error) throw error;
+
+        let dentistsQuery = client
+            .from('dentists')
+            .select('id, name')
+            .order('name');
+
+        dentistsQuery = applyScope(dentistsQuery, scope);
+        if (dentistId) {
+            dentistsQuery = dentistsQuery.eq('id', dentistId);
+        }
+
+        const { data: dentists, error: dentistsError } = await dentistsQuery;
+        if (dentistsError) throw dentistsError;
 
         // Get working hours for this day of week
         const dayOfWeek = new Date(date).getDay();
@@ -67,22 +100,6 @@ export const getAvailableSlots = async (
                 for (let minute = 0; minute < 60; minute += slotDuration) {
                     const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                     
-                    // Check if this slot conflicts with any appointment
-                    const isBooked = appointments?.some(apt => {
-                        const aptStart = new Date(apt.start_time);
-                        const aptEnd = new Date(apt.end_time);
-                        const slotTime = new Date(`${date}T${time}:00`);
-                        const slotEnd = new Date(slotTime.getTime() + slotDuration * 60000);
-                        
-                        return slotTime < aptEnd && slotEnd > aptStart;
-                    }) ?? false;
-
-                    // Get dentists available at this time
-                    const { data: dentists } = await client
-                        .from('dentists')
-                        .select('id, name')
-                        .order('name');
-
                     // Find a dentist who is available
                     let availableDentist: { id: string; name: string } | null = null;
                     if (dentists) {
@@ -106,7 +123,7 @@ export const getAvailableSlots = async (
 
                     slots.push({
                         time,
-                        available: !isBooked && !!availableDentist,
+                        available: !!availableDentist,
                         dentistId: availableDentist?.id,
                         dentistName: availableDentist?.name,
                     });
@@ -150,14 +167,18 @@ const generateMockSlots = (date: string): AvailabilityResponse => {
 /**
  * Fetch available dentists
  */
-export const getAvailableDentists = async (): Promise<{ id: string; name: string; specialty: string }[]> => {
+export const getAvailableDentists = async (scope?: PublicBookingScope): Promise<{ id: string; name: string; specialty: string }[]> => {
     try {
         const client = getClient();
         
-        const { data, error } = await client
+        let query = client
             .from('dentists')
             .select('id, name, specialty')
             .order('name');
+
+        query = applyScope(query, scope);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -177,14 +198,18 @@ export const getAvailableDentists = async (): Promise<{ id: string; name: string
 /**
  * Fetch available services/treatments
  */
-export const getAvailableServices = async (): Promise<BookingService[]> => {
+export const getAvailableServices = async (scope?: PublicBookingScope): Promise<BookingService[]> => {
     try {
         const client = getClient();
         
-        const { data, error } = await client
+        let query = client
             .from('treatment_definitions')
             .select('id, name, description, base_price')
             .order('name');
+
+        query = applyScope(query, scope);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -223,6 +248,8 @@ export const createReservation = async (
         const { data, error } = await client
             .from('online_reservations')
             .insert({
+                clinic_id: request.clinicId || null,
+                branch_id: request.branchId || null,
                 patient_name: request.patientName,
                 patient_phone: request.patientPhone,
                 patient_email: request.patientEmail || null,
@@ -342,11 +369,11 @@ export const getWorkingHours = async (dayOfWeek: number): Promise<WorkingHours |
 /**
  * Fetch pending reservations for admin approval
  */
-export const getPendingReservations = async (): Promise<OnlineReservation[]> => {
+export const getPendingReservations = async (scope?: PublicBookingScope): Promise<OnlineReservation[]> => {
     try {
         const client = getClient();
 
-        const { data, error } = await client
+        let query = client
             .from('online_reservations')
             .select(`
                 *,
@@ -355,10 +382,16 @@ export const getPendingReservations = async (): Promise<OnlineReservation[]> => 
             .eq('status', 'PENDING')
             .order('created_at', { ascending: false });
 
+        query = applyScope(query, scope);
+
+        const { data, error } = await query;
+
         if (error) throw error;
 
         return (data || []).map((item: any) => ({
             id: item.id,
+            clinicId: item.clinic_id,
+            branchId: item.branch_id,
             patientName: item.patient_name,
             patientPhone: item.patient_phone,
             patientEmail: item.patient_email,

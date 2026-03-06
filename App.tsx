@@ -32,6 +32,7 @@ import { PatientDetailsPanel } from './components/patient/PatientDetailsPanel';
 import TestPatientCards from './TestPatientCards';
 import ReportsPage from './components/reports/ReportsPage';
 import PublicBookingPage from './components/PublicBookingPage';
+import PendingReservationsPage from './components/PendingReservationsPage';
 import EmployeesManagement from './components/employees/EmployeesManagement';
 import AboutPage from './components/AboutPage';
 import ClinicManagementPage from './components/clinic/ClinicManagementPage';
@@ -167,6 +168,10 @@ const AppContent: React.FC = () => {
         ) : <AccessDenied />;
       case 'publicBooking':
         return <PublicBookingPage />;
+      case 'pendingReservations':
+        return hasPermission(Permission.APPOINTMENT_VIEW) ? (
+          <PendingReservationsPage clinicData={clinicData} />
+        ) : <AccessDenied />;
       case 'about':
         return <AboutPage />;
       case 'clinicManagement':
@@ -218,7 +223,7 @@ const AppContent: React.FC = () => {
       'reports': 'Reports',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
       'about': 'ط¹ظ† ط§ظ„ط¨ط±ظ†ط§ظ…ط¬',
-      'pendingReservations': t('adminReservations.title') || 'Pending Reservations',
+      'pendingReservations': t('onlineReservations.title') || 'Online Reservations',
       'clinicManagement': 'Clinic & Branch Management',
       'subscriptionOverview': locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription'
   }
@@ -297,4 +302,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

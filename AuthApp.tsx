@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import App from './App';
 import LoginPage from './pages/LoginPage';
 import RegisterClinic from './components/RegisterClinic';
+import PublicBookingPage from './components/PublicBookingPage';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from './supabaseClient';
 import { useI18n } from './hooks/useI18n';
@@ -32,6 +33,9 @@ const BackendConfigMessage: React.FC = () => {
 const AuthApp: React.FC = () => {
   const { user, loading } = useAuth();
   const [showClinicRegistration, setShowClinicRegistration] = useState(false);
+  const isPublicBookingFlow =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('page') === 'booking';
   const isRecoveryFlow =
     typeof window !== 'undefined' &&
     (window.location.hash.toLowerCase().includes('type=recovery') ||
@@ -46,6 +50,10 @@ const AuthApp: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (isPublicBookingFlow) {
+    return <PublicBookingPage />;
   }
 
   if (!supabase) {

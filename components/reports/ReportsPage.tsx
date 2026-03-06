@@ -4,6 +4,7 @@ import { useClinicData } from '../../hooks/useClinicData';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import LowStockPurchaseOrderModal from '../finance/LowStockPurchaseOrderModal';
+import { motion } from 'framer-motion';
 import {
   LineChart,
   Line,
@@ -26,18 +27,13 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
-  ScatterChart,
-  Scatter,
-  ZAxis,
-  ReferenceLine,
-  ReferenceDot
+  Treemap
 } from 'recharts';
 import * as XLSX from 'xlsx';
 
 // Report Categories
 export type ReportCategory = 'overview' | 'financial' | 'patient' | 'doctor' | 'treatment' | 'supplier' | 'appointment' | 'inventory' | 'analytics';
 
-// Report Types
 export type ReportType =
   | 'overview'
   | 'revenue' | 'expenses' | 'daily' | 'monthly' | 'yearly' | 'comparison' | 'profitLoss'
@@ -54,41 +50,25 @@ interface ReportsPageProps {
   initialType?: ReportType;
 }
 
-// Enhanced Color Schemes for Dark Mode
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#ff9f40', '#a05195'];
-const GRADIENT_COLORS = [
-  ['#667eea', '#764ba2'],
-  ['#f093fb', '#f5576c'],
-  ['#4facfe', '#00f2fe'],
-  ['#43e97b', '#38f9d7'],
-  ['#fa709a', '#fee140'],
-  ['#a8edea', '#fed6e3'],
-  ['#ff9a9e', '#fecfef'],
-  ['#fbc2eb', '#a6c1ee']
-];
+const COLORS = ['#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
-// Utility Functions
-const formatCurrency = (value: number) => `EGP ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (value: number) => `EGP ${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const formatNumber = (value: number) => value.toLocaleString('en-US');
 const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
-// Calculate growth rate
 const calculateGrowth = (current: number, previous: number) => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 };
 
-// Get previous period dates
 const getPreviousPeriod = (startDate: string, endDate: string) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
   const prevEnd = new Date(start);
   prevEnd.setDate(prevEnd.getDate() - 1);
   const prevStart = new Date(prevEnd);
   prevStart.setDate(prevStart.getDate() - diffDays);
-
   return {
     startDate: prevStart.toISOString().split('T')[0],
     endDate: prevEnd.toISOString().split('T')[0]
@@ -97,26 +77,20 @@ const getPreviousPeriod = (startDate: string, endDate: string) => {
 
 // Icons
 const ChartIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
   </svg>
 );
 
 const TrendUpIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
   </svg>
 );
 
 const TrendDownIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-  </svg>
-);
-
-const FilterIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01.293.707l-6.414 6.414a1 1 0 00-.293.707V17H6v-2.586a1 1 0 00-.293-.707L-6.414 6.414A1 1 0 003 17V4z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
   </svg>
 );
 
@@ -174,122 +148,498 @@ const AnalyticsIcon = () => (
   </svg>
 );
 
-// Enhanced KPI Card Component
-const KPICard: React.FC<{ 
-  title: string; 
-  value: string; 
-  icon: React.ReactNode; 
-  color: string;
-  trend?: number;
-  subtitle?: string;
-}> = ({ title, value, icon, color, trend, subtitle }) => {
-  const { isDark } = useTheme();
-  
-  const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
-    blue: { bg: 'from-blue-500 to-blue-600', text: 'text-blue-600', border: 'border-blue-200' },
-    green: { bg: 'from-emerald-500 to-emerald-600', text: 'text-emerald-600', border: 'border-emerald-200' },
-    red: { bg: 'from-rose-500 to-rose-600', text: 'text-rose-600', border: 'border-rose-200' },
-    purple: { bg: 'from-purple-500 to-purple-600', text: 'text-purple-600', border: 'border-purple-200' },
-    orange: { bg: 'from-amber-500 to-amber-600', text: 'text-amber-600', border: 'border-amber-200' },
-    indigo: { bg: 'from-indigo-500 to-indigo-600', text: 'text-indigo-600', border: 'border-indigo-200' },
-    teal: { bg: 'from-teal-500 to-teal-600', text: 'text-teal-600', border: 'border-teal-200' },
-    pink: { bg: 'from-pink-500 to-pink-600', text: 'text-pink-600', border: 'border-pink-200' },
-    cyan: { bg: 'from-cyan-500 to-cyan-600', text: 'text-cyan-600', border: 'border-cyan-200' },
-    rose: { bg: 'from-rose-500 to-rose-600', text: 'text-rose-600', border: 'border-rose-200' }
-  };
+const ExpandIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+  </svg>
+);
 
-  const classes = colorClasses[color] || colorClasses.blue;
+const FilterIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+  </svg>
+);
+
+// ============================================
+// NEW MODERN KPI COMPONENTS
+// ============================================
+
+// Modern Gauge KPI Card
+interface GaugeKPICardProps {
+  title: string;
+  value: number;
+  maxValue: number;
+  icon: React.ReactNode;
+  color: string;
+  unit?: string;
+}
+
+const GaugeKPICard: React.FC<GaugeKPICardProps> = ({ title, value, maxValue, icon, color, unit = '%' }) => {
+  const { isDark } = useTheme();
+  const percentage = Math.min((value / maxValue) * 100, 100);
+  
+  const colorMap: Record<string, string> = {
+    blue: '#06b6d4',
+    green: '#10b981',
+    purple: '#8b5cf6',
+    orange: '#f59e0b',
+    red: '#ef4444',
+    pink: '#ec4899'
+  };
+  
+  const strokeColor = colorMap[color] || colorMap.blue;
 
   return (
-    <div className={`bg-gradient-to-br ${classes.bg} p-5 rounded-2xl shadow-lg text-white transform hover:scale-[1.02] transition-all duration-300 hover:shadow-xl relative overflow-hidden`}>
-      {/* Decorative background pattern */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-      <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full blur-xl"></div>
-      
-      <div className="relative flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium opacity-90 mb-1">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          {subtitle && <p className="text-xs opacity-75 mt-1">{subtitle}</p>}
-          {trend !== undefined && (
-            <div className={`inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-lg text-xs font-medium ${
-              trend >= 0 
-                ? 'bg-white/20 text-white' 
-                : 'bg-white/20 text-white'
-            }`}>
-              {trend >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
-              <span>{Math.abs(trend).toFixed(1)}%</span>
-            </div>
-          )}
-        </div>
-        <div className="bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`relative overflow-hidden rounded-3xl p-6 ${isDark ? 'bg-slate-800/90' : 'bg-white/90'} backdrop-blur-xl shadow-xl border ${isDark ? 'border-slate-700/50' : 'border-slate-100/50'}`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
+        <div className={`p-2 rounded-xl bg-gradient-to-br from-${color}-500 to-${color}-600 text-white`}>
           {icon}
         </div>
       </div>
+      
+      <div className="relative flex items-center justify-center">
+        <svg className="w-32 h-32 transform -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            fill="none"
+            stroke={isDark ? '#334155' : '#e2e8f0'}
+            strokeWidth="12"
+          />
+          <motion.circle
+            cx="64"
+            cy="64"
+            r="56"
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth="12"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 56}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 56 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 56 * (1 - percentage / 100) }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            style={{
+              filter: `drop-shadow(0 0 8px ${strokeColor}40)`
+            }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <motion.span
+            className="text-3xl font-bold"
+            style={{ color: strokeColor }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            {value.toFixed(1)}{unit}
+          </motion.span>
+          <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>of {maxValue}{unit}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Modern Stat KPI Card with Trend
+interface StatKPICardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  color: string;
+  trend?: number;
+  subtitle?: string;
+  sparklineData?: number[];
+}
+
+const StatKPICard: React.FC<StatKPICardProps> = ({ title, value, icon, color, trend, subtitle, sparklineData }) => {
+  const { isDark } = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const colorMap: Record<string, { bg: string; text: string; glow: string }> = {
+    blue: { bg: 'from-cyan-500 to-blue-600', text: 'text-cyan-500', glow: 'shadow-cyan-500/20' },
+    green: { bg: 'from-emerald-500 to-green-600', text: 'text-emerald-500', glow: 'shadow-emerald-500/20' },
+    purple: { bg: 'from-violet-500 to-purple-600', text: 'text-violet-500', glow: 'shadow-violet-500/20' },
+    orange: { bg: 'from-amber-500 to-orange-600', text: 'text-amber-500', glow: 'shadow-amber-500/20' },
+    red: { bg: 'from-rose-500 to-red-600', text: 'text-rose-500', glow: 'shadow-rose-500/20' },
+    pink: { bg: 'from-pink-500 to-rose-600', text: 'text-pink-500', glow: 'shadow-pink-500/20' },
+    indigo: { bg: 'from-indigo-500 to-blue-600', text: 'text-indigo-500', glow: 'shadow-indigo-500/20' }
+  };
+  
+  const classes = colorMap[color] || colorMap.blue;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className={`relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br ${classes.bg} text-white shadow-xl ${classes.glow}`}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl transform translate-x-8 -translate-y-8"></div>
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl transform -translate-x-4 translate-y-4"></div>
+      
+      <div className="relative">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-white/80">{title}</span>
+          <motion.div
+            animate={{ scale: isHovered ? 1.1 : 1, rotate: isHovered ? 5 : 0 }}
+            className="p-2 bg-white/20 rounded-xl backdrop-blur-sm"
+          >
+            {icon}
+          </motion.div>
+        </div>
+        
+        <div className="text-3xl font-bold mb-1">{value}</div>
+        
+        {subtitle && (
+          <div className="text-xs text-white/70 mb-2">{subtitle}</div>
+        )}
+        
+        {trend !== undefined && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${
+              trend >= 0 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/80'
+            }`}
+          >
+            {trend >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
+            <span>{Math.abs(trend).toFixed(1)}%</span>
+          </motion.div>
+        )}
+        
+        {sparklineData && sparklineData.length > 0 && (
+          <div className="mt-4 h-12">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData.map((v, i) => ({ value: v, index: i }))}>
+                <defs>
+                  <linearGradient id={`sparkGrad-${color}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="white" stopOpacity={0.4}/>
+                    <stop offset="100%" stopColor="white" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="white"
+                  strokeWidth={2}
+                  fill={`url(#sparkGrad-${color})`}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// NEW CHART COMPONENTS
+// ============================================
+
+// Heatmap Chart Component
+interface HeatmapData {
+  day: string;
+  hour: number;
+  value: number;
+}
+
+interface HeatmapChartProps {
+  data: HeatmapData[];
+}
+
+const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
+  const { isDark } = useTheme();
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const hours = Array.from({ length: 12 }, (_, i) => i + 8);
+  
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+  
+  const getColor = (value: number) => {
+    const intensity = value / maxValue;
+    if (intensity === 0) return isDark ? '#1e293b' : '#f1f5f9';
+    if (intensity < 0.25) return '#ccfbf1';
+    if (intensity < 0.5) return '#5eead4';
+    if (intensity < 0.75) return '#14b8a6';
+    return '#0f766e';
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[400px]">
+        <div className="flex gap-1 mb-2 ml-12">
+          {hours.map(h => (
+            <div key={h} className={`text-xs flex-1 text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              {h}:00
+            </div>
+          ))}
+        </div>
+        {days.map((day, dayIndex) => (
+          <div key={day} className="flex items-center gap-1 mb-1">
+            <div className={`text-xs w-10 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{day}</div>
+            {hours.map(hour => {
+              const cellData = data.find(d => d.day === day && d.hour === hour);
+              const value = cellData?.value || 0;
+              return (
+                <motion.div
+                  key={`${day}-${hour}`}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: (dayIndex * 12 + hour) * 0.01 }}
+                  className="flex-1 h-8 rounded-md cursor-pointer transition-all hover:scale-110"
+                  style={{ backgroundColor: getColor(value) }}
+                  title={`${day} ${hour}:00 - ${value} appointments`}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
-// Enhanced Chart Card Component
-const ChartCard: React.FC<{ 
-  title: string; 
-  children: React.ReactNode;
-  actions?: React.ReactNode;
-}> = ({ title, children, actions }) => {
+// Radar Chart for Doctor Comparison
+interface RadarChartData {
+  subject: string;
+  A: number;
+  B?: number;
+  fullMark?: number;
+}
+
+interface CustomRadarChartProps {
+  data: RadarChartData[];
+}
+
+const CustomRadarChart: React.FC<CustomRadarChartProps> = ({ data }) => {
   const { isDark } = useTheme();
   
   return (
-    <div className={`${
-      isDark 
-        ? 'bg-slate-800/80 border-slate-700/50' 
-        : 'bg-white/90 border-slate-100/50'
-    } backdrop-blur-sm p-6 rounded-2xl shadow-lg border hover:shadow-xl transition-all duration-300`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className={`text-lg font-semibold flex items-center gap-2 ${
-          isDark ? 'text-slate-200' : 'text-slate-800'
-        }`}>
-          <span className="w-1 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></span>
-          {title}
-        </h3>
-        {actions && <div className="flex gap-2">{actions}</div>}
-      </div>
-      {children}
-    </div>
+    <ResponsiveContainer width="100%" height={300}>
+      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+        <PolarGrid stroke={isDark ? '#334155' : '#e2e8f0'} />
+        <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 12 }} />
+        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: isDark ? '#64748b' : '#94a3b8' }} />
+        <Radar
+          name="Current"
+          dataKey="A"
+          stroke="#06b6d4"
+          fill="#06b6d4"
+          fillOpacity={0.3}
+          strokeWidth={2}
+        />
+        {data[0]?.B !== undefined && (
+          <Radar
+            name="Previous"
+            dataKey="B"
+            stroke="#8b5cf6"
+            fill="#8b5cf6"
+            fillOpacity={0.2}
+            strokeWidth={2}
+          />
+        )}
+        <Legend />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: isDark ? '#1e293b' : '#fff',
+            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+            borderRadius: '12px'
+          }}
+        />
+      </RadarChart>
+    </ResponsiveContainer>
   );
 };
 
-// Enhanced Table Component
-const DataTable: React.FC<{
+// Treemap Chart Component
+interface TreemapData {
+  name: string;
+  size: number;
+  fill?: string;
+}
+
+interface TreemapChartProps {
+  data: TreemapData[];
+}
+
+const CustomTreemap: React.FC<TreemapChartProps> = ({ data }) => {
+  const { isDark } = useTheme();
+  
+  const coloredData = data.map((item, index) => ({
+    ...item,
+    fill: item.fill || COLORS[index % COLORS.length]
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <Treemap
+        data={coloredData}
+        dataKey="size"
+        aspectRatio={4 / 3}
+        stroke={isDark ? '#1e293b' : '#fff'}
+        fill="#06b6d4"
+        content={<CustomTreemapContent isDark={isDark} />}
+      />
+    </ResponsiveContainer>
+  );
+};
+
+const CustomTreemapContent = (props: any) => {
+  const { isDark } = useTheme();
+  const { x, y, width, height, name, fill } = props;
+  
+  if (width < 50 || height < 30) return null;
+  
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: fill,
+          stroke: '#fff',
+          strokeWidth: 2,
+          strokeDasharray: '4 4'
+        }}
+        rx={4}
+      />
+      {width > 60 && height > 40 && (
+        <text
+          x={x + width / 2}
+          y={y + height / 2}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#fff"
+          fontSize={12}
+          fontWeight={600}
+        >
+          {name?.length > 10 ? name.substring(0, 10) + '...' : name}
+        </text>
+      )}
+    </g>
+  );
+};
+
+// Modern Chart Card
+const ModernChartCard: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+  onExpand?: () => void;
+  className?: string;
+}> = ({ title, children, actions, onExpand, className = '' }) => {
+  const { isDark } = useTheme();
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`relative overflow-hidden rounded-3xl p-6 ${isDark ? 'bg-slate-800/90' : 'bg-white/90'} backdrop-blur-xl shadow-xl border ${isDark ? 'border-slate-700/50' : 'border-slate-100/50'} ${className}`}
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          {title}
+        </h3>
+        <div className="flex items-center gap-2">
+          {actions}
+          {onExpand && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onExpand}
+              className={`p-2 rounded-xl ${isDark ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+            >
+              <ExpandIcon />
+            </motion.button>
+          )}
+        </div>
+      </div>
+      <div className="relative">
+        {children}
+      </div>
+    </motion.div>
+  );
+};
+
+// Custom Tooltip
+const CustomTooltip: React.FC<{
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  formatter?: (value: any, name: string) => any;
+  isDark?: boolean;
+}> = ({ active, payload, label, formatter, isDark }) => {
+  if (active && payload && payload.length) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`px-4 py-3 rounded-2xl shadow-2xl border ${
+          isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+        }`}
+      >
+        <p className={`text-sm font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          {label}
+        </p>
+        {payload.map((entry, index) => (
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
+              {entry.name}:
+            </span>
+            <span className="font-semibold" style={{ color: entry.color }}>
+              {formatter
+                ? formatter(entry.value, entry.name)[0]
+                : typeof entry.value === 'number'
+                  ? entry.value.toLocaleString()
+                  : entry.value}
+            </span>
+          </div>
+        ))}
+      </motion.div>
+    );
+  }
+  return null;
+};
+
+// Enhanced Data Table
+const ModernDataTable: React.FC<{
   title: string;
   columns: { key: string; label: string; align?: 'left' | 'right' | 'center' }[];
   data: any[];
   renderRow?: (row: any, index: number) => React.ReactNode;
   maxHeight?: string;
-}> = ({ title, columns, data, renderRow, maxHeight }) => {
+  onRowClick?: (row: any) => void;
+}> = ({ title, columns, data, renderRow, maxHeight, onRowClick }) => {
   const { isDark } = useTheme();
   
   return (
-    <div className={`${
-      isDark 
-        ? 'bg-slate-800/80 border-slate-700/50' 
-        : 'bg-white/90 border-slate-100/50'
-    } backdrop-blur-sm rounded-2xl shadow-lg border overflow-hidden`}>
-      <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-        <h3 className={`text-lg font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{title}</h3>
+    <div className={`relative overflow-hidden rounded-3xl ${isDark ? 'bg-slate-800/90' : 'bg-white/90'} backdrop-blur-xl shadow-xl border ${isDark ? 'border-slate-700/50' : 'border-slate-100/50'}`}>
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{title}</h3>
       </div>
       <div className={`overflow-x-auto ${maxHeight ? 'overflow-y-auto' : ''}`} style={{ maxHeight }}>
         <table className="w-full text-sm">
-          <thead className={`${
-            isDark 
-              ? 'bg-slate-700/80' 
-              : 'bg-slate-100/80'
-          } sticky top-0`}>
+          <thead className={isDark ? 'bg-slate-700/50' : 'bg-slate-50/80'}>
             <tr>
-              {columns.map((col, index) => (
-                <th 
+              {columns.map((col) => (
+                <th
                   key={col.key}
-                  className={`p-4 font-semibold ${
-                    isDark ? 'text-slate-200' : 'text-slate-800'
+                  className={`px-6 py-3 font-semibold text-left text-xs uppercase tracking-wider ${
+                    isDark ? 'text-slate-400' : 'text-slate-500'
                   } ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
                 >
                   {col.label}
@@ -297,27 +647,33 @@ const DataTable: React.FC<{
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className={`divide-y ${isDark ? 'divide-slate-700/50' : 'divide-slate-100'}`}>
             {data.map((row, rowIndex) => (
-              <tr 
+              <motion.tr
                 key={rowIndex}
-                className={`border-b transition-colors duration-200 ${
-                  isDark 
-                    ? 'border-slate-700/50 hover:bg-slate-700/30' 
-                    : 'border-slate-100/50 hover:bg-slate-50/50'
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: rowIndex * 0.02 }}
+                onClick={() => onRowClick?.(row)}
+                className={`transition-colors duration-200 ${
+                  onRowClick ? 'cursor-pointer' : ''
+                } ${
+                  isDark
+                    ? 'hover:bg-slate-700/30'
+                    : 'hover:bg-slate-50/50'
                 }`}
               >
                 {renderRow ? renderRow(row, rowIndex) : columns.map((col) => (
-                  <td 
+                  <td
                     key={col.key}
-                    className={`p-4 ${
+                    className={`px-6 py-4 ${
                       isDark ? 'text-slate-300' : 'text-slate-700'
                     } ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}
                   >
                     {row[col.key]}
                   </td>
                 ))}
-              </tr>
+              </motion.tr>
             ))}
           </tbody>
         </table>
@@ -326,8 +682,8 @@ const DataTable: React.FC<{
   );
 };
 
-// Enhanced Dropdown Component
-const SelectDropdown: React.FC<{
+// Enhanced Dropdown
+const ModernSelect: React.FC<{
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -345,11 +701,11 @@ const SelectDropdown: React.FC<{
       <div className="relative overflow-visible">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 transition-all duration-200 ${
+          className={`w-full px-4 py-3 rounded-2xl flex items-center justify-between gap-2 transition-all duration-200 ${
             isDark 
-              ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500' 
-              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-300 hover:shadow-md'
-          } border focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              ? 'bg-slate-700/80 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500' 
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-lg'
+          } border backdrop-blur-sm`}
         >
           <div className="flex items-center gap-2">
             {icon && <span className="text-slate-400">{icon}</span>}
@@ -365,7 +721,7 @@ const SelectDropdown: React.FC<{
           </svg>
         </button>
         {isOpen && (
-          <div className={`absolute z-[9999] w-full mt-1 rounded-xl shadow-2xl border overflow-visible ${
+          <div className={`absolute z-[9999] w-full mt-2 rounded-2xl shadow-2xl border overflow-hidden ${
             isDark 
               ? 'bg-slate-800 border-slate-700' 
               : 'bg-white border-slate-200'
@@ -377,9 +733,9 @@ const SelectDropdown: React.FC<{
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full px-4 py-2.5 text-left transition-colors duration-150 ${
+                className={`w-full px-4 py-3 text-left transition-colors duration-150 ${
                   value === option.value
-                    ? isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                    ? isDark ? 'bg-cyan-600 text-white' : 'bg-cyan-500 text-white'
                     : isDark ? 'text-slate-200 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -393,8 +749,8 @@ const SelectDropdown: React.FC<{
   );
 };
 
-// Enhanced Date Input Component
-const DateInput: React.FC<{
+// Enhanced Date Input
+const ModernDateInput: React.FC<{
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -407,45 +763,94 @@ const DateInput: React.FC<{
         isDark ? 'text-slate-400' : 'text-slate-500'
       }`}>{label}</label>
       <div className="relative">
-        <CalendarIcon />
+        <div className={`absolute left-3 top-1/2 -translate-y-1/2 z-10 ${
+          isDark ? 'text-slate-400' : 'text-slate-400'
+        }`}>
+          <CalendarIcon />
+        </div>
         <input
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full pl-10 pr-4 py-2.5 rounded-xl transition-all duration-200 ${
+          className={`w-full pl-10 pr-4 py-3 rounded-2xl transition-all duration-200 ${
             isDark 
-              ? 'bg-slate-700 border-slate-600 text-slate-200 focus:bg-slate-600 focus:border-blue-500' 
-              : 'bg-slate-50 border-slate-200 text-slate-700 focus:bg-white focus:border-blue-500 hover:bg-white hover:shadow-md'
-          } border focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              ? 'bg-slate-700/80 border-slate-600 text-slate-200 focus:bg-slate-600 focus:border-cyan-500' 
+              : 'bg-white border-slate-200 text-slate-700 focus:bg-white focus:border-cyan-500 hover:shadow-lg'
+          } border focus:outline-none focus:ring-2 focus:ring-cyan-500/50`}
         />
       </div>
     </div>
   );
 };
 
+// Quick Date Filter Buttons
+const QuickDateFilter: React.FC<{
+  onSelect: (days: number) => void;
+  currentDays: number;
+}> = ({ onSelect, currentDays }) => {
+  const { isDark } = useTheme();
+  
+  const periods = [
+    { label: '7D', days: 7 },
+    { label: '30D', days: 30 },
+    { label: '90D', days: 90 },
+    { label: '1Y', days: 365 }
+  ];
+
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+      {periods.map((p) => (
+        <button
+          key={p.days}
+          onClick={() => onSelect(p.days)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            currentDays === p.days
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
+              : isDark 
+                ? 'text-slate-400 hover:text-white hover:bg-slate-700' 
+                : 'text-slate-600 hover:text-slate-800 hover:bg-white'
+          }`}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// MAIN REPORTS PAGE COMPONENT
+// ============================================
+
 const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview', initialType = 'overview' }) => {
   const { t, locale } = useI18n();
   const clinicData = useClinicData();
-  const { filters, updateFilter, setFilters, getPreviousPeriod: getPrevPeriod } = useReportsFilters();
+  const { filters, updateFilter, getPreviousPeriod: getPrevPeriod } = useReportsFilters();
   const { isDark } = useTheme();
   
   const [activeCategory, setActiveCategory] = useState<ReportCategory>(initialCategory);
   const [activeReport, setActiveReport] = useState<ReportType>(initialType);
-  
-  // Local state for comparison and chart type
   const [comparisonDateRange, setComparisonDateRange] = useState(() => {
     const prev = getPrevPeriod(filters.startDate, filters.endDate);
     return prev;
   });
   const [showComparison, setShowComparison] = useState(false);
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
+  const [selectedPeriod, setSelectedPeriod] = useState(30);
+  const [expandedChart, setExpandedChart] = useState<string | null>(null);
 
-  // Update comparison date range when main date range changes
   useEffect(() => {
     setComparisonDateRange(getPrevPeriod(filters.startDate, filters.endDate));
   }, [filters.startDate, filters.endDate, getPrevPeriod]);
 
-  // Destructure filters for easier access
+  const handlePeriodChange = (days: number) => {
+    setSelectedPeriod(days);
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    updateFilter('startDate', start.toISOString().split('T')[0]);
+    updateFilter('endDate', end.toISOString().split('T')[0]);
+  };
+
   const {
     startDate,
     endDate,
@@ -457,12 +862,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     selectedTreatment
   } = filters;
 
-  // Create dateRange object for backward compatibility
   const dateRange = useMemo(() => ({ startDate, endDate }), [startDate, endDate]);
 
   const { patients, dentists, suppliers, payments, expenses, doctorPayments, supplierInvoices, treatmentRecords, treatmentDefinitions, appointments, inventoryItems, labCases } = clinicData;
 
-  // Filter data by date range
   const filterByDate = useCallback(<T extends { [key: string]: any }>(data: T[], dateField: string, range = dateRange): T[] => {
     const start = new Date(range.startDate);
     start.setHours(0, 0, 0, 0);
@@ -475,7 +878,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     });
   }, [dateRange]);
 
-  // Filtered data for current period
   const filteredPayments = useMemo(() => {
     let filtered = filterByDate(payments, 'date');
     if (selectedPaymentMethod) filtered = filtered.filter(p => p.method === selectedPaymentMethod);
@@ -525,7 +927,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     return filterByDate(labCases.map(lc => ({ ...lc, date: lc.sentDate })), 'date');
   }, [labCases, dateRange, filterByDate]);
 
-  // Previous period data for comparison
   const prevPayments = useMemo(() => filterByDate(payments, 'date', comparisonDateRange), [payments, comparisonDateRange, filterByDate]);
   const prevExpenses = useMemo(() => filterByDate(expenses, 'date', comparisonDateRange), [expenses, comparisonDateRange, filterByDate]);
   const prevTreatmentRecords = useMemo(() => filterByDate(treatmentRecords, 'treatmentDate', comparisonDateRange), [treatmentRecords, comparisonDateRange, filterByDate]);
@@ -533,7 +934,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
 
   // Report Data Calculations
   const reportData = useMemo(() => {
-    // Financial Data
     const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     const totalDoctorPayments = filteredDoctorPayments.reduce((sum, dp) => sum + dp.amount, 0);
@@ -543,17 +943,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     const netProfit = clinicRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
-    // Previous period for comparison
     const prevRevenue = prevPayments.reduce((sum, p) => sum + p.amount, 0);
     const prevExpensesTotal = prevExpenses.reduce((sum, e) => sum + e.amount, 0);
     const prevNetProfit = prevRevenue - prevExpensesTotal;
 
-    // Growth calculations
     const revenueGrowth = calculateGrowth(totalRevenue, prevRevenue);
     const expensesGrowth = calculateGrowth(totalExpenses, prevExpensesTotal);
     const profitGrowth = calculateGrowth(netProfit, prevNetProfit);
 
-    // Payment Methods
     const paymentMethods = Object.entries(
       filteredPayments.reduce((acc, p) => {
         acc[p.method] = (acc[p.method] || 0) + p.amount;
@@ -566,15 +963,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       count: filteredPayments.filter(p => p.method === method).length
     })).sort((a, b) => b.value - a.value);
 
-    // Payment Methods Trend (daily)
-    const paymentMethodTrend = filteredPayments.reduce((acc, p) => {
-      const date = p.date;
-      if (!acc[date]) acc[date] = { date };
-      acc[date][p.method] = (acc[date][p.method] || 0) + p.amount;
-      return acc;
-    }, {} as Record<string, any>);
-
-    // Expense Categories
     const expenseCategories = Object.entries(
       filteredExpenses.reduce((acc, e) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -587,7 +975,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
     })).sort((a, b) => b.value - a.value);
 
-    // Patient Data
     const patientData = patients.map(patient => {
       const patientTreatments = filteredTreatmentRecords.filter(tr => tr.patientId === patient.id);
       const patientPayments = filteredPayments.filter(p => p.patientId === patient.id);
@@ -608,12 +995,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
 
     const newPatients = patientData.filter(p => p.isNew).length;
     const returningPatients = patientData.filter(p => p.isReturning).length;
-
-    // Patient Retention Rate
     const activePatients = patientData.filter(p => p.treatments > 0).length;
     const retentionRate = patients.length > 0 ? (activePatients / patients.length) * 100 : 0;
 
-    // Doctor Data
     const doctorData = dentists.map(doctor => {
       const doctorTreatments = filteredTreatmentRecords.filter(tr => tr.dentistId === doctor.id);
       const doctorPays = filteredDoctorPayments.filter(dp => dp.dentistId === doctor.id);
@@ -639,7 +1023,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       };
     }).sort((a, b) => b.treatments - a.treatments);
 
-    // Treatment Data
     const treatmentTypes = Object.entries(
       filteredTreatmentRecords.reduce((acc, tr) => {
         const def = treatmentDefinitions.find(td => td.id === tr.treatmentDefinitionId);
@@ -658,27 +1041,19 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       avgValue: data.count > 0 ? data.revenue / data.count : 0
     })).sort((a, b) => b.count - a.count);
 
-    // Treatment Trends Over Time
     const treatmentTrends = filteredTreatmentRecords.reduce((acc, tr) => {
-      const date = tr.treatmentDate.substring(0, 7); // YYYY-MM
+      const date = tr.treatmentDate.substring(0, 7);
       if (!acc[date]) acc[date] = { month: date, count: 0, revenue: 0 };
       acc[date].count += 1;
       acc[date].revenue += tr.totalTreatmentCost;
       return acc;
     }, {} as Record<string, { month: string; count: number; revenue: number }>);
 
-    // Supplier Data
     const supplierData = suppliers.map(supplier => {
       const invoices = filteredSupplierInvoices.filter(si => si.supplierId === supplier.id);
       const supplierExpenses = filteredExpenses.filter(e => e.supplierId === supplier.id);
-      
-      // Calculate total billed from invoices
       const totalBilled = invoices.reduce((sum, si) => sum + si.amount, 0);
-      
-      // Calculate total paid from all expenses (both direct expenses and invoice payments)
       const totalPaid = supplierExpenses.reduce((sum, e) => sum + e.amount, 0);
-      
-      // Calculate actual outstanding balance (same as in SuppliersManagement page)
       const outstandingBalance = totalBilled - totalPaid;
       
       return {
@@ -689,13 +1064,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
         totalAmount: totalBilled,
         unpaidAmount: outstandingBalance > 0 ? outstandingBalance : 0,
         expensesAmount: totalPaid,
-        avgInvoiceValue: invoices.length > 0 
-          ? totalBilled / invoices.length 
-          : 0
+        avgInvoiceValue: invoices.length > 0 ? totalBilled / invoices.length : 0
       };
     }).sort((a, b) => b.totalAmount - a.totalAmount);
 
-    // Appointment Data
     const appointmentStats = {
       total: filteredAppointments.length,
       scheduled: filteredAppointments.filter(a => a.status === 'SCHEDULED').length,
@@ -710,12 +1082,33 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       completed: prevAppointments.filter((a: any) => a.status === 'COMPLETED').length
     };
 
-    // Appointment Efficiency
     const completionRate = appointmentStats.total > 0 ? (appointmentStats.completed / appointmentStats.total) * 100 : 0;
     const noShowRate = appointmentStats.total > 0 ? (appointmentStats.noShow / appointmentStats.total) * 100 : 0;
     const appointmentGrowth = calculateGrowth(appointmentStats.completed, prevAppointmentStats.completed);
 
-    // Peak Hours Analysis
+    // Heatmap data for appointments
+    const heatmapData: { day: string; hour: number; value: number }[] = [];
+    const dayMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    filteredAppointments.forEach(a => {
+      const date = new Date(a.startTime);
+      const day = dayMap[date.getDay()];
+      const hour = date.getHours();
+      if (hour >= 8 && hour <= 19) {
+        heatmapData.push({ day, hour, value: 1 });
+      }
+    });
+    
+    const heatmapAggregated: { day: string; hour: number; value: number }[] = [];
+    const heatmapMap = new Map<string, number>();
+    heatmapData.forEach(h => {
+      const key = `${h.day}-${h.hour}`;
+      heatmapMap.set(key, (heatmapMap.get(key) || 0) + h.value);
+    });
+    heatmapMap.forEach((value, key) => {
+      const [day, hour] = key.split('-');
+      heatmapAggregated.push({ day, hour: parseInt(hour), value });
+    });
+
     const peakHours = filteredAppointments.reduce((acc, a) => {
       const hour = new Date(a.startTime).getHours();
       acc[hour] = (acc[hour] || 0) + 1;
@@ -726,12 +1119,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
       .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
 
-    // Daily Financials
     const dailyFinancials: Record<string, { date: string; revenue: number; expenses: number; doctorRevenue: number; netProfit: number; treatments: number; appointments: number }> = {};
     
     const currentDate = new Date(dateRange.startDate);
-    const endDate = new Date(dateRange.endDate);
-    while (currentDate <= endDate) {
+    const endDateObj = new Date(dateRange.endDate);
+    while (currentDate <= endDateObj) {
       const dateKey = currentDate.toISOString().split('T')[0];
       dailyFinancials[dateKey] = { date: dateKey, revenue: 0, expenses: 0, doctorRevenue: 0, netProfit: 0, treatments: 0, appointments: 0 };
       currentDate.setDate(currentDate.getDate() + 1);
@@ -771,7 +1163,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       day.netProfit = day.revenue - day.doctorRevenue - day.expenses;
     });
 
-    // Inventory Data
     const inventoryValue = inventoryItems.reduce((sum, item) => sum + (item.currentStock * item.unitCost), 0);
     const lowStockItems = inventoryItems.filter(item => item.currentStock <= (item.minStockLevel || 10));
     const expiringItems = inventoryItems.filter(item => {
@@ -780,7 +1171,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
     });
 
-    // Lab Cases Data
     const labCaseStats = {
       total: filteredLabCases.length,
       sent: filteredLabCases.filter(lc => lc.status === 'SENT_TO_LAB').length,
@@ -794,14 +1184,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
         totalRevenue, totalExpenses, totalDoctorPayments, totalSupplierInvoices, 
         clinicRevenue, doctorRevenue, netProfit, profitMargin,
         revenueGrowth, expensesGrowth, profitGrowth,
-        paymentMethods, expenseCategories, paymentMethodTrend 
+        paymentMethods, expenseCategories
       },
       patient: patientData,
       patientStats: { newPatients, returningPatients, retentionRate, activePatients },
       doctor: doctorData,
       treatment: { types: treatmentTypes, trends: Object.values(treatmentTrends) },
       supplier: supplierData,
-      appointment: { stats: appointmentStats, completionRate, noShowRate, appointmentGrowth, peakHours: peakHoursData },
+      appointment: { stats: appointmentStats, completionRate, noShowRate, appointmentGrowth, peakHours: peakHoursData, heatmap: heatmapAggregated },
       daily: Object.values(dailyFinancials).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
       inventory: { value: inventoryValue, lowStock: lowStockItems, expiring: expiringItems },
       labCases: labCaseStats
@@ -809,417 +1199,21 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
   }, [filteredPayments, filteredExpenses, filteredDoctorPayments, filteredSupplierInvoices, filteredTreatmentRecords, filteredAppointments, filteredLabCases, prevPayments, prevExpenses, prevTreatmentRecords, prevAppointments, patients, dentists, suppliers, treatmentDefinitions, inventoryItems, t]);
 
   // Export Functions
-  const printDetailedReport = () => {
-    const isArabic = locale.toLowerCase().startsWith('ar');
-    const dir = isArabic ? 'rtl' : 'ltr';
-    const categoryLabels: Record<ReportCategory, string> = {
-      overview: t('reports.overview'),
-      financial: t('reports.financialReports'),
-      patient: t('reports.patientReports'),
-      doctor: t('reports.doctorReports'),
-      treatment: t('reports.treatmentReports'),
-      supplier: t('reports.supplierReports'),
-      appointment: t('reports.appointmentReports') || 'Appointments',
-      inventory: t('reports.inventoryReports') || 'Inventory',
-      analytics: t('reports.analytics') || 'Analytics'
-    };
-
-    const formatDateValue = (value: string) => {
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-    };
-
-    const escapeHtml = (value: string) =>
-      value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-
-    const createTableHtml = (title: string, headers: string[], rows: string[][]) => {
-      const headerCells = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
-      const bodyRows = rows.length > 0
-        ? rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
-        : `<tr><td colspan="${headers.length}" class="empty-row">${escapeHtml(isArabic ? 'لا توجد بيانات' : 'No data')}</td></tr>`;
-
-      return `
-        <section class="section">
-          <h2>${escapeHtml(title)}</h2>
-          <table>
-            <thead><tr>${headerCells}</tr></thead>
-            <tbody>${bodyRows}</tbody>
-          </table>
-        </section>
-      `;
-    };
-
-    const summaryRows: string[][] = [
-      [t('reports.totalRevenue'), formatCurrency(reportData.financial.totalRevenue)],
-      [t('reports.totalExpenses'), formatCurrency(reportData.financial.totalExpenses)],
-      [t('reports.netProfit'), formatCurrency(reportData.financial.netProfit)],
-      [t('reports.profitMargin'), formatPercentage(reportData.financial.profitMargin)],
-      [t('reports.totalPatients'), formatNumber(patients.length)],
-      [t('reports.activePatients'), formatNumber(reportData.patientStats.activePatients)],
-      [t('reports.newPatients'), formatNumber(reportData.patientStats.newPatients)],
-      [t('reports.retentionRate'), formatPercentage(reportData.patientStats.retentionRate)],
-      [t('reports.totalAppointments'), formatNumber(reportData.appointment.stats.total)],
-      [t('reports.completionRate'), formatPercentage(reportData.appointment.completionRate)]
-    ];
-
-    const dailyRows = reportData.daily.map(day => [
-      formatDateValue(day.date),
-      formatCurrency(day.revenue),
-      formatCurrency(day.expenses),
-      formatCurrency(day.netProfit),
-      formatNumber(day.treatments),
-      formatNumber(day.appointments)
-    ]);
-
-    const topPatientsRows = reportData.patient
-      .filter(patient => patient.treatments > 0)
-      .slice(0, 20)
-      .map(patient => [
-        patient.name || '-',
-        patient.phone || '-',
-        formatNumber(patient.treatments),
-        formatCurrency(patient.totalSpent),
-        formatCurrency(patient.totalPaid),
-        patient.lastVisit ? formatDateValue(patient.lastVisit) : '-'
-      ]);
-
-    const doctorRows = reportData.doctor.slice(0, 20).map(doctor => [
-      doctor.name || '-',
-      doctor.specialty || '-',
-      formatNumber(doctor.treatments),
-      formatNumber(doctor.patients),
-      formatCurrency(doctor.totalRevenue),
-      formatCurrency(doctor.doctorRevenue),
-      formatPercentage(doctor.growth)
-    ]);
-
-    const treatmentRows = reportData.treatment.types.slice(0, 20).map(treatment => [
-      treatment.name || '-',
-      formatNumber(treatment.count),
-      formatCurrency(treatment.revenue),
-      formatCurrency(treatment.doctorRevenue),
-      formatCurrency(treatment.avgValue)
-    ]);
-
-    const supplierRows = reportData.supplier.slice(0, 20).map(supplier => [
-      supplier.name || '-',
-      supplier.type || '-',
-      formatNumber(supplier.totalInvoices),
-      formatCurrency(supplier.totalAmount),
-      formatCurrency(supplier.expensesAmount),
-      formatCurrency(supplier.unpaidAmount)
-    ]);
-
-    const lowStockRows = reportData.inventory.lowStock.slice(0, 30).map(item => [
-      item.name || '-',
-      formatNumber(item.currentStock),
-      formatNumber(item.minStockLevel || 10),
-      formatCurrency(item.unitCost),
-      formatCurrency(item.currentStock * item.unitCost)
-    ]);
-
-    const expiringRows = reportData.inventory.expiring.slice(0, 30).map(item => [
-      item.name || '-',
-      item.expiryDate ? formatDateValue(item.expiryDate) : '-',
-      formatNumber(item.currentStock),
-      formatCurrency(item.unitCost)
-    ]);
-
-    const kpiCards = [
-      { label: t('reports.totalRevenue'), value: formatCurrency(reportData.financial.totalRevenue), className: 'kpi revenue' },
-      { label: t('reports.netProfit'), value: formatCurrency(reportData.financial.netProfit), className: 'kpi profit' },
-      { label: t('reports.totalExpenses'), value: formatCurrency(reportData.financial.totalExpenses), className: 'kpi expense' },
-      { label: t('reports.totalAppointments'), value: formatNumber(reportData.appointment.stats.total), className: 'kpi appointments' }
-    ];
-
-    const kpiCardsHtml = kpiCards.map(card => `
-      <div class="${card.className}">
-        <span>${escapeHtml(card.label)}</span>
-        <strong>${escapeHtml(card.value)}</strong>
-      </div>
-    `).join('');
-
-    const reportHtml = `
-      <!doctype html>
-      <html lang="${isArabic ? 'ar' : 'en'}" dir="${dir}">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>${escapeHtml(t('reports.title'))}</title>
-          <style>
-            * { box-sizing: border-box; }
-            body {
-              font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-              margin: 0;
-              color: #0f172a;
-              background:
-                radial-gradient(circle at top right, #dbeafe 0%, transparent 40%),
-                radial-gradient(circle at bottom left, #e0e7ff 0%, transparent 30%),
-                #f8fafc;
-            }
-            .page {
-              max-width: 1280px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(130deg, #1d4ed8, #4338ca 55%, #7c3aed);
-              color: #fff;
-              border-radius: 16px;
-              padding: 18px;
-              margin-bottom: 16px;
-              box-shadow: 0 10px 30px rgba(37, 99, 235, 0.22);
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .header h1 { margin: 0; font-size: 24px; letter-spacing: 0.2px; }
-            .header p { margin: 8px 0 0; font-size: 13px; opacity: 0.95; }
-            .meta {
-              display: grid;
-              grid-template-columns: repeat(3, minmax(0, 1fr));
-              gap: 10px;
-              margin-bottom: 14px;
-            }
-            .meta-card {
-              background: #fff;
-              border: 1px solid #dbeafe;
-              border-radius: 12px;
-              padding: 11px 13px;
-              font-size: 12px;
-              box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-            }
-            .kpi-grid {
-              display: grid;
-              grid-template-columns: repeat(4, minmax(0, 1fr));
-              gap: 10px;
-              margin-bottom: 14px;
-            }
-            .kpi {
-              border-radius: 12px;
-              padding: 10px 12px;
-              color: #fff;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-              box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
-            }
-            .kpi span {
-              display: block;
-              font-size: 11px;
-              opacity: 0.95;
-              margin-bottom: 4px;
-            }
-            .kpi strong {
-              font-size: 16px;
-              line-height: 1.2;
-            }
-            .kpi.revenue { background: linear-gradient(135deg, #059669, #10b981); }
-            .kpi.profit { background: linear-gradient(135deg, #0284c7, #2563eb); }
-            .kpi.expense { background: linear-gradient(135deg, #dc2626, #f43f5e); }
-            .kpi.appointments { background: linear-gradient(135deg, #7c3aed, #9333ea); }
-            .section:nth-of-type(odd) {
-              border-left: 4px solid #3b82f6;
-            }
-            [dir="rtl"] .section:nth-of-type(odd) {
-              border-left: 1px solid #e2e8f0;
-              border-right: 4px solid #3b82f6;
-            }
-            .section {
-              background: #fff;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-              padding: 12px 12px 10px;
-              margin-bottom: 12px;
-              box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
-            }
-            .section h2 {
-              margin: 0 0 10px;
-              font-size: 14px;
-              color: #1e3a8a;
-              background: #eff6ff;
-              padding: 7px 10px;
-              border-radius: 8px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              table-layout: fixed;
-              font-size: 11px;
-            }
-            th, td {
-              border: 1px solid #e2e8f0;
-              padding: 8px 8px;
-              vertical-align: top;
-              word-wrap: break-word;
-            }
-            th {
-              background: linear-gradient(180deg, #e2e8f0, #f1f5f9);
-              text-align: ${isArabic ? 'right' : 'left'};
-              font-weight: 700;
-              color: #0f172a;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            tbody tr:nth-child(even) { background: #f8fafc; }
-            tbody tr:hover { background: #eff6ff; }
-            .empty-row {
-              text-align: center;
-              color: #64748b;
-              padding: 12px;
-            }
-            .actions {
-              display: flex;
-              justify-content: ${isArabic ? 'flex-start' : 'flex-end'};
-              gap: 8px;
-              margin-top: 10px;
-            }
-            .btn {
-              border: 1px solid #cbd5e1;
-              border-radius: 8px;
-              padding: 8px 12px;
-              font-size: 12px;
-              background: #fff;
-              cursor: pointer;
-              transition: all 0.2s ease;
-            }
-            .btn:hover {
-              background: #eff6ff;
-              border-color: #93c5fd;
-            }
-            .footer {
-              color: #64748b;
-              font-size: 11px;
-              margin-top: 12px;
-              text-align: ${isArabic ? 'left' : 'right'};
-            }
-            @media print {
-              @page { size: A4 portrait; margin: 10mm; }
-              body { background: #fff; }
-              .page { max-width: 100%; padding: 0; }
-              .actions { display: none !important; }
-              .section { page-break-inside: avoid; }
-              thead { display: table-header-group; }
-              tr { page-break-inside: avoid; }
-              .meta, .kpi-grid { page-break-inside: avoid; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="page">
-            <header class="header">
-              <h1>${escapeHtml(t('reports.title'))}</h1>
-              <p>${escapeHtml(`${t('reports.dateRange')}: ${formatDateValue(dateRange.startDate)} - ${formatDateValue(dateRange.endDate)}`)}</p>
-            </header>
-
-            <section class="meta">
-              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'نوع التقرير' : 'Report Type')}:</strong> ${escapeHtml(categoryLabels[activeCategory])}</div>
-              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'إجمالي الأيام' : 'Total Days')}:</strong> ${escapeHtml(String(reportData.daily.length))}</div>
-              <div class="meta-card"><strong>${escapeHtml(isArabic ? 'تم الإنشاء' : 'Generated At')}:</strong> ${escapeHtml(new Date().toLocaleString(locale))}</div>
-            </section>
-            <section class="kpi-grid">${kpiCardsHtml}</section>
-
-            ${createTableHtml(
-              isArabic ? 'الملخص التنفيذي' : 'Executive Summary',
-              [t('reports.metric'), t('reports.value')],
-              summaryRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'الملخص اليومي المالي والتشغيلي' : 'Daily Financial & Operational Summary',
-              [isArabic ? 'التاريخ' : 'Date', t('reports.revenue'), t('reports.expenses'), t('reports.netProfit'), t('reports.treatments'), t('reports.totalAppointments')],
-              dailyRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'أفضل المرضى' : 'Top Patients',
-              [isArabic ? 'المريض' : 'Patient', isArabic ? 'الهاتف' : 'Phone', t('reports.treatments'), isArabic ? 'إجمالي التكلفة' : 'Total Cost', isArabic ? 'إجمالي المدفوع' : 'Total Paid', isArabic ? 'آخر زيارة' : 'Last Visit'],
-              topPatientsRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'أداء الأطباء' : 'Doctors Performance',
-              [isArabic ? 'الطبيب' : 'Doctor', isArabic ? 'التخصص' : 'Specialty', t('reports.treatments'), t('reports.totalPatients'), t('reports.totalRevenue'), t('reports.doctorShare'), t('reports.growth')],
-              doctorRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'تحليل العلاجات' : 'Treatments Analysis',
-              [isArabic ? 'العلاج' : 'Treatment', isArabic ? 'العدد' : 'Count', t('reports.totalRevenue'), t('reports.doctorShare'), t('reports.averageValue')],
-              treatmentRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'تحليل الموردين' : 'Suppliers Analysis',
-              [isArabic ? 'المورد' : 'Supplier', isArabic ? 'النوع' : 'Type', isArabic ? 'عدد الفواتير' : 'Invoices', isArabic ? 'إجمالي الفواتير' : 'Total Invoices', isArabic ? 'إجمالي المدفوع' : 'Total Paid', isArabic ? 'المتبقي' : 'Outstanding'],
-              supplierRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'الأصناف منخفضة المخزون' : 'Low Stock Items',
-              [isArabic ? 'الصنف' : 'Item', isArabic ? 'المخزون الحالي' : 'Current Stock', isArabic ? 'الحد الأدنى' : 'Min Stock', isArabic ? 'تكلفة الوحدة' : 'Unit Cost', isArabic ? 'القيمة الحالية' : 'Current Value'],
-              lowStockRows
-            )}
-
-            ${createTableHtml(
-              isArabic ? 'الأصناف قريبة الانتهاء' : 'Expiring Items',
-              [isArabic ? 'الصنف' : 'Item', isArabic ? 'تاريخ الانتهاء' : 'Expiry Date', isArabic ? 'المخزون' : 'Stock', isArabic ? 'تكلفة الوحدة' : 'Unit Cost'],
-              expiringRows
-            )}
-
-            <div class="footer">
-              ${escapeHtml(isArabic ? 'تم إنشاء هذا التقرير من نظام Curasoft' : 'This report was generated from Curasoft system')}
-            </div>
-
-            <div class="actions">
-              <button class="btn" onclick="window.print()">${escapeHtml(t('common.print'))}</button>
-              <button class="btn" onclick="window.close()">${escapeHtml(t('common.close'))}</button>
-            </div>
-          </div>
-          <script>
-            window.addEventListener('load', function () {
-              setTimeout(function () { window.print(); }, 250);
-            });
-          </script>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank', 'width=1400,height=900');
-    if (!printWindow) {
-      alert(isArabic ? 'تعذر فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة.' : 'Unable to open print window. Please allow popups.');
-      return;
-    }
-
-    printWindow.document.open();
-    printWindow.document.write(reportHtml);
-    printWindow.document.close();
-    printWindow.document.title = `${t('reports.title')} - ${new Date().toISOString().split('T')[0]}`;
-    printWindow.focus();
-  };
-
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
-    
-    // Summary sheet
     const summaryData = [
-      [t('reports.metric'), t('reports.value')],
-      [t('reports.totalRevenue'), reportData.financial.totalRevenue],
-      [t('reports.totalExpenses'), reportData.financial.totalExpenses],
-      [t('reports.netProfit'), reportData.financial.netProfit],
-      [t('reports.profitMargin'), reportData.financial.profitMargin],
-      [t('reports.totalPatients'), patients.length],
-      [t('reports.activePatients'), reportData.patientStats.activePatients],
-      [t('reports.newPatients'), reportData.patientStats.newPatients]
+      ['Metric', 'Value'],
+      ['Total Revenue', reportData.financial.totalRevenue],
+      ['Total Expenses', reportData.financial.totalExpenses],
+      ['Net Profit', reportData.financial.netProfit],
+      ['Profit Margin', reportData.financial.profitMargin],
+      ['Total Patients', patients.length],
+      ['Active Patients', reportData.patientStats.activePatients],
+      ['New Patients', reportData.patientStats.newPatients]
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summarySheet, t('reports.summary'));
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
 
-    // Daily data sheet
     const dailyData = reportData.daily.map(d => ({
       Date: d.date,
       Revenue: d.revenue,
@@ -1234,70 +1228,139 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     XLSX.writeFile(wb, `report-${activeCategory}-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  // Render Report Content
-  const renderReportContent = () => {
-    switch (activeCategory) {
-      case 'overview':
-        return renderOverview();
-      case 'financial':
-        return renderFinancialReport();
-      case 'patient':
-        return renderPatientReport();
-      case 'doctor':
-        return renderDoctorReport();
-      case 'treatment':
-        return renderTreatmentReport();
-      case 'supplier':
-        return renderSupplierReport();
-      case 'appointment':
-        return renderAppointmentReport();
-      case 'inventory':
-        return renderInventoryReport();
-      case 'analytics':
-        return renderAnalyticsReport();
-      default:
-        return renderOverview();
-    }
+  // Print Report
+  const printDetailedReport = () => {
+    const isArabic = locale.toLowerCase().startsWith('ar');
+    const dir = isArabic ? 'rtl' : 'ltr';
+    
+    const reportHtml = `
+      <!doctype html>
+      <html lang="${isArabic ? 'ar' : 'en'}" dir="${dir}">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>${t('reports.title')}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: "Segoe UI", sans-serif; margin: 0; color: #0f172a; background: #f8fafc; }
+            .page { max-width: 1280px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(130deg, #06b6d4, #8b5cf6); color: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+            .kpi { background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius: 12px; padding: 16px; color: #fff; }
+            .kpi span { display: block; font-size: 12px; opacity: 0.9; }
+            .kpi strong { font-size: 20px; }
+            .section { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+            .section h2 { margin: 0 0 12px; font-size: 16px; color: #0f172a; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            th { background: #f1f5f9; font-weight: 600; }
+            @media print { @page { size: A4; margin: 10mm; } }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <header class="header">
+              <h1>${t('reports.title')}</h1>
+              <p>${t('reports.dateRange')}: ${dateRange.startDate} - ${dateRange.endDate}</p>
+            </header>
+            <div class="kpi-grid">
+              <div class="kpi"><span>${t('reports.totalRevenue')}</span><strong>${formatCurrency(reportData.financial.totalRevenue)}</strong></div>
+              <div class="kpi"><span>${t('reports.netProfit')}</span><strong>${formatCurrency(reportData.financial.netProfit)}</strong></div>
+              <div class="kpi"><span>${t('reports.totalExpenses')}</span><strong>${formatCurrency(reportData.financial.totalExpenses)}</strong></div>
+              <div class="kpi"><span>${t('reports.totalAppointments')}</span><strong>${formatNumber(reportData.appointment.stats.total)}</strong></div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank', 'width=1400,height=900');
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
+    printWindow.focus();
   };
 
-  // Overview Report
+  // Render Overview Dashboard
   const renderOverview = () => (
-    <div className="space-y-6">
-      {/* KPI Cards with Comparison */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard 
-          title={t('reports.totalRevenue')} 
-          value={formatCurrency(reportData.financial.totalRevenue)} 
+    <div className="space-y-8">
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalRevenue')}
+          value={formatCurrency(reportData.financial.totalRevenue)}
           icon={<DollarIcon />}
           color="blue"
           trend={reportData.financial.revenueGrowth}
+          subtitle="vs previous period"
+          sparklineData={reportData.daily.slice(-7).map(d => d.revenue)}
         />
-        <KPICard 
-          title={t('reports.netProfit')} 
-          value={formatCurrency(reportData.financial.netProfit)} 
+        <StatKPICard
+          title={t('reports.netProfit')}
+          value={formatCurrency(reportData.financial.netProfit)}
           icon={<ChartIcon />}
-          color={reportData.financial.netProfit >= 0 ? 'green' : 'red'} 
+          color={reportData.financial.netProfit >= 0 ? 'green' : 'red'}
           trend={reportData.financial.profitGrowth}
+          subtitle="vs previous period"
+          sparklineData={reportData.daily.slice(-7).map(d => d.netProfit)}
         />
-        <KPICard 
-          title={t('reports.activePatients')} 
-          value={formatNumber(reportData.patientStats.activePatients)} 
+        <StatKPICard
+          title={t('reports.activePatients')}
+          value={formatNumber(reportData.patientStats.activePatients)}
           icon={<UserIcon />}
           color="purple"
-          trend={calculateGrowth(reportData.patientStats.activePatients, reportData.patient.length - reportData.patientStats.newPatients)}
+          subtitle={`of ${formatNumber(patients.length)} total`}
+          sparklineData={reportData.daily.slice(-7).map(d => d.treatments)}
         />
-        <KPICard 
-          title={t('reports.completionRate')} 
-          value={formatPercentage(reportData.appointment.completionRate)} 
+        <StatKPICard
+          title={t('reports.completionRate')}
+          value={formatPercentage(reportData.appointment.completionRate)}
+          icon={<ClockIcon />}
+          color="indigo"
+          trend={reportData.appointment.appointmentGrowth}
+          subtitle="appointments completed"
+        />
+      </div>
+
+      {/* Gauge KPIs Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <GaugeKPICard
+          title="Revenue Target"
+          value={Math.min((reportData.financial.totalRevenue / 500000) * 100, 100)}
+          maxValue={100}
+          icon={<DollarIcon />}
+          color="blue"
+        />
+        <GaugeKPICard
+          title="Profit Margin"
+          value={reportData.financial.profitMargin}
+          maxValue={100}
+          icon={<ChartIcon />}
+          color="green"
+        />
+        <GaugeKPICard
+          title="Patient Retention"
+          value={reportData.patientStats.retentionRate}
+          maxValue={100}
+          icon={<UserIcon />}
+          color="purple"
+        />
+        <GaugeKPICard
+          title="Appointment Rate"
+          value={reportData.appointment.completionRate}
+          maxValue={100}
           icon={<ClockIcon />}
           color="orange"
-          trend={reportData.appointment.appointmentGrowth}
         />
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('reports.revenueDistribution')}>
+        <ModernChartCard
+          title={t('reports.revenueDistribution')}
+        >
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -1314,118 +1377,156 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Tooltip content={<CustomTooltip isDark={isDark} formatter={formatCurrency} />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
 
-        <ChartCard title={t('reports.expenseCategories')}>
+        <ModernChartCard
+          title={t('reports.expenseCategories')}
+        >
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={reportData.financial.expenseCategories}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              <Bar dataKey="value" fill="#8884d8">
+            <BarChart data={reportData.financial.expenseCategories} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+              <XAxis type="number" stroke={isDark ? '#64748b' : '#94a3b8'} />
+              <YAxis dataKey="label" type="category" width={100} stroke={isDark ? '#64748b' : '#94a3b8'} />
+              <Tooltip />
+              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {reportData.financial.expenseCategories.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
       </div>
 
-      {/* Daily Trend */}
-      <ChartCard title={t('reports.dailyTrend')}>
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={reportData.daily}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={(value, name) => [name === 'revenue' || name === 'expenses' ? formatCurrency(Number(value)) : value, name]} />
+      {/* Daily Trend Chart */}
+      <ModernChartCard
+        title={t('reports.dailyTrend')}
+      >
+        <ResponsiveContainer width="100%" height={350}>
+          <AreaChart data={reportData.daily}>
+            <defs>
+              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+            <XAxis dataKey="date" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <Tooltip content={<CustomTooltip isDark={isDark} formatter={formatCurrency} />} />
             <Legend />
-            <Bar yAxisId="left" dataKey="treatments" fill="#82ca9d" name={t('reports.treatments')} />
-            <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#0088FE" name={t('reports.revenue')} strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="expenses" stroke="#FF8042" name={t('reports.expenses')} strokeWidth={2} />
-          </ComposedChart>
+            <Area type="monotone" dataKey="revenue" stroke="#06b6d4" fill="url(#revenueGradient)" name={t('reports.revenue')} strokeWidth={2} />
+            <Area type="monotone" dataKey="expenses" stroke="#ef4444" fill="url(#expenseGradient)" name={t('reports.expenses')} strokeWidth={2} />
+            <Area type="monotone" dataKey="netProfit" stroke="#10b981" fill="none" name={t('reports.netProfit')} strokeWidth={2} strokeDasharray="5 5" />
+          </AreaChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ModernChartCard>
+
+      {/* Heatmap Chart */}
+      <ModernChartCard
+        title="Appointment Heatmap"
+      >
+        <HeatmapChart data={reportData.appointment.heatmap} />
+      </ModernChartCard>
     </div>
   );
 
-  // Financial Report
+  // Render Financial Report
   const renderFinancialReport = () => (
-    <div className="space-y-6">
-      {/* Financial KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalRevenue')} value={formatCurrency(reportData.financial.totalRevenue)} trend={reportData.financial.revenueGrowth} icon={<DollarIcon />} color="green" />
-        <KPICard title={t('reports.totalExpenses')} value={formatCurrency(reportData.financial.totalExpenses)} trend={reportData.financial.expensesGrowth} icon={<ChartIcon />} color="red" />
-        <KPICard title={t('reports.doctorShare')} value={formatCurrency(reportData.financial.doctorRevenue)} icon={<UserIcon />} color="purple" />
-        <KPICard title={t('reports.netProfit')} value={formatCurrency(reportData.financial.netProfit)} trend={reportData.financial.profitGrowth} icon={<ChartIcon />} color={reportData.financial.netProfit >= 0 ? 'green' : 'red'} />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalRevenue')}
+          value={formatCurrency(reportData.financial.totalRevenue)}
+          icon={<DollarIcon />}
+          color="blue"
+          trend={reportData.financial.revenueGrowth}
+        />
+        <StatKPICard
+          title={t('reports.totalExpenses')}
+          value={formatCurrency(reportData.financial.totalExpenses)}
+          icon={<ChartIcon />}
+          color="red"
+          trend={reportData.financial.expensesGrowth}
+        />
+        <StatKPICard
+          title={t('reports.netProfit')}
+          value={formatCurrency(reportData.financial.netProfit)}
+          icon={<ChartIcon />}
+          color={reportData.financial.netProfit >= 0 ? 'green' : 'red'}
+          trend={reportData.financial.profitGrowth}
+        />
+        <StatKPICard
+          title={t('reports.profitMargin')}
+          value={formatPercentage(reportData.financial.profitMargin)}
+          icon={<AnalyticsIcon />}
+          color="purple"
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <KPICard title={t('reports.profitMargin')} value={formatPercentage(reportData.financial.profitMargin)} icon={<AnalyticsIcon />} color="blue" />
-        <KPICard title={t('reports.clinicRevenue')} value={formatCurrency(reportData.financial.clinicRevenue)} icon={<DollarIcon />} color="indigo" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ModernChartCard title="Revenue by Category">
+          <CustomTreemap
+            data={reportData.financial.paymentMethods.map((pm, i) => ({
+              name: pm.label,
+              size: pm.value
+            }))}
+          />
+        </ModernChartCard>
+
+        <ModernChartCard title="Expense Distribution">
+          <CustomTreemap
+            data={reportData.financial.expenseCategories.map((ec, i) => ({
+              name: ec.label,
+              size: ec.value
+            }))}
+          />
+        </ModernChartCard>
       </div>
 
-      {/* Financial Trend Chart */}
-      <ChartCard title={t('reports.dailyFinancialTrend')}>
+      <ModernChartCard title={t('reports.dailyFinancialTrend')}>
         <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={reportData.daily}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+          <ComposedChart data={reportData.daily}>
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+            <XAxis dataKey="date" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis yAxisId="left" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis yAxisId="right" orientation="right" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <Tooltip content={<CustomTooltip isDark={isDark} formatter={formatCurrency} />} />
             <Legend />
-            <Area type="monotone" dataKey="revenue" stackId="1" stroke="#0088FE" fill="#0088FE" fillOpacity={0.6} name={t('reports.revenue')} />
-            <Area type="monotone" dataKey="expenses" stackId="1" stroke="#FF8042" fill="#FF8042" fillOpacity={0.6} name={t('reports.expenses')} />
-            <Area type="monotone" dataKey="netProfit" stackId="1" stroke="#00C49F" fill="#00C49F" fillOpacity={0.6} name={t('reports.netProfit')} />
-          </AreaChart>
+            <Bar yAxisId="left" dataKey="treatments" fill="#10b981" name={t('reports.treatments')} radius={[4, 4, 0, 0]} />
+            <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#06b6d4" name={t('reports.revenue')} strokeWidth={2} />
+            <Line yAxisId="right" type="monotone" dataKey="expenses" stroke="#ef4444" name={t('reports.expenses')} strokeWidth={2} />
+          </ComposedChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ModernChartCard>
 
-      {/* Payment Methods Detail */}
-      <ChartCard title={t('reports.paymentMethodDetails')}>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={reportData.financial.paymentMethods}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={(value, name) => [name === 'value' ? formatCurrency(Number(value)) : value, name === 'value' ? t('reports.amount') : t('reports.count')]} />
-            <Legend />
-            <Bar yAxisId="left" dataKey="value" fill="#0088FE" name={t('reports.amount')} />
-            <Bar yAxisId="right" dataKey="count" fill="#00C49F" name={t('reports.count')} />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
-
-      {/* Daily Financial Table */}
-      <DataTable
+      <ModernDataTable
         title={t('reports.dailyFinancialSummary')}
         columns={[
-          { key: 'date', label: t('reports.date') },
-          { key: 'revenue', label: t('reports.revenue'), align: 'right' },
-          { key: 'expenses', label: t('reports.expenses'), align: 'right' },
-          { key: 'doctorRevenue', label: t('reports.doctorShare'), align: 'right' },
-          { key: 'netProfit', label: t('reports.netProfit'), align: 'right' },
-          { key: 'treatments', label: t('reports.treatments'), align: 'right' }
+          { key: 'date', label: 'Date' },
+          { key: 'revenue', label: 'Revenue', align: 'right' },
+          { key: 'expenses', label: 'Expenses', align: 'right' },
+          { key: 'netProfit', label: 'Net Profit', align: 'right' },
+          { key: 'treatments', label: 'Treatments', align: 'right' }
         ]}
         data={reportData.daily}
         renderRow={(day) => (
           <>
-            <td className="p-4">{day.date}</td>
-            <td className="p-4 text-right text-emerald-600 font-medium">{formatCurrency(day.revenue)}</td>
-            <td className="p-4 text-right text-rose-600 font-medium">{formatCurrency(day.expenses)}</td>
-            <td className="p-4 text-right text-purple-600 font-medium">{formatCurrency(day.doctorRevenue)}</td>
-            <td className={`p-4 text-right font-semibold ${day.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <td className="px-6 py-4 font-medium">{day.date}</td>
+            <td className="px-6 py-4 text-right text-cyan-600 font-semibold">{formatCurrency(day.revenue)}</td>
+            <td className="px-6 py-4 text-right text-rose-600 font-semibold">{formatCurrency(day.expenses)}</td>
+            <td className={`px-6 py-4 text-right font-bold ${day.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatCurrency(day.netProfit)}
             </td>
-            <td className="p-4 text-right">{day.treatments}</td>
+            <td className="px-6 py-4 text-right">{day.treatments}</td>
           </>
         )}
         maxHeight="400px"
@@ -1433,27 +1534,45 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     </div>
   );
 
-  // Patient Report
+  // Render Patient Report
   const renderPatientReport = () => (
-    <div className="space-y-6">
-      {/* Patient KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalPatients')} value={formatNumber(patients.length)} icon={<UserIcon />} color="blue" />
-        <KPICard title={t('reports.activePatients')} value={formatNumber(reportData.patientStats.activePatients)} icon={<UserIcon />} color="green" />
-        <KPICard title={t('reports.newPatients')} value={formatNumber(reportData.patientStats.newPatients)} icon={<UserIcon />} color="purple" />
-        <KPICard title={t('reports.retentionRate')} value={formatPercentage(reportData.patientStats.retentionRate)} icon={<AnalyticsIcon />} color="orange" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalPatients')}
+          value={formatNumber(patients.length)}
+          icon={<UserIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.activePatients')}
+          value={formatNumber(reportData.patientStats.activePatients)}
+          icon={<UserIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.newPatients')}
+          value={formatNumber(reportData.patientStats.newPatients)}
+          icon={<UserIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.retentionRate')}
+          value={formatPercentage(reportData.patientStats.retentionRate)}
+          icon={<AnalyticsIcon />}
+          color="orange"
+        />
       </div>
 
-      {/* Patient Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('reports.patientDistribution')}>
+        <ModernChartCard title={t('reports.patientDistribution')}>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={[
                   { name: t('reports.newPatients'), value: reportData.patientStats.newPatients },
                   { name: t('reports.returningPatients'), value: reportData.patientStats.returningPatients },
-                  { name: t('reports.inactivePatients'), value: patients.length - reportData.patientStats.activePatients }
+                  { name: 'Inactive', value: patients.length - reportData.patientStats.activePatients }
                 ]}
                 cx="50%"
                 cy="50%"
@@ -1463,66 +1582,55 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
                 fill="#8884d8"
                 dataKey="value"
               >
-                <Cell fill="#00C49F" />
-                <Cell fill="#0088FE" />
-                <Cell fill="#FFBB28" />
+                <Cell fill="#10b981" />
+                <Cell fill="#06b6d4" />
+                <Cell fill="#f59e0b" />
               </Pie>
               <Tooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
 
-        <ChartCard title={t('reports.patientValueDistribution')}>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={[
-              { range: '0-500', count: reportData.patient.filter(p => p.totalSpent <= 500).length },
-              { range: '501-1000', count: reportData.patient.filter(p => p.totalSpent > 500 && p.totalSpent <= 1000).length },
-              { range: '1001-2000', count: reportData.patient.filter(p => p.totalSpent > 1000 && p.totalSpent <= 2000).length },
-              { range: '2001-5000', count: reportData.patient.filter(p => p.totalSpent > 2000 && p.totalSpent <= 5000).length },
-              { range: '5000+', count: reportData.patient.filter(p => p.totalSpent > 5000).length }
-            ]}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="range" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        <ModernChartCard title={t('reports.patientValueDistribution')}>
+          <CustomTreemap
+            data={[
+              { name: '0-500', size: reportData.patient.filter(p => p.totalSpent <= 500).length },
+              { name: '501-1000', size: reportData.patient.filter(p => p.totalSpent > 500 && p.totalSpent <= 1000).length },
+              { name: '1001-2000', size: reportData.patient.filter(p => p.totalSpent > 1000 && p.totalSpent <= 2000).length },
+              { name: '2001-5000', size: reportData.patient.filter(p => p.totalSpent > 2000 && p.totalSpent <= 5000).length },
+              { name: '5000+', size: reportData.patient.filter(p => p.totalSpent > 5000).length }
+            ]}
+          />
+        </ModernChartCard>
       </div>
 
-      {/* Top Patients Table */}
-      <DataTable
+      <ModernDataTable
         title={t('reports.topPatients')}
         columns={[
-          { key: 'name', label: t('reports.patientName') },
-          { key: 'treatments', label: t('reports.treatments'), align: 'right' },
-          { key: 'totalSpent', label: t('reports.totalSpent'), align: 'right' },
-          { key: 'totalPaid', label: t('reports.totalPaid'), align: 'right' },
-          { key: 'balance', label: t('reports.balance'), align: 'right' },
-          { key: 'status', label: t('reports.status'), align: 'center' }
+          { key: 'name', label: 'Patient Name' },
+          { key: 'treatments', label: 'Treatments', align: 'right' },
+          { key: 'totalSpent', label: 'Total Spent', align: 'right' },
+          { key: 'totalPaid', label: 'Total Paid', align: 'right' },
+          { key: 'status', label: 'Status', align: 'center' }
         ]}
         data={reportData.patient.slice(0, 20)}
         renderRow={(patient) => (
           <>
-            <td className="p-4">
-              <div className="font-medium">{patient.name}</div>
-              <div className="text-xs text-slate-500">{patient.phone}</div>
+            <td className="px-6 py-4">
+              <div className="font-semibold">{patient.name}</div>
+              <div className="text-xs opacity-60">{patient.phone}</div>
             </td>
-            <td className="p-4 text-right">{patient.treatments}</td>
-            <td className="p-4 text-right text-blue-600 font-medium">{formatCurrency(patient.totalSpent)}</td>
-            <td className="p-4 text-right text-emerald-600 font-medium">{formatCurrency(patient.totalPaid)}</td>
-            <td className={`p-4 text-right font-semibold ${patient.totalSpent - patient.totalPaid <= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {formatCurrency(patient.totalSpent - patient.totalPaid)}
-            </td>
-            <td className="p-4 text-center">
+            <td className="px-6 py-4 text-right">{patient.treatments}</td>
+            <td className="px-6 py-4 text-right text-cyan-600 font-medium">{formatCurrency(patient.totalSpent)}</td>
+            <td className="px-6 py-4 text-right text-emerald-600 font-medium">{formatCurrency(patient.totalPaid)}</td>
+            <td className="px-6 py-4 text-center">
               {patient.isNew ? (
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">{t('reports.new')}</span>
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">New</span>
               ) : patient.isReturning ? (
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">{t('reports.returning')}</span>
+                <span className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-xs font-medium">Returning</span>
               ) : (
-                <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium">{t('reports.inactive')}</span>
+                <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium">Inactive</span>
               )}
             </td>
           </>
@@ -1532,63 +1640,86 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     </div>
   );
 
-  // Doctor Report
+  // Render Doctor Report
   const renderDoctorReport = () => (
-    <div className="space-y-6">
-      {/* Doctor KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalDoctors')} value={formatNumber(dentists.length)} icon={<UserIcon />} color="blue" />
-        <KPICard title={t('reports.totalTreatments')} value={formatNumber(filteredTreatmentRecords.length)} icon={<ToothIcon />} color="green" />
-        <KPICard title={t('reports.totalDoctorRevenue')} value={formatCurrency(reportData.financial.doctorRevenue)} icon={<DollarIcon />} color="purple" />
-        <KPICard title={t('reports.avgTreatmentsPerDoctor')} value={formatNumber(dentists.length > 0 ? Math.round(filteredTreatmentRecords.length / dentists.length) : 0)} icon={<AnalyticsIcon />} color="orange" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalDoctors')}
+          value={formatNumber(dentists.length)}
+          icon={<UserIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.totalTreatments')}
+          value={formatNumber(filteredTreatmentRecords.length)}
+          icon={<ToothIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.totalDoctorRevenue')}
+          value={formatCurrency(reportData.financial.doctorRevenue)}
+          icon={<DollarIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.avgTreatmentsPerDoctor')}
+          value={formatNumber(dentists.length > 0 ? Math.round(filteredTreatmentRecords.length / dentists.length) : 0)}
+          icon={<AnalyticsIcon />}
+          color="orange"
+        />
       </div>
 
-      {/* Doctor Performance Chart */}
-      <ChartCard title={t('reports.doctorPerformanceComparison')}>
+      <ModernChartCard title={t('reports.doctorPerformanceComparison')}>
+        <CustomRadarChart
+          data={reportData.doctor.slice(0, 5).map(d => ({
+            subject: d.name?.substring(0, 8) || 'Doctor',
+            A: (d.treatments / Math.max(...reportData.doctor.map(doc => doc.treatments), 1)) * 100,
+            B: reportData.doctor.length > 1 ? (d.patients / Math.max(...reportData.doctor.map(doc => doc.patients), 1)) * 100 : undefined,
+            fullMark: 100
+          }))}
+        />
+      </ModernChartCard>
+
+      <ModernChartCard title={t('reports.doctorPerformanceComparison')}>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={reportData.doctor}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={(value, name) => [name === 'totalRevenue' || name === 'doctorRevenue' ? formatCurrency(Number(value)) : value, name]} />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+            <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <Tooltip content={<CustomTooltip isDark={isDark} formatter={formatCurrency} />} />
             <Legend />
-            <Bar yAxisId="left" dataKey="treatments" fill="#0088FE" name={t('reports.treatments')} />
-            <Bar yAxisId="left" dataKey="patients" fill="#00C49F" name={t('reports.patients')} />
-            <Bar yAxisId="right" dataKey="totalRevenue" fill="#FFBB28" name={t('reports.revenue')} />
+            <Bar dataKey="treatments" fill="#06b6d4" name={t('reports.treatments')} />
+            <Bar dataKey="patients" fill="#8b5cf6" name={t('reports.patients')} />
+            <Bar dataKey="totalRevenue" fill="#10b981" name={t('reports.revenue')} />
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ModernChartCard>
 
-      {/* Doctor Details Table */}
-      <DataTable
+      <ModernDataTable
         title={t('reports.doctorPerformance')}
         columns={[
-          { key: 'name', label: t('reports.doctorName') },
-          { key: 'specialty', label: t('reports.specialty') },
-          { key: 'treatments', label: t('reports.treatments'), align: 'right' },
-          { key: 'patients', label: t('reports.patients'), align: 'right' },
-          { key: 'avgTreatmentValue', label: t('reports.avgValue'), align: 'right' },
-          { key: 'totalRevenue', label: t('reports.revenue'), align: 'right' },
-          { key: 'doctorRevenue', label: t('reports.doctorRevenue'), align: 'right' },
-          { key: 'balance', label: t('reports.balance'), align: 'right' },
-          { key: 'growth', label: t('reports.growth'), align: 'center' }
+          { key: 'name', label: 'Doctor Name' },
+          { key: 'specialty', label: 'Specialty' },
+          { key: 'treatments', label: 'Treatments', align: 'right' },
+          { key: 'patients', label: 'Patients', align: 'right' },
+          { key: 'totalRevenue', label: 'Revenue', align: 'right' },
+          { key: 'doctorRevenue', label: 'Doctor Share', align: 'right' },
+          { key: 'growth', label: 'Growth', align: 'center' }
         ]}
         data={reportData.doctor}
         renderRow={(doctor) => (
           <>
-            <td className="p-4 font-medium">{doctor.name}</td>
-            <td className="p-4">{doctor.specialty}</td>
-            <td className="p-4 text-right">{doctor.treatments}</td>
-            <td className="p-4 text-right">{doctor.patients}</td>
-            <td className="p-4 text-right">{formatCurrency(doctor.avgTreatmentValue)}</td>
-            <td className="p-4 text-right text-blue-600 font-medium">{formatCurrency(doctor.totalRevenue)}</td>
-            <td className="p-4 text-right text-emerald-600 font-medium">{formatCurrency(doctor.doctorRevenue)}</td>
-            <td className={`p-4 text-right font-semibold ${doctor.doctorRevenue - doctor.paymentsReceived >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {formatCurrency(doctor.doctorRevenue - doctor.paymentsReceived)}
-            </td>
-            <td className="p-4 text-center">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.growth >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+            <td className="px-6 py-4 font-semibold">{doctor.name}</td>
+            <td className="px-6 py-4">{doctor.specialty}</td>
+            <td className="px-6 py-4 text-right">{doctor.treatments}</td>
+            <td className="px-6 py-4 text-right">{doctor.patients}</td>
+            <td className="px-6 py-4 text-right text-cyan-600 font-medium">{formatCurrency(doctor.totalRevenue)}</td>
+            <td className="px-6 py-4 text-right text-emerald-600 font-medium">{formatCurrency(doctor.doctorRevenue)}</td>
+            <td className="px-6 py-4 text-center">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                doctor.growth >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              }`}>
                 {doctor.growth >= 0 ? '+' : ''}{doctor.growth.toFixed(1)}%
               </span>
             </td>
@@ -1599,159 +1730,158 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     </div>
   );
 
-  // Treatment Report
+  // Render Treatment Report
   const renderTreatmentReport = () => (
-    <div className="space-y-6">
-      {/* Treatment KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalTreatments')} value={formatNumber(filteredTreatmentRecords.length)} icon={<ToothIcon />} color="blue" />
-        <KPICard title={t('reports.uniqueTreatments')} value={formatNumber(reportData.treatment.types.length)} icon={<ToothIcon />} color="green" />
-        <KPICard title={t('reports.totalRevenue')} value={formatCurrency(reportData.treatment.types.reduce((sum: number, t) => sum + t.revenue, 0))} icon={<DollarIcon />} color="purple" />
-        <KPICard title={t('reports.avgTreatmentValue')} value={formatCurrency(filteredTreatmentRecords.length > 0 ? reportData.treatment.types.reduce((sum: number, t) => sum + t.revenue, 0) / filteredTreatmentRecords.length : 0)} icon={<AnalyticsIcon />} color="orange" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalTreatments')}
+          value={formatNumber(filteredTreatmentRecords.length)}
+          icon={<ToothIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.uniqueTreatments')}
+          value={formatNumber(reportData.treatment.types.length)}
+          icon={<ToothIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.totalRevenue')}
+          value={formatCurrency(reportData.treatment.types.reduce((sum: number, t) => sum + t.revenue, 0))}
+          icon={<DollarIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.avgTreatmentValue')}
+          value={formatCurrency(filteredTreatmentRecords.length > 0 ? reportData.treatment.types.reduce((sum: number, t) => sum + t.revenue, 0) / filteredTreatmentRecords.length : 0)}
+          icon={<AnalyticsIcon />}
+          color="orange"
+        />
       </div>
 
-      {/* Treatment Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('reports.treatmentFrequency')}>
+        <ModernChartCard title={t('reports.treatmentFrequency')}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={reportData.treatment.types.slice(0, 10)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke={isDark ? '#64748b' : '#94a3b8'} />
+              <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
               <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
+              <Bar dataKey="count" fill="#06b6d4" />
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
 
-        <ChartCard title={t('reports.treatmentRevenue')}>
+        <ModernChartCard title={t('reports.treatmentRevenue')}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={reportData.treatment.types.slice(0, 10)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke={isDark ? '#64748b' : '#94a3b8'} />
+              <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
               <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              <Bar dataKey="revenue" fill="#00C49F" />
+              <Bar dataKey="revenue" fill="#10b981" />
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
       </div>
 
-      {/* Treatment Trends */}
-      <ChartCard title={t('reports.treatmentTrends')}>
+      <ModernChartCard title={t('reports.treatmentTrends')}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={reportData.treatment.trends}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+            <XAxis dataKey="month" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis yAxisId="left" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis yAxisId="right" orientation="right" stroke={isDark ? '#64748b' : '#94a3b8'} />
             <Tooltip formatter={(value, name) => [name === 'revenue' ? formatCurrency(Number(value)) : value, name]} />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="count" stroke="#0088FE" name={t('reports.count')} strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#00C49F" name={t('reports.revenue')} strokeWidth={2} />
+            <Line yAxisId="left" type="monotone" dataKey="count" stroke="#06b6d4" name={t('reports.count')} strokeWidth={2} />
+            <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" name={t('reports.revenue')} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
-      </ChartCard>
-
-      {/* Treatment Details Table */}
-      <DataTable
-        title={t('reports.treatmentDetails')}
-        columns={[
-          { key: 'name', label: t('reports.treatmentName') },
-          { key: 'count', label: t('reports.count'), align: 'right' },
-          { key: 'revenue', label: t('reports.totalRevenue'), align: 'right' },
-          { key: 'avgValue', label: t('reports.avgValue'), align: 'right' },
-          { key: 'doctorRevenue', label: t('reports.doctorShare'), align: 'right' },
-          { key: 'clinicShare', label: t('reports.clinicShare'), align: 'right' }
-        ]}
-        data={reportData.treatment.types}
-        renderRow={(treatment) => (
-          <>
-            <td className="p-4 font-medium">{treatment.name}</td>
-            <td className="p-4 text-right">{treatment.count}</td>
-            <td className="p-4 text-right text-blue-600 font-medium">{formatCurrency(treatment.revenue)}</td>
-            <td className="p-4 text-right">{formatCurrency(treatment.avgValue)}</td>
-            <td className="p-4 text-right text-emerald-600 font-medium">{formatCurrency(treatment.doctorRevenue)}</td>
-            <td className="p-4 text-right text-purple-600 font-medium">{formatCurrency(treatment.revenue - treatment.doctorRevenue)}</td>
-          </>
-        )}
-        maxHeight="400px"
-      />
+      </ModernChartCard>
     </div>
   );
 
-  // Supplier Report
+  // Render Supplier Report
   const renderSupplierReport = () => (
-    <div className="space-y-6">
-      {/* Supplier KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalSuppliers')} value={formatNumber(suppliers.length)} icon={<TruckIcon />} color="blue" />
-        <KPICard title={t('reports.totalInvoices')} value={formatNumber(filteredSupplierInvoices.length)} icon={<BoxIcon />} color="green" />
-        <KPICard title={t('reports.totalAmount')} value={formatCurrency(reportData.financial.totalSupplierInvoices)} icon={<DollarIcon />} color="purple" />
-        <KPICard title={t('reports.unpaidAmount')} value={formatCurrency(reportData.supplier.reduce((sum, s) => sum + s.unpaidAmount, 0))} icon={<ChartIcon />} color="red" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalSuppliers')}
+          value={formatNumber(suppliers.length)}
+          icon={<TruckIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.totalInvoices')}
+          value={formatNumber(filteredSupplierInvoices.length)}
+          icon={<BoxIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.totalAmount')}
+          value={formatCurrency(reportData.financial.totalSupplierInvoices)}
+          icon={<DollarIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.unpaidAmount')}
+          value={formatCurrency(reportData.supplier.reduce((sum, s) => sum + s.unpaidAmount, 0))}
+          icon={<ChartIcon />}
+          color="red"
+        />
       </div>
 
-      {/* Supplier Comparison */}
-      <ChartCard title={t('reports.supplierComparison')}>
+      <ModernChartCard title={t('reports.supplierComparison')}>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={reportData.supplier}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+            <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#94a3b8'} />
+            <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
             <Tooltip formatter={(value) => formatCurrency(Number(value))} />
             <Legend />
-            <Bar dataKey="totalAmount" fill="#0088FE" name={t('reports.totalAmount')} />
-            <Bar dataKey="unpaidAmount" fill="#FF8042" name={t('reports.unpaidAmount')} />
-            <Bar dataKey="expensesAmount" fill="#00C49F" name={t('reports.expenses')} />
+            <Bar dataKey="totalAmount" fill="#06b6d4" name={t('reports.totalAmount')} />
+            <Bar dataKey="unpaidAmount" fill="#ef4444" name={t('reports.unpaidAmount')} />
+            <Bar dataKey="expensesAmount" fill="#10b981" name={t('reports.expenses')} />
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
-
-      {/* Supplier Details Table */}
-      <DataTable
-        title={t('reports.supplierDetails')}
-        columns={[
-          { key: 'name', label: t('reports.supplierName') },
-          { key: 'type', label: t('reports.type') },
-          { key: 'totalInvoices', label: t('reports.invoices'), align: 'right' },
-          { key: 'totalAmount', label: t('reports.totalAmount'), align: 'right' },
-          { key: 'unpaidAmount', label: t('reports.unpaidAmount'), align: 'right' },
-          { key: 'avgInvoiceValue', label: t('reports.avgInvoice'), align: 'right' }
-        ]}
-        data={reportData.supplier}
-        renderRow={(supplier) => (
-          <>
-            <td className="p-4 font-medium">{supplier.name}</td>
-            <td className="p-4">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${supplier.type === 'Dental Lab' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                {supplier.type}
-              </span>
-            </td>
-            <td className="p-4 text-right">{supplier.totalInvoices}</td>
-            <td className="p-4 text-right text-blue-600 font-medium">{formatCurrency(supplier.totalAmount)}</td>
-            <td className="p-4 text-right text-rose-600 font-medium">{formatCurrency(supplier.unpaidAmount)}</td>
-            <td className="p-4 text-right">{formatCurrency(supplier.avgInvoiceValue)}</td>
-          </>
-        )}
-        maxHeight="400px"
-      />
+      </ModernChartCard>
     </div>
   );
 
-  // Appointment Report
+  // Render Appointment Report
   const renderAppointmentReport = () => (
-    <div className="space-y-6">
-      {/* Appointment KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.totalAppointments')} value={formatNumber(reportData.appointment.stats.total)} icon={<ClockIcon />} color="blue" />
-        <KPICard title={t('reports.completed')} value={formatNumber(reportData.appointment.stats.completed)} icon={<AnalyticsIcon />} color="green" />
-        <KPICard title={t('reports.completionRate')} value={formatPercentage(reportData.appointment.completionRate)} icon={<ChartIcon />} color="purple" />
-        <KPICard title={t('reports.noShowRate')} value={formatPercentage(reportData.appointment.noShowRate)} icon={<ChartIcon />} color="red" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.totalAppointments')}
+          value={formatNumber(reportData.appointment.stats.total)}
+          icon={<ClockIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.completed')}
+          value={formatNumber(reportData.appointment.stats.completed)}
+          icon={<AnalyticsIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.completionRate')}
+          value={formatPercentage(reportData.appointment.completionRate)}
+          icon={<ChartIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.noShowRate')}
+          value={formatPercentage(reportData.appointment.noShowRate)}
+          icon={<ChartIcon />}
+          color="red"
+        />
       </div>
 
-      {/* Appointment Status Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('reports.appointmentStatusDistribution')}>
+        <ModernChartCard title={t('reports.appointmentStatusDistribution')}>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -1777,42 +1907,64 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
 
-        <ChartCard title={t('reports.peakHours')}>
+        <ModernChartCard title={t('reports.peakHours')}>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={reportData.appointment.peakHours}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+              <XAxis dataKey="hour" stroke={isDark ? '#64748b' : '#94a3b8'} />
+              <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} />
               <Tooltip />
-              <Bar dataKey="count" fill="#8884d8" />
+              <Bar dataKey="count" fill="#8b5cf6" />
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
+        </ModernChartCard>
       </div>
+
+      <ModernChartCard title="Appointment Heatmap">
+        <HeatmapChart data={reportData.appointment.heatmap} />
+      </ModernChartCard>
     </div>
   );
 
+  // Render Inventory Report
   const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
 
-  // Inventory Report
   const renderInventoryReport = () => (
-    <div className="space-y-6">
-      {/* Inventory KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.inventoryValue')} value={formatCurrency(reportData.inventory.value)} icon={<BoxIcon />} color="blue" />
-        <KPICard title={t('reports.totalItems')} value={formatNumber(inventoryItems.length)} icon={<BoxIcon />} color="green" />
-        <KPICard title={t('reports.lowStockItems')} value={formatNumber(reportData.inventory.lowStock.length)} icon={<ChartIcon />} color="red" />
-        <KPICard title={t('reports.expiringItems')} value={formatNumber(reportData.inventory.expiring.length)} icon={<ClockIcon />} color="orange" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.inventoryValue')}
+          value={formatCurrency(reportData.inventory.value)}
+          icon={<BoxIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.totalItems')}
+          value={formatNumber(inventoryItems.length)}
+          icon={<BoxIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.lowStockItems')}
+          value={formatNumber(reportData.inventory.lowStock.length)}
+          icon={<ChartIcon />}
+          color="red"
+        />
+        <StatKPICard
+          title={t('reports.expiringItems')}
+          value={formatNumber(reportData.inventory.expiring.length)}
+          icon={<ClockIcon />}
+          color="orange"
+        />
       </div>
 
-      {/* Generate Purchase Orders Button */}
       {reportData.inventory.lowStock.length > 0 && (
         <div className="flex justify-center">
           <button
             onClick={() => setIsLowStockModalOpen(true)}
-            className="bg-gradient-to-r from-purple-600 to-amber-500 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-amber-600 flex items-center gap-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+            className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-6 py-3 rounded-xl hover:from-cyan-600 hover:to-purple-600 flex items-center gap-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
           >
             <BoxIcon />
             {t('inventory.generatePurchaseOrders')}
@@ -1820,48 +1972,46 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
         </div>
       )}
 
-      {/* Low Stock Alert */}
       {reportData.inventory.lowStock.length > 0 && (
-        <DataTable
+        <ModernDataTable
           title={t('reports.lowStockAlert')}
           columns={[
-            { key: 'name', label: t('reports.itemName') },
-            { key: 'currentStock', label: t('reports.currentStock'), align: 'right' },
-            { key: 'minStockLevel', label: t('reports.minStock'), align: 'right' },
-            { key: 'unitCost', label: t('reports.unitCost'), align: 'right' }
+            { key: 'name', label: 'Item Name' },
+            { key: 'currentStock', label: 'Current Stock', align: 'right' },
+            { key: 'minStockLevel', label: 'Min Stock', align: 'right' },
+            { key: 'unitCost', label: 'Unit Cost', align: 'right' }
           ]}
           data={reportData.inventory.lowStock}
           renderRow={(item) => (
             <>
-              <td className="p-4 font-medium">{item.name}</td>
-              <td className="p-4 text-right text-rose-600 font-bold">{item.currentStock}</td>
-              <td className="p-4 text-right">{item.minStockLevel || 10}</td>
-              <td className="p-4 text-right">{formatCurrency(item.unitCost)}</td>
+              <td className="px-6 py-4 font-medium">{item.name}</td>
+              <td className="px-6 py-4 text-right text-rose-600 font-bold">{item.currentStock}</td>
+              <td className="px-6 py-4 text-right">{item.minStockLevel || 10}</td>
+              <td className="px-6 py-4 text-right">{formatCurrency(item.unitCost)}</td>
             </>
           )}
           maxHeight="300px"
         />
       )}
 
-      {/* Expiring Items Alert */}
       {reportData.inventory.expiring.length > 0 && (
-        <DataTable
+        <ModernDataTable
           title={t('reports.expiringSoon')}
           columns={[
-            { key: 'name', label: t('reports.itemName') },
-            { key: 'expiryDate', label: t('reports.expiryDate') },
-            { key: 'currentStock', label: t('reports.currentStock'), align: 'right' },
-            { key: 'daysLeft', label: t('reports.daysLeft'), align: 'right' }
+            { key: 'name', label: 'Item Name' },
+            { key: 'expiryDate', label: 'Expiry Date' },
+            { key: 'currentStock', label: 'Current Stock', align: 'right' },
+            { key: 'daysLeft', label: 'Days Left', align: 'right' }
           ]}
           data={reportData.inventory.expiring}
           renderRow={(item) => {
             const daysLeft = Math.ceil((new Date(item.expiryDate!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
             return (
               <>
-                <td className="p-4 font-medium">{item.name}</td>
-                <td className="p-4 text-right">{item.expiryDate}</td>
-                <td className="p-4 text-right">{item.currentStock}</td>
-                <td className="p-4 text-right text-amber-600 font-bold">{daysLeft} days</td>
+                <td className="px-6 py-4 font-medium">{item.name}</td>
+                <td className="px-6 py-4 text-right">{item.expiryDate}</td>
+                <td className="px-6 py-4 text-right">{item.currentStock}</td>
+                <td className="px-6 py-4 text-right text-amber-600 font-bold">{daysLeft} days</td>
               </>
             );
           }}
@@ -1871,22 +2021,40 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     </div>
   );
 
-  // Analytics Report
+  // Render Analytics Report
   const renderAnalyticsReport = () => (
-    <div className="space-y-6">
-      {/* Analytics KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title={t('reports.revenuePerPatient')} value={formatCurrency(reportData.patientStats.activePatients > 0 ? reportData.financial.totalRevenue / reportData.patientStats.activePatients : 0)} icon={<DollarIcon />} color="blue" />
-        <KPICard title={t('reports.revenuePerAppointment')} value={formatCurrency(reportData.appointment.stats.completed > 0 ? reportData.financial.totalRevenue / reportData.appointment.stats.completed : 0)} icon={<ClockIcon />} color="green" />
-        <KPICard title={t('reports.avgTreatmentTime')} value="45 min" icon={<ClockIcon />} color="purple" />
-        <KPICard title={t('reports.patientSatisfaction')} value="4.8/5" icon={<AnalyticsIcon />} color="orange" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatKPICard
+          title={t('reports.revenuePerPatient')}
+          value={formatCurrency(reportData.patientStats.activePatients > 0 ? reportData.financial.totalRevenue / reportData.patientStats.activePatients : 0)}
+          icon={<DollarIcon />}
+          color="blue"
+        />
+        <StatKPICard
+          title={t('reports.revenuePerAppointment')}
+          value={formatCurrency(reportData.appointment.stats.completed > 0 ? reportData.financial.totalRevenue / reportData.appointment.stats.completed : 0)}
+          icon={<ClockIcon />}
+          color="green"
+        />
+        <StatKPICard
+          title={t('reports.avgTreatmentTime')}
+          value={t('reports.avgTreatmentTimeValue')}
+          icon={<ClockIcon />}
+          color="purple"
+        />
+        <StatKPICard
+          title={t('reports.patientSatisfaction')}
+          value="4.8/5"
+          icon={<AnalyticsIcon />}
+          color="orange"
+        />
       </div>
 
-      {/* Lab Cases Stats */}
-      <ChartCard title={t('reports.labCasesSummary')}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{reportData.labCases.total}</div>
+      <ModernChartCard title={t('reports.labCasesSummary')}>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-cyan-50 dark:bg-cyan-900/30 p-4 rounded-xl text-center">
+            <div className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{reportData.labCases.total}</div>
             <div className="text-sm text-slate-600 dark:text-slate-400">{t('reports.totalCases')}</div>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-xl text-center">
@@ -1906,11 +2074,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
             <div className="text-sm text-slate-600 dark:text-slate-400">{t('reports.totalCost')}</div>
           </div>
         </div>
-      </ChartCard>
+      </ModernChartCard>
 
-      {/* Key Insights */}
-      <ChartCard title={t('reports.keyInsights')}>
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
+      <ModernChartCard title={t('reports.keyInsights')}>
+        <div className="bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl p-6 text-white">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white/20 rounded-xl p-4 backdrop-blur-sm">
               <div className="text-sm opacity-80">{t('reports.topPerformingDoctor')}</div>
@@ -1938,11 +2105,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
             </div>
           </div>
         </div>
-      </ChartCard>
+      </ModernChartCard>
     </div>
   );
 
-  // Category Tabs Configuration
+  // Category Tabs
   const categoryTabs = [
     { id: 'overview', label: t('reports.overview'), icon: <ChartIcon />, color: 'blue' },
     { id: 'financial', label: t('reports.financialReports'), icon: <DollarIcon />, color: 'green' },
@@ -1950,14 +2117,29 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
     { id: 'doctor', label: t('reports.doctorReports'), icon: <UserIcon />, color: 'indigo' },
     { id: 'treatment', label: t('reports.treatmentReports'), icon: <ToothIcon />, color: 'teal' },
     { id: 'supplier', label: t('reports.supplierReports'), icon: <TruckIcon />, color: 'orange' },
-    { id: 'appointment', label: t('reports.appointmentReports') || 'Appointments', icon: <ClockIcon />, color: 'pink' },
-    { id: 'inventory', label: t('reports.inventoryReports') || 'Inventory', icon: <BoxIcon />, color: 'cyan' },
-    { id: 'analytics', label: t('reports.analytics') || 'Analytics', icon: <AnalyticsIcon />, color: 'rose' }
+    { id: 'appointment', label: t('reports.appointmentReports'), icon: <ClockIcon />, color: 'pink' },
+    { id: 'inventory', label: t('reports.inventoryReports'), icon: <BoxIcon />, color: 'cyan' },
+    { id: 'analytics', label: 'Analytics', icon: <AnalyticsIcon />, color: 'rose' }
   ];
+
+  const renderReportContent = () => {
+    switch (activeCategory) {
+      case 'overview': return renderOverview();
+      case 'financial': return renderFinancialReport();
+      case 'patient': return renderPatientReport();
+      case 'doctor': return renderDoctorReport();
+      case 'treatment': return renderTreatmentReport();
+      case 'supplier': return renderSupplierReport();
+      case 'appointment': return renderAppointmentReport();
+      case 'inventory': return renderInventoryReport();
+      case 'analytics': return renderAnalyticsReport();
+      default: return renderOverview();
+    }
+  };
+
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
-      {/* Low Stock Purchase Order Modal */}
       {isLowStockModalOpen && (
         <LowStockPurchaseOrderModal
           clinicData={clinicData}
@@ -1967,64 +2149,87 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
 
       {/* Header */}
       <div className="relative overflow-hidden">
-        {/* Background gradient */}
         <div className={`absolute inset-0 bg-gradient-to-r ${
           isDark 
             ? 'from-slate-800 via-slate-900 to-slate-800' 
-            : 'from-blue-600 via-indigo-600 to-purple-600'
+            : 'from-cyan-600 via-blue-600 to-purple-600'
         }`}></div>
         
-        {/* Decorative circles */}
-        <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl ${
-          isDark ? 'bg-white/5' : 'bg-white/10'
+        {/* Animated background elements */}
+        <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-30 animate-pulse duration-[3000ms] ${
+          isDark ? 'bg-cyan-500' : 'bg-white'
         }`}></div>
-        <div className={`absolute bottom-0 left-0 w-60 h-60 rounded-full blur-3xl ${
-          isDark ? 'bg-white/5' : 'bg-white/10'
+        <div className={`absolute bottom-0 left-0 w-72 h-72 rounded-full blur-3xl opacity-30 animate-pulse duration-[4000ms] ${
+          isDark ? 'bg-purple-500' : 'bg-white'
         }`}></div>
         
-        {/* Pattern overlay */}
-        <div className="absolute inset-0 opacity-5" style={{
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h4zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-4">
-              {/* Icon container */}
-              <div className={`hidden sm:flex items-center justify-center w-16 h-16 rounded-2xl backdrop-blur-sm shadow-lg ${
-                isDark ? 'bg-white/10' : 'bg-white/20'
-              }`}>
-                <ChartIcon />
-              </div>
-              <div>
-                <h1 className={`text-3xl md:text-4xl font-bold ${isDark ? 'text-white' : 'text-white'}`}>{t('reports.title')}</h1>
-                <p className={`text-lg mt-2 ${isDark ? 'text-blue-100' : 'text-blue-100'}`}>{t('reports.subtitle')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={printDetailedReport}
-                className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 border shadow-lg hover:shadow-xl hover:scale-105 ${
-                  isDark 
-                    ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' 
-                    : 'bg-white/20 border-white/30 text-white hover:bg-white/30'
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="flex items-center gap-5">
+              {/* Animated Icon Container */}
+              <motion.div 
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className={`hidden sm:flex items-center justify-center w-20 h-20 rounded-3xl backdrop-blur-md shadow-2xl ${
+                  isDark ? 'bg-white/10 border border-white/20' : 'bg-white/30 border border-white/40'
                 }`}
               >
-                <DownloadIcon />
-                <span className="font-medium">{t('common.print')} / PDF</span>
+                <div className="text-white">
+                  <ChartIcon />
+                </div>
+              </motion.div>
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-4xl md:text-5xl font-bold text-white tracking-tight"
+                >
+                  {t('reports.title')}
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-lg mt-3 text-white/80 font-medium"
+                >
+                  {t('reports.subtitle')}
+                </motion.p>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3"
+            >
+              <button
+                onClick={printDetailedReport}
+                className="group relative px-6 py-3 rounded-2xl font-semibold text-white overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/25"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                <span className="relative flex items-center gap-2">
+                  <DownloadIcon />
+                  <span>{t('common.print')}</span>
+                </span>
               </button>
               <button
                 onClick={exportToExcel}
-                className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 border shadow-lg hover:shadow-xl hover:scale-105 ${
-                  isDark 
-                    ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' 
-                    : 'bg-white/20 border-white/30 text-white hover:bg-white/30'
-                }`}
+                className="group relative px-6 py-3 rounded-2xl font-semibold text-white overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/25"
               >
-                <DownloadIcon />
-                <span className="font-medium">Excel</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                <span className="relative flex items-center gap-2">
+                  <DownloadIcon />
+                  <span>Excel</span>
+                </span>
               </button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -2032,65 +2237,72 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
       {/* Filters */}
       <div className={`relative z-40 ${
         isDark 
-          ? 'bg-slate-800/80 border-slate-700/50' 
-          : 'bg-white/90 border-slate-100/50'
-      } backdrop-blur-sm shadow-md overflow-visible`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-wrap items-end gap-4">
-            <DateInput
-              label={t('reports.startDate')}
-              value={filters.startDate}
-              onChange={(value) => updateFilter('startDate', value)}
-            />
-            <DateInput
-              label={t('reports.endDate')}
-              value={filters.endDate}
-              onChange={(value) => updateFilter('endDate', value)}
-            />
-            <SelectDropdown
-              label={t('reports.filterByDentist')}
-              value={filters.selectedDentist}
-              onChange={(value) => updateFilter('selectedDentist', value)}
-              options={[
-                { value: '', label: t('common.all') },
-                ...dentists.map(d => ({ value: d.id, label: d.name }))
-              ]}
-              icon={<UserIcon />}
-            />
-            <SelectDropdown
-              label={t('reports.filterByPatient')}
-              value={filters.selectedPatient}
-              onChange={(value) => updateFilter('selectedPatient', value)}
-              options={[
-                { value: '', label: t('common.all') },
-                ...patients.map(p => ({ value: p.id, label: p.name }))
-              ]}
-              icon={<UserIcon />}
-            />
-            <SelectDropdown
-              label={t('reports.filterByPaymentMethod')}
-              value={filters.selectedPaymentMethod}
-              onChange={(value) => updateFilter('selectedPaymentMethod', value)}
-              options={[
-                { value: '', label: t('common.all') },
-                { value: 'Cash', label: t('paymentMethod.Cash') },
-                { value: 'Instapay', label: t('paymentMethod.Instapay') },
-                { value: 'Vodafone Cash', label: t('paymentMethod.Vodafone Cash') },
-                { value: 'Other', label: t('paymentMethod.Other') },
-                { value: 'Discount', label: t('paymentMethod.Discount') }
-              ]}
-              icon={<DollarIcon />}
-            />
-            <SelectDropdown
-              label={t('reports.filterByTreatment')}
-              value={filters.selectedTreatment}
-              onChange={(value) => updateFilter('selectedTreatment', value)}
-              options={[
-                { value: '', label: t('common.all') },
-                ...treatmentDefinitions.map(td => ({ value: td.id, label: td.name }))
-              ]}
-              icon={<ToothIcon />}
-            />
+          ? 'bg-slate-800/95 border-slate-700/50' 
+          : 'bg-white/95 border-slate-200/50'
+      } backdrop-blur-xl shadow-2xl`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Filter Header */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className={`p-2 rounded-xl ${isDark ? 'bg-cyan-500/20' : 'bg-cyan-100'}`}>
+              <FilterIcon />
+            </div>
+            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+              {t('reports.filtersAndControls')}
+            </h3>
+          </div>
+          
+          <div className="flex flex-col xl:flex-row items-end gap-5">
+            {/* Date Range Section */}
+            <div className="flex flex-wrap gap-4 flex-1">
+              <div className="flex flex-col gap-2">
+                <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Date Range
+                </span>
+                <div className="flex items-center gap-2">
+                  <ModernDateInput
+                    label=""
+                    value={filters.startDate}
+                    onChange={(value) => updateFilter('startDate', value)}
+                  />
+                  <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'}`}>→</span>
+                  <ModernDateInput
+                    label=""
+                    value={filters.endDate}
+                    onChange={(value) => updateFilter('endDate', value)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col justify-end">
+                <QuickDateFilter onSelect={handlePeriodChange} currentDays={selectedPeriod} />
+              </div>
+            </div>
+            
+            {/* Dropdowns */}
+            <div className="flex flex-wrap gap-4">
+              <ModernSelect
+                label="Dentist"
+                value={filters.selectedDentist}
+                onChange={(value) => updateFilter('selectedDentist', value)}
+                options={[
+                  { value: '', label: t('common.all') },
+                  ...dentists.map(d => ({ value: d.id, label: d.name }))
+                ]}
+                icon={<UserIcon />}
+              />
+              <ModernSelect
+                label="Payment Method"
+                value={filters.selectedPaymentMethod}
+                onChange={(value) => updateFilter('selectedPaymentMethod', value)}
+                options={[
+                  { value: '', label: t('common.all') },
+                  { value: 'Cash', label: t('paymentMethod.Cash') },
+                  { value: 'Instapay', label: t('paymentMethod.Instapay') },
+                  { value: 'Vodafone Cash', label: t('paymentMethod.Vodafone Cash') },
+                  { value: 'Other', label: t('paymentMethod.Other') }
+                ]}
+                icon={<DollarIcon />}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -2104,16 +2316,16 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
             : 'bg-white/90 border-slate-100/50'
         } backdrop-blur-sm rounded-2xl shadow-xl overflow-visible border mb-8`}>
           <div className={`border-b ${isDark ? 'border-slate-700/50' : 'border-slate-100/50'}`}>
-            <nav className="flex flex-wrap overflow-x-auto">
+            <nav className="flex flex-wrap overflow-x-auto px-2">
               {categoryTabs.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id as ReportCategory)}
-                  className={`py-4 px-5 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-300 ${
+                  className={`py-4 px-4 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-300 whitespace-nowrap ${
                     activeCategory === cat.id
                       ? `border-${cat.color}-500 text-${cat.color}-600 ${
                           isDark 
-                            ? `bg-${cat.color}-900/30` 
+                            ? `bg-${cat.color}-900/20` 
                             : `bg-${cat.color}-50`
                         }`
                       : `border-transparent ${
@@ -2130,11 +2342,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
             </nav>
           </div>
 
-          {/* Report Content */}
           <div className={`p-6 ${
             isDark 
-              ? 'bg-gradient-to-b from-slate-800/50 to-slate-900' 
-              : 'bg-gradient-to-b from-slate-50/50 to-white'
+                ? 'bg-gradient-to-b from-slate-800/50 to-slate-900' 
+                : 'bg-gradient-to-b from-slate-50/50 to-white'
           }`}>
             {renderReportContent()}
           </div>

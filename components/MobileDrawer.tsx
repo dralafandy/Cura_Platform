@@ -34,6 +34,13 @@ const SchedulerIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const OnlineReservationsIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4" />
+    <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 19" />
+  </svg>
+);
+
 const ReportsIcon = ({ isActive }: { isActive: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -195,6 +202,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     { id: 'dashboard', label: t('sidebar.dashboard'), icon: DashboardIcon, permission: null, adminOnly: false },
     { id: 'patients', label: t('sidebar.patients'), icon: PatientsIcon, permission: Permission.PATIENT_VIEW, adminOnly: false },
     { id: 'scheduler', label: t('sidebar.scheduler'), icon: SchedulerIcon, permission: Permission.APPOINTMENT_VIEW, adminOnly: false },
+    { id: 'pendingReservations', label: t('sidebar.onlineReservations'), icon: OnlineReservationsIcon, permission: Permission.APPOINTMENT_VIEW, adminOnly: false },
     { id: 'doctors', label: t('sidebar.doctors'), icon: DoctorsIcon, permission: null, adminOnly: true }, // Admin only
     { id: 'employees', label: t('sidebar.employees'), icon: EmployeesIcon, permission: Permission.FINANCE_VIEW, adminOnly: false },
     { id: 'suppliers', label: t('sidebar.suppliers'), icon: SuppliersIcon, permission: Permission.SUPPLIER_VIEW, adminOnly: false },
@@ -230,7 +238,7 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
     },
     {
       label: t('sidebar.group.appointments'),
-      items: filteredNavItems.filter(item => item.id === 'scheduler'),
+      items: filteredNavItems.filter(item => ['scheduler', 'pendingReservations'].includes(item.id)),
     },
     {
       label: t('sidebar.group.materialsLabs'),
