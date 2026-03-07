@@ -976,7 +976,12 @@ const MobileAppointmentList: React.FC<{
     daysInMonth: number;
     firstDayOfMonth: number;
     appointmentsByDay: Map<string, Set<string>>;
-}> = ({ dailyAppointments, patients, dentists, onAppointmentClick, onAddClick, onSendReminder, onStatusClick, selectedDate, onDateChange, appointmentStats, calendarDate, onCalendarDateChange, onPrevMonth, onNextMonth, daysInMonth, firstDayOfMonth, appointmentsByDay }) => {
+    workStartHour: number;
+    workEndHour: number;
+    onWorkStartHourChange: (hour: number) => void;
+    onWorkEndHourChange: (hour: number) => void;
+    onSaveWorkHours: () => void;
+}> = ({ dailyAppointments, patients, dentists, onAppointmentClick, onAddClick, onSendReminder, onStatusClick, selectedDate, onDateChange, appointmentStats, calendarDate, onCalendarDateChange, onPrevMonth, onNextMonth, daysInMonth, firstDayOfMonth, appointmentsByDay, workStartHour, workEndHour, onWorkStartHourChange, onWorkEndHourChange, onSaveWorkHours }) => {
     const { t, locale } = useI18n();
     const timeFormatter = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
     const dayFormatter = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -1307,20 +1312,77 @@ const MobileAppointmentList: React.FC<{
                     <div className={`grid grid-cols-4 gap-2 overflow-hidden transition-all duration-300 ${showStats ? 'max-h-24 opacity-100 mt-2' : 'max-h-0 opacity-0 mt-0'}`}>
                         <div className="text-center bg-white/10 rounded-lg p-2">
                             <div className="text-2xl font-bold">{appointmentStats.total}</div>
-                            <div className="text-xs text-purple-100">Total</div>
+                            <div className="text-xs text-purple-100">{t('scheduler.total')}</div>
                         </div>
                         <div className="text-center bg-emerald-500/20 rounded-lg p-2">
                             <div className="text-2xl font-bold">{appointmentStats.scheduled}</div>
-                            <div className="text-xs text-emerald-100">Scheduled</div>
+                            <div className="text-xs text-emerald-100">{t('scheduler.scheduledAppointments')}</div>
                         </div>
                         <div className="text-center bg-blue-500/20 rounded-lg p-2">
                             <div className="text-2xl font-bold">{appointmentStats.completed}</div>
-                            <div className="text-xs text-blue-100">Completed</div>
+                            <div className="text-xs text-blue-100">{t('scheduler.completedAppointments')}</div>
                         </div>
                         <div className="text-center bg-rose-500/20 rounded-lg p-2">
                             <div className="text-2xl font-bold">{appointmentStats.cancelled}</div>
-                            <div className="text-xs text-rose-100">Cancelled</div>
+                            <div className="text-xs text-rose-100">{t('scheduler.cancelledAppointments')}</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-4 pt-3">
+                <div className="overflow-hidden rounded-2xl border border-purple-200/80 bg-white/90 shadow-sm dark:border-purple-800 dark:bg-slate-800/90">
+                    <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-3 text-white">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-bold">{t('scheduler.workHours')}</h3>
+                                <p className="mt-0.5 text-xs text-purple-100">
+                                    {timeFormatter.format(new Date(0, 0, 0, workStartHour))} - {timeFormatter.format(new Date(0, 0, 0, workEndHour))}
+                                </p>
+                            </div>
+                            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium">
+                                {t('scheduler.currentWorkHours')}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                            {t('scheduler.workHoursDescription')}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label htmlFor="mobile-start-hour" className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                                    {t('scheduler.showFrom')}
+                                </label>
+                                <select
+                                    id="mobile-start-hour"
+                                    value={workStartHour}
+                                    onChange={(e) => onWorkStartHourChange(parseInt(e.target.value, 10))}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                                >
+                                    {Array.from({ length: 24 }).map((_, i) => <option key={i} value={i}>{timeFormatter.format(new Date(0, 0, 0, i))}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="mobile-end-hour" className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                                    {t('scheduler.to')}
+                                </label>
+                                <select
+                                    id="mobile-end-hour"
+                                    value={workEndHour}
+                                    onChange={(e) => onWorkEndHourChange(parseInt(e.target.value, 10))}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                                >
+                                    {Array.from({ length: 25 }).map((_, i) => i > 0 && <option key={i} value={i}>{timeFormatter.format(new Date(0, 0, 0, i))}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onSaveWorkHours}
+                            className="mt-3 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-purple-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                        >
+                            {t('scheduler.saveSettings')}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1386,10 +1448,10 @@ const MobileAppointmentList: React.FC<{
             <div className="px-4 pb-2">
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {[
-                        { key: 'all', label: 'All', color: 'from-purple-500 to-violet-500' },
-                        { key: 'SCHEDULED', label: 'Scheduled', color: 'from-emerald-500 to-teal-500' },
-                        { key: 'COMPLETED', label: 'Completed', color: 'from-blue-500 to-cyan-500' },
-                        { key: 'CANCELLED', label: 'Cancelled', color: 'from-rose-500 to-red-500' }
+                        { key: 'all', label: t('scheduler.filter.all'), color: 'from-purple-500 to-violet-500' },
+                        { key: 'SCHEDULED', label: t('scheduler.filter.scheduled'), color: 'from-emerald-500 to-teal-500' },
+                        { key: 'COMPLETED', label: t('scheduler.filter.completed'), color: 'from-blue-500 to-cyan-500' },
+                        { key: 'CANCELLED', label: t('scheduler.filter.cancelled'), color: 'from-rose-500 to-red-500' }
                     ].map(filter => (
                         <button
                             key={filter.key}
@@ -1438,12 +1500,12 @@ const MobileAppointmentList: React.FC<{
                             <CalendarIcon className="h-10 w-10 text-purple-400" />
                         </div>
                         <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                            {searchTerm || activeFilter !== 'all' ? 'No appointments found' : t('scheduler.noAppointments')}
+                            {searchTerm || activeFilter !== 'all' ? t('scheduler.noAppointmentsFound') : t('scheduler.noAppointments')}
                         </h3>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
                             {searchTerm || activeFilter !== 'all' 
-                                ? 'Try adjusting your filters' 
-                                : 'Tap the + button to add a new appointment'}
+                                ? t('scheduler.tryAdjustingFilters')
+                                : t('scheduler.tapPlusToAddAppointment')}
                         </p>
                         {!searchTerm && activeFilter === 'all' && (
                             <button 
@@ -1577,7 +1639,10 @@ const MobileTimeSelectorModal: React.FC<{
     dentists: Dentist[];
     workStartHour: number;
     workEndHour: number;
-}> = ({ onClose, onSelectTime, selectedDate, dailyAppointments, patients, dentists, workStartHour, workEndHour }) => {
+    onWorkStartHourChange: (hour: number) => void;
+    onWorkEndHourChange: (hour: number) => void;
+    onSaveWorkHours: () => void;
+}> = ({ onClose, onSelectTime, selectedDate, dailyAppointments, patients, dentists, workStartHour, workEndHour, onWorkStartHourChange, onWorkEndHourChange, onSaveWorkHours }) => {
     const { t, locale } = useI18n();
     const timeFormatter = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
     const dayFormatter = new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'short', day: 'numeric' });
@@ -1720,6 +1785,43 @@ const MobileTimeSelectorModal: React.FC<{
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-purple-200/70 bg-white/90 p-3 shadow-sm dark:border-purple-800 dark:bg-slate-800/70">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('scheduler.workHours')}</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('scheduler.workHoursDescription')}</p>
+                            </div>
+                            <div className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                                {timeFormatter.format(new Date(0, 0, 0, workStartHour))} - {timeFormatter.format(new Date(0, 0, 0, workEndHour))}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <select
+                                aria-label={t('scheduler.showFrom')}
+                                value={workStartHour}
+                                onChange={(e) => onWorkStartHourChange(parseInt(e.target.value, 10))}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                            >
+                                {Array.from({ length: 24 }).map((_, i) => <option key={i} value={i}>{timeFormatter.format(new Date(0, 0, 0, i))}</option>)}
+                            </select>
+                            <select
+                                aria-label={t('scheduler.to')}
+                                value={workEndHour}
+                                onChange={(e) => onWorkEndHourChange(parseInt(e.target.value, 10))}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                            >
+                                {Array.from({ length: 25 }).map((_, i) => i > 0 && <option key={i} value={i}>{timeFormatter.format(new Date(0, 0, 0, i))}</option>)}
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onSaveWorkHours}
+                            className="mt-2 w-full rounded-xl bg-purple-600 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                        >
+                            {t('scheduler.saveSettings')}
+                        </button>
                     </div>
                 </header>
 
@@ -2711,6 +2813,11 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                             daysInMonth={daysInMonth}
                             firstDayOfMonth={firstDayOfMonth}
                             appointmentsByDay={appointmentsByDay}
+                            workStartHour={workStartHour}
+                            workEndHour={workEndHour}
+                            onWorkStartHourChange={setWorkStartHour}
+                            onWorkEndHourChange={setWorkEndHour}
+                            onSaveWorkHours={saveWorkHours}
                         />
                     ) : showSelectedDayList ? (
                         <div className="h-full overflow-y-auto p-4 bg-white dark:bg-slate-800">
@@ -2991,6 +3098,9 @@ const Scheduler: React.FC<{ clinicData: ClinicData }> = ({ clinicData }) => {
                     dentists={dentists}
                     workStartHour={workStartHour}
                     workEndHour={workEndHour}
+                    onWorkStartHourChange={setWorkStartHour}
+                    onWorkEndHourChange={setWorkEndHour}
+                    onSaveWorkHours={saveWorkHours}
                 />
             )}
             </div>
