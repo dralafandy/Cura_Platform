@@ -256,13 +256,13 @@ const AppContent: React.FC = () => {
       'treatmentInsuranceLink': t('sidebar.treatmentInsuranceLink'),
       'insuranceIntegration': t('sidebar.insuranceIntegration'),
       'insuranceUnified': t('sidebar.insuranceUnified'),
-      'reports': 'Reports',
+      'reports': t('sidebar.reports'),
       'comprehensiveReport': locale === 'ar' ? 'تقرير شامل' : 'Comprehensive Report',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
-      'about': 'ط¹ظ† ط§ظ„ط¨ط±ظ†ط§ظ…ط¬',
+      'about': t('sidebar.about'),
       'pendingReservations': t('onlineReservations.title') || 'Online Reservations',
-      'clinicManagement': 'Clinic & Branch Management',
-      'subscriptionOverview': locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription'
+      'clinicManagement': t('sidebar.clinicManagement'),
+      'subscriptionOverview': t('sidebar.subscriptionOverview')
   }
 
   // Show loading state while auth is loading

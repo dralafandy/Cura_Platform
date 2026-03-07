@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from '../types';
+import { useI18n } from '../hooks/useI18n';
 
 interface SearchBarProps {
   navItems: Array<{
@@ -22,6 +23,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   isCollapsed,
   onClose
 }) => {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState(navItems);
@@ -113,7 +115,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <button
           onClick={toggleSearch}
           className="w-full p-3 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/20 hover:from-purple-100 hover:to-purple-200/50 dark:hover:from-purple-800/40 dark:hover:to-purple-700/30 transition-all duration-300 group border border-purple-200/50 dark:border-purple-700/50 shadow-sm hover:shadow-md touch-manipulation"
-          aria-label="Search navigation"
+          aria-label={t('sidebar.searchNavigation')}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mx-auto text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -126,7 +128,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search..."
+                placeholder={t('sidebar.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
@@ -163,7 +165,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search navigation..."
+          placeholder={t('sidebar.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setIsOpen(true)}
@@ -208,18 +210,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
                   >
                     <IconComponent isActive={isActive} />
                     <span className="font-medium">{item.label}</span>
-                    {isActive && (
-                      <span className="ml-auto text-xs bg-purple-600 text-white px-2 py-1 rounded-full">
-                        Active
-                      </span>
-                    )}
                   </button>
                 );
               })}
             </div>
           ) : (
             <div className="px-4 py-6 text-center text-slate-500 dark:text-slate-400">
-              No results found for "{searchTerm}"
+              {t('common.noResults')}: "{searchTerm}"
             </div>
           )}
         </div>
