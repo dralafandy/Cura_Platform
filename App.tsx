@@ -268,20 +268,13 @@ const AppContent: React.FC = () => {
   // Show loading state while auth is loading
   if (authLoading) {
     console.log('Showing loading state - auth still loading');
-    return (
-      <div className="bg-neutral-light dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen min-h-[100dvh] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen mode="auth" />;
   }
 
   // Show loading state while clinic data is loading
   if (clinicData.isLoading) {
     console.log('Showing loading state - clinic data still loading');
-    return <LoadingScreen />;
+    return <LoadingScreen mode="data" />;
   }
 
   console.log('Rendering main app content');

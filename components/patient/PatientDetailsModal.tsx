@@ -20,6 +20,29 @@ import ImageViewerModal from './ImageViewerModal';
 import { supabase } from '../../supabaseClient';
 import { usePermissions } from '../../hooks/usePermissions';
 
+const normalizeInsuranceCompanyName = (insuranceCompany: any): string => {
+    if (Array.isArray(insuranceCompany)) {
+        return insuranceCompany[0]?.name?.trim() || '';
+    }
+    return insuranceCompany?.name?.trim() || '';
+};
+
+const buildFallbackInsuranceLink = (patient: Patient) => {
+    const fallbackCompanyName = patient.insuranceProvider?.trim();
+    if (!fallbackCompanyName) {
+        return null;
+    }
+
+    return {
+        insurance_company_id: '',
+        insurance_company_name: fallbackCompanyName,
+        coverage_percentage: 0,
+        policy_number: patient.insurancePolicyNumber || '',
+        effective_date: '',
+        expiry_date: ''
+    };
+};
+
 // FormSection component
 interface FormSectionProps {
     title: string;
@@ -110,30 +133,57 @@ export const PatientDetailsModal: React.FC<{
     // Load patient insurance link
     useEffect(() => {
         const loadPatientInsurance = async () => {
+            const fallbackInsuranceLink = buildFallbackInsuranceLink(patient);
+            setPatientInsuranceLink(fallbackInsuranceLink);
+
             if (!supabase || !patient?.id) return;
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('patient_insurance_link')
                     .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
                     .eq('patient_id', patient.id)
-                    .single();
-                
-                if (data && !error) {
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (activeClinicId) {
+                    query = query.eq('clinic_id', activeClinicId);
+                }
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                let latestInsuranceLink = data?.[0];
+
+                // Fallback for legacy rows without clinic_id
+                if (!latestInsuranceLink && activeClinicId) {
+                    const { data: fallbackData, error: fallbackError } = await supabase
+                        .from('patient_insurance_link')
+                        .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
+                        .eq('patient_id', patient.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    if (!fallbackError) {
+                        latestInsuranceLink = fallbackData?.[0];
+                    }
+                }
+
+                if (latestInsuranceLink) {
                     setPatientInsuranceLink({
-                        insurance_company_id: data.insurance_company_id,
-                        insurance_company_name: (data.insurance_companies as any)?.name || '',
-                        coverage_percentage: data.coverage_percentage || 0,
-                        policy_number: data.policy_number || '',
-                        effective_date: data.effective_date || '',
-                        expiry_date: data.expiry_date || ''
+                        insurance_company_id: latestInsuranceLink.insurance_company_id,
+                        insurance_company_name: normalizeInsuranceCompanyName(latestInsuranceLink.insurance_companies) || fallbackInsuranceLink?.insurance_company_name || '',
+                        coverage_percentage: latestInsuranceLink.coverage_percentage || 0,
+                        policy_number: latestInsuranceLink.policy_number || fallbackInsuranceLink?.policy_number || '',
+                        effective_date: latestInsuranceLink.effective_date || '',
+                        expiry_date: latestInsuranceLink.expiry_date || ''
                     });
                 }
             } catch (err) {
                 console.error('Failed to load patient insurance:', err);
+                setPatientInsuranceLink(fallbackInsuranceLink);
             }
         };
         void loadPatientInsurance();
-    }, [patient?.id]);
+    }, [patient, activeClinicId]);
 
     const loadInsuranceDebtHint = useCallback(async () => {
         if (!supabase || !patient?.id) return;

@@ -286,7 +286,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentView, setCurrentView
             } ${pressedItem === 'darkmode' ? 'scale-95' : ''}`}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <div className={`relative mb-1 p-2.5 rounded-xl transition-all duration-300 ${
+            <div className={`relative mb-1 p-2 rounded-xl transition-all duration-300 ${
               isDark 
                 ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/25' 
                 : 'group-hover:bg-purple-50'

@@ -22,6 +22,29 @@ import AddEditPatientModal from './AddEditPatientModal';
 import ImageViewerModal from './ImageViewerModal';
 import { supabase } from '../../supabaseClient';
 
+const normalizeInsuranceCompanyName = (insuranceCompany: any): string => {
+    if (Array.isArray(insuranceCompany)) {
+        return insuranceCompany[0]?.name?.trim() || '';
+    }
+    return insuranceCompany?.name?.trim() || '';
+};
+
+const buildFallbackInsuranceLink = (patient: Patient) => {
+    const fallbackCompanyName = patient.insuranceProvider?.trim();
+    if (!fallbackCompanyName) {
+        return null;
+    }
+
+    return {
+        insurance_company_id: '',
+        insurance_company_name: fallbackCompanyName,
+        coverage_percentage: 0,
+        policy_number: patient.insurancePolicyNumber || '',
+        effective_date: '',
+        expiry_date: ''
+    };
+};
+
 // Helper function to map treatment names to tooth statuses
 const getToothStatusFromTreatment = (treatmentName: string): ToothStatus | null => {
     const lowerName = treatmentName.toLowerCase();
@@ -120,30 +143,57 @@ export const PatientDetailsPanel: React.FC<{
     // Load patient insurance link
     useEffect(() => {
         const loadPatientInsurance = async () => {
+            const fallbackInsuranceLink = buildFallbackInsuranceLink(patient);
+            setPatientInsuranceLink(fallbackInsuranceLink);
+
             if (!supabase || !patient?.id) return;
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('patient_insurance_link')
                     .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
                     .eq('patient_id', patient.id)
-                    .single();
-                
-                if (data && !error) {
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (activeClinicId) {
+                    query = query.eq('clinic_id', activeClinicId);
+                }
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                let latestInsuranceLink = data?.[0];
+
+                // Fallback for legacy rows without clinic_id
+                if (!latestInsuranceLink && activeClinicId) {
+                    const { data: fallbackData, error: fallbackError } = await supabase
+                        .from('patient_insurance_link')
+                        .select('insurance_company_id, coverage_percentage, policy_number, effective_date, expiry_date, insurance_companies(name)')
+                        .eq('patient_id', patient.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    if (!fallbackError) {
+                        latestInsuranceLink = fallbackData?.[0];
+                    }
+                }
+
+                if (latestInsuranceLink) {
                     setPatientInsuranceLink({
-                        insurance_company_id: data.insurance_company_id,
-                        insurance_company_name: (data.insurance_companies as any)?.name || '',
-                        coverage_percentage: data.coverage_percentage || 0,
-                        policy_number: data.policy_number || '',
-                        effective_date: data.effective_date || '',
-                        expiry_date: data.expiry_date || ''
+                        insurance_company_id: latestInsuranceLink.insurance_company_id,
+                        insurance_company_name: normalizeInsuranceCompanyName(latestInsuranceLink.insurance_companies) || fallbackInsuranceLink?.insurance_company_name || '',
+                        coverage_percentage: latestInsuranceLink.coverage_percentage || 0,
+                        policy_number: latestInsuranceLink.policy_number || fallbackInsuranceLink?.policy_number || '',
+                        effective_date: latestInsuranceLink.effective_date || '',
+                        expiry_date: latestInsuranceLink.expiry_date || ''
                     });
                 }
             } catch (err) {
                 console.error('Failed to load patient insurance:', err);
+                setPatientInsuranceLink(fallbackInsuranceLink);
             }
         };
         void loadPatientInsurance();
-    }, [patient?.id]);
+    }, [patient, activeClinicId]);
 
     const loadInsuranceDebtHint = useCallback(async () => {
         if (!supabase || !patient?.id) return;
@@ -594,20 +644,20 @@ export const PatientDetailsPanel: React.FC<{
                             {/* Insurance Card */}
                             <SectionCard 
                                 title={t('patientDetails.insurance')}
-                                icon={<svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
+                                icon={<svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-.4 0-.8.1-1.1.3l-6 3A2 2 0 0 0 4 7.1v5.9c0 4.7 3.4 8.9 7.9 9.9.1 0 .3.1.5.1s.4 0 .5-.1C16.6 21.9 20 17.7 20 13V7.1c0-.7-.4-1.4-1-1.8l-6-3c-.3-.2-.7-.3-1-.3Zm-1.2 13.6 5-5a1 1 0 1 0-1.4-1.4l-4.3 4.3-1.8-1.8a1 1 0 0 0-1.4 1.4l2.5 2.5c.4.4 1 .4 1.4 0Z" /></svg>}
                             >
-                                {patientInsuranceLink ? (
+                                {patientInsuranceLink || patient.insuranceProvider ? (
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <InfoCard 
                                                 icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
                                                 label={t('patientDetails.insuranceProvider')}
-                                                value={patientInsuranceLink.insurance_company_name}
+                                                value={patientInsuranceLink?.insurance_company_name || patient.insuranceProvider || '-'}
                                             />
                                             <InfoCard 
                                                 icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>}
                                                 label={t('patientDetails.policyNumber')}
-                                                value={patientInsuranceLink.policy_number || '-'}
+                                                value={patientInsuranceLink?.policy_number || patient.insurancePolicyNumber || '-'}
                                             />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

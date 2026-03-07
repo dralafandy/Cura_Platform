@@ -7,6 +7,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { ClinicData } from '../hooks/useClinicData';
 import {
   buildSidebarGroups,
+  SIDEBAR_DEFAULT_COLLAPSED_GROUPS,
   SIDEBAR_RECENT_LIMIT,
   SIDEBAR_STORAGE_KEYS,
   SidebarGroupId,
@@ -172,11 +173,11 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<SidebarGroupId>>(() => {
     const saved = localStorage.getItem(SIDEBAR_STORAGE_KEYS.collapsedGroups);
-    if (!saved) return new Set<SidebarGroupId>();
+    if (!saved) return new Set<SidebarGroupId>(SIDEBAR_DEFAULT_COLLAPSED_GROUPS);
     try {
       return new Set<SidebarGroupId>(JSON.parse(saved));
     } catch {
-      return new Set<SidebarGroupId>();
+      return new Set<SidebarGroupId>(SIDEBAR_DEFAULT_COLLAPSED_GROUPS);
     }
   });
   const [pinnedItems, setPinnedItems] = useState<Set<string>>(() => {
@@ -382,10 +383,10 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
           <SearchBar navItems={navItems} currentView={currentView} setCurrentView={(view) => { handleViewChange(view); onClose(); }} isCollapsed={false} onClose={onClose} />
 
           {(pinnedNavItems.length > 0 || recentNavItems.length > 0) && (
-            <section className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/50">
+            <section className="rounded-2xl border border-cyan-300/90 bg-gradient-to-br from-cyan-100 via-sky-100 to-blue-50 p-3 shadow-sm shadow-cyan-200/60 backdrop-blur-sm dark:border-cyan-800/80 dark:bg-gradient-to-br dark:from-cyan-900/55 dark:via-sky-950/55 dark:to-slate-900/70">
               <div className="mb-3 flex items-center justify-between px-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('sidebar.quickAccess')}</p>
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">{pinnedNavItems.length + recentNavItems.length}</span>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-900 dark:text-cyan-100">{t('sidebar.quickAccess')}</p>
+                <span className="rounded-full bg-cyan-600 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-cyan-400 dark:text-slate-950">{pinnedNavItems.length + recentNavItems.length}</span>
               </div>
               {!!pinnedNavItems.length && (
                 <div className="space-y-2">

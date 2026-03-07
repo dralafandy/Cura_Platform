@@ -20,6 +20,13 @@ const createEmptyChart = (): DentalChartData => {
     return chart;
 };
 
+const normalizeInsuranceCompanyName = (insuranceCompany: any): string => {
+    if (Array.isArray(insuranceCompany)) {
+        return insuranceCompany[0]?.name?.trim() || '';
+    }
+    return insuranceCompany?.name?.trim() || '';
+};
+
 export interface ClinicInfo {
     name: string;
     address: string;
@@ -357,6 +364,7 @@ export const useClinicData = (): ClinicData => {
             'suppliers',
             'inventory_items',
             'dentists',
+            'patient_insurance_link',
         ]);
         const branchScopedTables = new Set<string>([
             'patients',
@@ -414,6 +422,50 @@ export const useClinicData = (): ClinicData => {
             clinicsRes, treatmentDoctorPercentagesRes
         ] = results;
 
+        // Fetch patient insurance links (latest per patient) with clinic filter + legacy fallback
+        let patientInsuranceLinks: { patient_id: string; policy_number?: string; insurance_companies?: any; created_at?: string }[] = [];
+        try {
+            let insuranceQuery = supabase
+                .from('patient_insurance_link')
+                .select('patient_id, policy_number, created_at, insurance_companies(name)')
+                .order('created_at', { ascending: false });
+
+            if (currentClinic?.id) {
+                insuranceQuery = insuranceQuery.eq('clinic_id', currentClinic.id);
+            } else if (userClinicIds.length > 0) {
+                insuranceQuery = insuranceQuery.in('clinic_id', userClinicIds);
+            }
+
+            const { data: insuranceData, error: insuranceError } = await insuranceQuery;
+
+            if (!insuranceError && insuranceData) {
+                patientInsuranceLinks = insuranceData;
+
+                // Legacy rows without clinic_id: fetch once without filter if nothing returned
+                if (patientInsuranceLinks.length === 0 && (currentClinic?.id || userClinicIds.length > 0)) {
+                    const { data: legacyData, error: legacyError } = await supabase
+                        .from('patient_insurance_link')
+                        .select('patient_id, policy_number, created_at, insurance_companies(name)')
+                        .order('created_at', { ascending: false });
+                    if (!legacyError && legacyData) {
+                        patientInsuranceLinks = legacyData;
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to load patient insurance links:', err);
+        }
+
+        const latestInsuranceByPatient = new Map<string, { companyName: string; policyNumber?: string }>();
+        patientInsuranceLinks.forEach((row) => {
+            if (!row?.patient_id) return;
+            if (latestInsuranceByPatient.has(row.patient_id)) return; // already have the latest due to order desc
+            latestInsuranceByPatient.set(row.patient_id, {
+                companyName: normalizeInsuranceCompanyName(row.insurance_companies),
+                policyNumber: row.policy_number || undefined
+            });
+        });
+
         console.log('Data fetch results:', {
             patients: patientsRes.data?.length || 0,
             dentists: dentistsRes.data?.length || 0,
@@ -436,27 +488,30 @@ export const useClinicData = (): ClinicData => {
 
         if (patientsRes.data) {
             console.log('Setting patients data:', patientsRes.data.length);
-            const formattedPatients = patientsRes.data.map((p: any) => ({
-                id: p.id,
-                name: p.name,
-                dob: p.dob,
-                gender: p.gender,
-                phone: p.phone,
-                email: p.email,
-                address: p.address,
-                medicalHistory: p.medical_history,
-                treatmentNotes: p.treatment_notes,
-                lastVisit: p.last_visit,
-                allergies: p.allergies,
-                medications: p.medications,
-                insuranceProvider: p.insurance_provider,
-                insurancePolicyNumber: p.insurance_policy_number,
-                emergencyContactName: p.emergency_contact_name,
-                emergencyContactPhone: p.emergency_contact_phone,
-                dentalChart: p.dental_chart,
-                images: p.images,
-                attachments: p.attachments || []
-            }));
+            const formattedPatients = patientsRes.data.map((p: any) => {
+                const insurance = latestInsuranceByPatient.get(p.id);
+                return {
+                    id: p.id,
+                    name: p.name,
+                    dob: p.dob,
+                    gender: p.gender,
+                    phone: p.phone,
+                    email: p.email,
+                    address: p.address,
+                    medicalHistory: p.medical_history,
+                    treatmentNotes: p.treatment_notes,
+                    lastVisit: p.last_visit,
+                    allergies: p.allergies,
+                    medications: p.medications,
+                    insuranceProvider: insurance?.companyName || p.insurance_provider,
+                    insurancePolicyNumber: insurance?.policyNumber || p.insurance_policy_number,
+                    emergencyContactName: p.emergency_contact_name,
+                    emergencyContactPhone: p.emergency_contact_phone,
+                    dentalChart: p.dental_chart,
+                    images: p.images,
+                    attachments: p.attachments || []
+                };
+            });
             setPatients(formattedPatients);
         }
         if (dentistsRes.data) {

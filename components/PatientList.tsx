@@ -105,6 +105,13 @@ const getAvatarColor = (patientId: string): string => {
     return avatarColors[hash % avatarColors.length];
 };
 
+const normalizeInsuranceCompanyName = (insuranceCompany: any): string => {
+    if (Array.isArray(insuranceCompany)) {
+        return insuranceCompany[0]?.name?.trim() || '';
+    }
+    return insuranceCompany?.name?.trim() || '';
+};
+
 // Skeleton loading component with Gold + Purple theme
 const PatientCardSkeleton = () => (
     <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 animate-pulse">
@@ -123,7 +130,7 @@ const PatientCardSkeleton = () => (
     </div>
 );
 
-const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData; canEdit?: boolean; canDelete?: boolean; insuranceLink?: { patientId: string; companyName: string } }> = ({ patient, onSelect, onEdit, onDelete, clinicData, canEdit = false, canDelete = false, insuranceLink }) => {
+const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData; canEdit?: boolean; canDelete?: boolean; insuranceLink?: { patientId: string; companyName: string }; insuranceName?: string }> = ({ patient, onSelect, onEdit, onDelete, clinicData, canEdit = false, canDelete = false, insuranceLink, insuranceName }) => {
     const { t } = useI18n();
     const { hasPermission } = useAuth();
     const [expanded, setExpanded] = useState(false);
@@ -201,14 +208,14 @@ const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit
                                 )}
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{patient.name}</h3>
                                 {/* Insurance Icon */}
-                                {insuranceLink && (
-                                    <div className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg px-2 py-0.5" title={insuranceLink.companyName}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                {insuranceName?.trim() ? (
+                                    <div className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg px-2 py-0.5" title={insuranceName}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path d="M12 2c-.4 0-.8.1-1.1.3l-6 3A2 2 0 0 0 4 7.1v5.9c0 4.7 3.4 8.9 7.9 9.9.1 0 .3.1.5.1s.4 0 .5-.1C16.6 21.9 20 17.7 20 13V7.1c0-.7-.4-1.4-1-1.8l-6-3c-.3-.2-.7-.3-1-.3Zm-1.2 13.6 5-5a1 1 0 1 0-1.4-1.4l-4.3 4.3-1.8-1.8a1 1 0 0 0-1.4 1.4l2.5 2.5c.4.4 1 .4 1.4 0Z" />
                                         </svg>
-                                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{insuranceLink.companyName}</span>
+                                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{insuranceName}</span>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                             
                             {/* Outstanding Balance Badge */}
@@ -378,31 +385,98 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [timelineModalPatient, setTimelineModalPatient] = useState<Patient | null>(null);
     const [patientInsuranceLinks, setPatientInsuranceLinks] = useState<{ patientId: string; companyName: string }[]>([]);
+    const [insuranceOverride, setInsuranceOverride] = useState<Record<string, string>>({});
     
     // Load insurance links
     useEffect(() => {
         const loadInsuranceLinks = async () => {
-            if (!supabase || !activeClinicId) return;
+            if (!supabase) return;
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('patient_insurance_link')
-                    .select('patient_id, insurance_companies(name)')
-                    .eq('clinic_id', activeClinicId);
-                if (error) throw error;
-                if (data) {
-                    const links = data.map((item: any) => ({
-                        patientId: item.patient_id,
-                        companyName: item.insurance_companies?.name || ''
-                    })).filter((link: any) => link.companyName);
-                    setPatientInsuranceLinks(links);
+                    .select('patient_id, created_at, insurance_companies(name)')
+                    .order('created_at', { ascending: false });
+
+                if (activeClinicId) {
+                    query = query.eq('clinic_id', activeClinicId);
                 }
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                let resultRows = data || [];
+
+                // Legacy records may not have clinic_id; fallback to cross-clinic fetch if nothing returned
+                if (resultRows.length === 0 && activeClinicId) {
+                    const { data: fallbackData, error: fallbackError } = await supabase
+                        .from('patient_insurance_link')
+                        .select('patient_id, created_at, insurance_companies(name)')
+                        .order('created_at', { ascending: false });
+                    if (!fallbackError && fallbackData) {
+                        resultRows = fallbackData;
+                    }
+                }
+
+                if (resultRows.length > 0) {
+                    const seenPatientIds = new Set<string>();
+                    const links = resultRows
+                        .map((item: any) => ({
+                            patientId: item.patient_id,
+                            companyName: normalizeInsuranceCompanyName(item.insurance_companies)
+                        }))
+                        .filter((link: any) => {
+                            if (!link.patientId || !link.companyName || seenPatientIds.has(link.patientId)) {
+                                return false;
+                            }
+                            seenPatientIds.add(link.patientId);
+                            return true;
+                        });
+                    setPatientInsuranceLinks(links);
+                    return;
+                }
+                setPatientInsuranceLinks([]);
             } catch (err) {
                 console.error('Failed to load insurance links:', err);
+                setPatientInsuranceLinks([]);
             }
         };
         void loadInsuranceLinks();
     }, [activeClinicId]);
-    
+
+    // Backfill insurance names for patients missing provider text
+    useEffect(() => {
+        const fetchMissingInsurance = async () => {
+            if (!supabase || patients.length === 0) return;
+            const missingIds = patients
+                .filter(p => !(p.insuranceProvider && p.insuranceProvider.trim()) && !insuranceOverride[p.id])
+                .map(p => p.id);
+            if (missingIds.length === 0) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('patient_id, insurance_companies(name)')
+                    .in('patient_id', missingIds)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                if (data) {
+                    const overrides: Record<string, string> = {};
+                    data.forEach((row: any) => {
+                        const name = normalizeInsuranceCompanyName(row.insurance_companies);
+                        if (row.patient_id && name && !overrides[row.patient_id]) {
+                            overrides[row.patient_id] = name;
+                        }
+                    });
+                    if (Object.keys(overrides).length > 0) {
+                        setInsuranceOverride(prev => ({ ...prev, ...overrides }));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to backfill insurance names:', err);
+            }
+        };
+        void fetchMissingInsurance();
+    }, [patients, insuranceOverride, supabase]);
+
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
     const linkedDoctorId = useMemo(() => {
@@ -479,6 +553,28 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
             }
         });
     }, [scopedPatients, searchTerm, sortBy, sortOrder, treatmentRecords, payments]);
+
+    const insuranceLinkMap = useMemo(() => {
+        const map = new Map<string, { patientId: string; companyName: string }>();
+
+        patientInsuranceLinks.forEach((link) => {
+            if (link.patientId && link.companyName && !map.has(link.patientId)) {
+                map.set(link.patientId, link);
+            }
+        });
+
+        scopedPatients.forEach((patient) => {
+            const fallbackCompanyName = patient.insuranceProvider?.trim();
+            if (!map.has(patient.id) && fallbackCompanyName) {
+                map.set(patient.id, {
+                    patientId: patient.id,
+                    companyName: fallbackCompanyName
+                });
+            }
+        });
+
+        return map;
+    }, [patientInsuranceLinks, scopedPatients]);
 
     const totalPatients = scopedPatients.length;
     const totalOutstanding = useMemo(() => {
@@ -611,7 +707,8 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
             <div className="space-y-4">
                 {filteredPatients.length > 0 ? (
                     filteredPatients.map(patient => {
-                        const insuranceLink = patientInsuranceLinks.find(link => link.patientId === patient.id);
+                        const insuranceLink = insuranceLinkMap.get(patient.id);
+                        const insuranceName = insuranceLink?.companyName || insuranceOverride[patient.id] || patient.insuranceProvider;
                         return (
                             <PatientListItem
                                 key={patient.id}
@@ -628,6 +725,7 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
                                 onDelete={() => handleDeletePatient(patient)}
                                 clinicData={clinicData}
                                 insuranceLink={insuranceLink}
+                                insuranceName={insuranceName}
                             />
                         );
                     })

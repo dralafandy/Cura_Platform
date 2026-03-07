@@ -7,6 +7,7 @@ import { ClinicData } from '../hooks/useClinicData';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   buildSidebarGroups,
+  SIDEBAR_DEFAULT_COLLAPSED_GROUPS,
   SIDEBAR_RECENT_LIMIT,
   SIDEBAR_STORAGE_KEYS,
   SidebarGroupId,
@@ -137,19 +138,19 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
-const LogoutIcon = ({ className = "h-5 w-5" }) => (
+const LogoutIcon = ({ className = "h-4 w-4" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
   </svg>
 );
 
-const SunIcon = ({ className = "h-5 w-5" }) => (
+const SunIcon = ({ className = "h-4 w-4" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
 );
 
-const MoonIcon = ({ className = "h-5 w-5" }) => (
+const MoonIcon = ({ className = "h-4 w-4" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
   </svg>
@@ -182,13 +183,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
     const saved = localStorage.getItem(SIDEBAR_STORAGE_KEYS.collapsedGroups);
 
     if (!saved) {
-      return new Set<SidebarGroupId>();
+      return new Set<SidebarGroupId>(SIDEBAR_DEFAULT_COLLAPSED_GROUPS);
     }
 
     try {
       return new Set<SidebarGroupId>(JSON.parse(saved));
     } catch {
-      return new Set<SidebarGroupId>();
+      return new Set<SidebarGroupId>(SIDEBAR_DEFAULT_COLLAPSED_GROUPS);
     }
   });
   const [pinnedItems, setPinnedItems] = useState<Set<string>>(() => {
@@ -432,10 +433,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
 
       {!isCollapsed && (pinnedNavItems.length > 0 || recentNavItems.length > 0) && (
         <div className="px-3 mt-1">
-          <section className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/50">
+          <section className="rounded-2xl border border-cyan-300/90 bg-gradient-to-br from-cyan-100 via-sky-100 to-blue-50 p-3 shadow-sm shadow-cyan-200/60 backdrop-blur-sm dark:border-cyan-800/80 dark:bg-gradient-to-br dark:from-cyan-900/55 dark:via-sky-950/55 dark:to-slate-900/70">
             <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('sidebar.quickAccess')}</p>
-              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">{pinnedNavItems.length + recentNavItems.length}</span>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-900 dark:text-cyan-100">{t('sidebar.quickAccess')}</p>
+              <span className="rounded-full bg-cyan-600 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-cyan-400 dark:text-slate-950">{pinnedNavItems.length + recentNavItems.length}</span>
             </div>
             <div className="space-y-4">
               {renderQuickSection(t('sidebar.pinned'), pinnedNavItems)}
@@ -491,12 +492,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       </div>
 
       <div className="p-4 border-t border-violet-200/70 dark:border-violet-800/60 bg-violet-50/40 dark:bg-violet-950/20 backdrop-blur-md space-y-3">
-        <button onClick={toggleTheme} className="flex items-center w-full p-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-violet-100/70 dark:hover:bg-violet-900/30 focus:outline-none focus:ring-2 focus:ring-violet-400/40 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700" aria-label={isDark ? t('header.lightMode') : t('header.darkMode')} title={isCollapsed ? (isDark ? t('header.lightMode') : t('header.darkMode')) : undefined}>
+        <button onClick={toggleTheme} className="flex items-center w-full p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-violet-100/70 dark:hover:bg-violet-900/30 focus:outline-none focus:ring-2 focus:ring-violet-400/40 transition-all duration-200 group border border-transparent hover:border-violet-200 dark:hover:border-violet-700" aria-label={isDark ? t('header.lightMode') : t('header.darkMode')} title={isCollapsed ? (isDark ? t('header.lightMode') : t('header.darkMode')) : undefined}>
           {isDark ? <SunIcon className="transition-transform duration-300 group-hover:rotate-90 group-hover:scale-105" /> : <MoonIcon className="transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-105" />}
           {!isCollapsed && <span className="ms-4 font-semibold text-base">{isDark ? t('header.lightMode') : t('header.darkMode')}</span>}
         </button>
 
-        <button onClick={logout} className="flex items-center w-full p-3 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/25 focus:outline-none focus:ring-2 focus:ring-red-400/40 transition-all duration-200 group border border-transparent hover:border-red-200/70 dark:hover:border-red-700/60" aria-label={t('auth.logout.button')} title={isCollapsed ? t('auth.logout.button') : undefined}>
+        <button onClick={logout} className="flex items-center w-full p-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/25 focus:outline-none focus:ring-2 focus:ring-red-400/40 transition-all duration-200 group border border-transparent hover:border-red-200/70 dark:hover:border-red-700/60" aria-label={t('auth.logout.button')} title={isCollapsed ? t('auth.logout.button') : undefined}>
           <LogoutIcon className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:scale-105" />
           {!isCollapsed && <span className="ms-3 font-semibold text-sm">{t('auth.logout.button')}</span>}
         </button>

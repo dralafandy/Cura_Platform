@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useI18n } from '../hooks/useI18n';
 
 // Icons
@@ -100,168 +100,246 @@ const FeatureItem: React.FC<FeatureItemProps> = ({ icon, title, items }) => (
   </div>
 );
 
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .slice(0, 2)
+    .join('');
+
+interface Founder {
+  name: string;
+  role: string;
+  photoUrl?: string;
+}
+
+const FounderBadge: React.FC<{ founder: Founder }> = ({ founder }) => {
+  const { name, role, photoUrl } = founder;
+  return (
+    <div className="flex items-center gap-3 w-full max-w-md px-4 py-3 bg-white/70 dark:bg-slate-800/70 border border-violet-100 dark:border-violet-700 rounded-2xl shadow-sm">
+      {photoUrl ? (
+        <img
+          src={photoUrl}
+          alt={name}
+          className="w-12 h-12 rounded-xl object-cover border border-violet-200 dark:border-slate-700"
+        />
+      ) : (
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center font-bold">
+          {initials(name)}
+        </div>
+      )}
+      <div className="text-start">
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{name}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{role}</p>
+      </div>
+    </div>
+  );
+};
+
 const AboutPage: React.FC = () => {
-  const { t, direction } = useI18n();
+  const { direction } = useI18n();
 
   const sections = [
     {
-      title: 'قسم إدارة المرضى',
+      title: 'إدارة المرضى والسجلات الطبية',
       icon: <UsersIcon />,
       items: [
-        'قائمة المرضى: عرض وإدارة جميع المرضى مع البحث والترتيب',
-        'إضافة/تعديل المريض: نموذج شامل لتسجيل البيانات الكاملة',
-        'تفاصيل المريض: صفحة متكاملة تشمل المعلومات والعلاجات والمدفوعات',
-        'المدفوعات: تسجيل ومتابعة مع خيارات متعددة (نقدي، بطاقة، تحويل)',
-        'الخصومات: إدارة مرنة للخصومات',
-        'سجل العلاجات: تتبع جميع العلاجات لكل مريض',
-        'الوصفات الطبية: إنشاء وإدارة الوصفات',
-        'مرفقات المريض: رفع وإدارة الملفات والصور',
-        'الرسم البياني للأسنان: أداة تفاعلية لتوثيق حالة الأسنان'
+        'ملف طبي موحد يشمل التاريخ المرضي، الحساسية، الصور قبل/بعد، والمرفقات.',
+        'استيراد/تصدير بيانات المرضى مع صلاحيات وصول دقيقة (RBAC).',
+        'خطط علاج مع تكاليف متوقعة وربطها بالمواعيد والمدفوعات.',
+        'ملاحظات داخلية وأرشفة تسجيلات صوتية وملفات لكل زيارة.',
+        'توثيق الموافقات والتوقيعات الرقمية وسجل كامل للتعديلات.'
       ]
     },
     {
-      title: 'قسم المواعيد والحجز',
+      title: 'المواعيد والحجز',
       icon: <CalendarIcon />,
       items: [
-        'جدول المواعيد: عرض أسبوعي/يومي',
-        'حجز المواعيد: تحديد موعد جديد مع اختيار الطبيب',
-        'إدارة جداول الأطباء: متابعة التوفر',
-        'الحجز العام: صفحة حجز إلكترونية للمرضى',
-        'إدارة الحجوزات المعلقة'
+        'تقويم مركزي يومي/أسبوعي متعدد الأطباء والغرف مع كشف التعارض.',
+        'إنشاء/تعديل/إلغاء المواعيد وربطها بالخطة العلاجية والفرع.',
+        'حجز إلكتروني عبر PublicBookingPage وقائمة PendingReservations للقبول اليدوي أو التلقائي.',
+        'الطلب المقبول يُنشئ موعداً في Scheduler مرتبطاً بالمريض والطبيب والفرع.',
+        'تأكيدات وتذكيرات تلقائية (SMS/WhatsApp/Email) للحضور والمتابعة.'
       ]
     },
     {
-      title: 'قسم الأطباء',
+      title: 'الأطباء والفريق والصلاحيات',
       icon: <UsersIcon />,
       items: [
-        'قائمة الأطباء',
-        'صفحة الطبيب التفصيلية',
-        'تقرير الطبيب المفصل',
-        'حسابات الأطباء ومتابعة المستحقات',
-        'نظام مشاركة الأطباء في الإيرادات'
+        'قوائم الأطباء مع نسب المشاركة في العلاج وجداول العمل.',
+        'ملف تفصيلي لكل طبيب وإحصاءات إنتاجية وتقارير قابلة للطباعة.',
+        'إدارة الموظفين والأدوار بصلاحيات دقيقة لكل وحدة (Patients, Appointments, Finance...).',
+        'توزيع المهام والتنبيهات الداخلية، ومعلومات بدائل الطوارئ.'
       ]
     },
     {
-      title: 'قسم المالية والمحاسبة',
+      title: 'الموردون والمشتريات',
       icon: <WalletIcon />,
       items: [
-        'لوحة الحسابات',
-        'المصروفات والإيرادات',
-        'حسابات الأطباء',
-        'التقارير المالية',
-        'إدارة متعددة الحسابات'
+        'إدارة موردين (مواد أو معامل) مع بيانات الدفع والعملة والضريبة.',
+        'تسجيل فواتير المورد ومدفوعات جزئية/كاملة مع مرفقات.',
+        'كشوف مورد قابلة للطباعة SupplierStatement وإجمالي الرصيد.',
+        'ربط المورد بأوامر الشراء واستهلاك المخزون والحالات المعملية.'
       ]
     },
     {
-      title: 'قسم المخزون والمستلزمات',
+      title: 'المخزون وأوامر الشراء',
       icon: <PackageIcon />,
       items: [
-        'إدارة المخزون',
-        'تنبيهات المخزون المنخفض',
-        'أوامر الشراء التلقائية',
-        'إدارة الموردين',
-        'تتبع المشتريات والفواتير'
+        'تتبع الكميات وحد إعادة الطلب والباركود والجرد السريع.',
+        'تنبيه نقص الكمية مع زر فوري لإنشاء أمر شراء.',
+        'CreatePurchaseOrderModal لتجميع البنود والأسعار والضرائب والخصم.',
+        'طباعة أمر الشراء PDF عبر PurchaseOrderPrintable.',
+        'استلام جزئي/كامل يحدّث المخزون ويغلق الطلبية حسب الكميات المستلمة.'
       ]
     },
     {
-      title: 'قسم المعامل dentist labCases',
+      title: 'حالات المعمل',
       icon: <LabIcon />,
       items: [
-        'إدارةCases dentist labdentistlabdentistlab الصادرة والواردة',
-        'تتبع حالة كل case',
-        'كشف حساب lab dentist'
+        'إنشاء Lab Case مرتبطة بالمريض والطبيب والمورد/المعمل.',
+        'مراحل تصنيع وتسليم مع مواعيد متوقعة وحالة تأخير.',
+        'تتبع التكلفة وربطها بالحسابات وكشوف المعمل LabStatement.',
+        'تنبيهات للحالات المتأخرة ولوحة متابعة للحالة الحالية.'
       ]
     },
     {
-      title: 'قسم التأمين',
-      icon: <ShieldIcon />,
-      items: [
-        'شركات التأمين',
-        'حسابات التأمين',
-        'معاملات التأمين',
-        'ربط المرضى بالتأمين',
-        'ربط العلاجات بالتأمين',
-        'متابعة حالة المطالبات',
-        'تقارير التأمين'
-      ]
-    },
-    {
-      title: 'قسم الإعدادات',
+      title: 'الوصفات الطبية',
       icon: <SettingsIcon />,
       items: [
-        'إعدادات العيادة',
-        'تعريف أنواع العلاجات والأسعار',
-        'الوضع الفاتح والداكن',
-        'دعم العربية والإنجليزية',
-        'تفضيلات المستخدم',
-        'إعدادات الإشعارات والطباعة'
+        'إنشاء وصفة بعدة أدوية (اسم، جرعة، تكرار، ملاحظات) داخل ملف المريض.',
+        'حفظ الوصفة وإعادة استخدامها وتعديلها بسرعة.',
+        'طباعة/إرسال الوصفة PDF وتخزينها كمرفق في السجل الطبي.'
       ]
     },
     {
-      title: 'قسم التقارير والإحصائيات',
+      title: 'المالية والحسابات',
+      icon: <WalletIcon />,
+      items: [
+        'حسابات مالية للأطباء والموردين والمعامل مع أرصدة ومعاملات.',
+        'فواتير، مطالبات، ومدفوعات تظهر في كشوف قابلة للطباعة.',
+        'DoctorAccountsManagement وFinancialAccounts لعرض وتحليل الحركات.',
+        'دعم المدفوعات الجزئية، الإيصالات، وتصدير البيانات.'
+      ]
+    },
+    {
+      title: 'التأمين',
+      icon: <ShieldIcon />,
+      items: [
+        'إدارة شركات التأمين وربط المرضى والإجراءات بالتغطية.',
+        'InsuranceManagementPage للتأمين الموحد والتقارير القابلة للطباعة.',
+        'صفحات ربط المريض/العلاج بالتأمين لضبط نسب التغطية والمطالبة.',
+        'مطالبات وتأمينات تظهر في الحسابات والتقارير المالية.'
+      ]
+    },
+    {
+      title: 'التقارير والتحليلات',
       icon: <ChartIcon />,
       items: [
-        'لوحة التقارير الشاملة',
-        'تقرير المرضى والأطباء',
-        'التقارير المالية',
-        'تقرير الموردين',
-        'طباعة التقارير'
+        'ReportsPage وComprehensiveClinicReportPage لملخصات مالية وسريرية.',
+        'تقارير مورد/معمل/تأمين/أطباء قابلة للتصدير PDF.',
+        'مؤشرات حضور المواعيد والإيرادات والمصروفات واستهلاك الكراسي.',
+        'قوالب طباعة موحدة مع هوية العيادة.'
       ]
     },
     {
-      title: 'قسم الإشعارات',
+      title: 'الإشعارات والتواصل',
       icon: <BellIcon />,
       items: [
-        'إشعارات المواعيد',
-        'إشعارات المخزون',
-        'إشعاراتCases dentist lab',
-        'الإشعارات العاجلة',
-        'صندوق الإشعارات'
+        'مركز إشعارات يدعم SMS/WhatsApp/Email عبر NotificationContext.',
+        'تذكير مواعيد، قبول/رفض حجز، نقص مخزون، تأخير Lab، وتنبيهات أمنية.',
+        'تفضيلات المستخدم لموضع الجرس والكتم المؤقت والقناة المفضلة.'
+      ]
+    },
+    {
+      title: 'الإعدادات والفروع والهوية',
+      icon: <SettingsIcon />,
+      items: [
+        'ClinicManagementPage لضبط بيانات العيادة والفروع وربط المخزون بكل فرع.',
+        'تخصيص الشعار والألوان وقوالب الفواتير والوصفات والموافقات.',
+        'إعدادات تعدد الفروع وربط الصلاحيات والمخزون والصادر والوارد لكل فرع.',
+        'إدارة المستخدمين والأدوار عبر UserManagement وRBAC.'
       ]
     }
   ];
 
   const techFeatures = [
-    'نظام أمان متقدم وتسجيل الدخول الآمن',
-    'تحكم بالوصول وصلاحيات دقيق (RBAC)',
-    'الوضع الداكن',
-    'دعم اللغات (العربية والإنجليزية)',
-    'تصميم متجاوب لجميع الأجهزة',
-    'نظام إشعارات ذكي',
-    'لوحة معلومات إحصائيات real-time'
+    'منصة سحابية آمنة قابلة للتدرج تدعم العمل من أي مكان.',
+    'تحكم دقيق بالأدوار والصلاحيات (RBAC) مدمج في جميع الوحدات.',
+    'تصميم متجاوب يعمل بسلاسة على الحاسب والتابلت والموبايل.',
+    'تكامل مع Supabase/PostgreSQL، Tailwind CSS، و React Context.',
+    'بنية مكونات قابلة لإعادة الاستخدام لتسريع تطوير المزايا الجديدة.',
+    'نظام إشعارات آنية (real-time) لتحسين سرعة الاستجابة.',
+    'حزم جاهزة للتكامل مع مزودي الدفع والرسائل القصيرة.'
+  ];
+
+  const benefits = [
+    'تسريع سير العمل الإداري وتقليل الأخطاء اليدوية في الحجز والفوترة.',
+    'رفع رضا المرضى عبر حجز إلكتروني سلس وتذكيرات تلقائية.',
+    'وضوح مالي لحظي يدعم القرار (أطباء، موردون، تأمين، معمل).',
+    'حماية بيانات المرضى والامتثال لممارسات الخصوصية الطبية.',
+    'قابلية توسع تدعم تعدد الفروع ونمو العيادة دون تعقيد.'
+  ];
+
+  const founders: Founder[] = [
+    { name: 'Dr. Mohamed Alafandy', role: 'Founder & Product Strategy', photoUrl: '/founders/alafandy.jpg' },
+    { name: 'Dr. Sherif Gamal', role: 'Co-Founder & Clinical Advisor', photoUrl: '/founders/sherif-gamal.jpg' },
+    { name: 'Asmaa Toson', role: 'Co-Founder & Operations', photoUrl: '/founders/asmaa-toson.jpg' }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 md:p-8">
+    <div dir={direction} className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-600 rounded-3xl shadow-lg shadow-purple-500/30 mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-white dark:bg-slate-800 rounded-3xl shadow-lg shadow-purple-500/30 ring-2 ring-violet-100 dark:ring-violet-800/60 mb-6 overflow-hidden">
+            <img
+              src="/logo.svg"
+              alt="CuraDent Logo"
+              className="w-16 h-16 object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-4">
-            كيورا دنت | CuraDent
+            كـيـورا دِنت | CuraDent
           </h1>
-          <p className="text-xl text-violet-600 dark:text-violet-400 font-medium mb-4">
-            نظام إدارة عيادات الأسنان
+          <p className="text-xl text-violet-600 dark:text-violet-400 font-medium mb-3">
+            حل متكامل لإدارة عيادات الأسنان
           </p>
           <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-            نظام متكامل لإدارة عيادات طب الأسنان، يوفر حلاً شاملاً لإدارة المرضى والمواعيد والمالية والمخزون في مكان واحد
+            منصة واحدة تشمل المواعيد، السجلات الطبية، الفوترة، المخزون، حالات المعمل، التأمين، والتقارير مع أمان عالٍ وتجربة سلسة للفريق والمرضى.
           </p>
+          <div className="flex flex-col items-center gap-3 mt-6">
+            {founders.map((founder) => (
+              <FounderBadge key={founder.name} founder={founder} />
+            ))}
+          </div>
         </div>
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {sections.map((section, index) => (
-            <FeatureItem
-              key={index}
-              icon={section.icon}
-              title={section.title}
-              items={section.items}
-            />
+            <FeatureItem key={index} icon={section.icon} title={section.title} items={section.items} />
           ))}
+        </div>
+
+        {/* Benefits */}
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-8 shadow-xl mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <InfoIcon />
+            <h2 className="text-2xl font-bold text-white">فوائد مباشرة للعيادة</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {benefits.map((benefit, index) => (
+              <div key={index} className="flex items-start gap-2 text-white/90">
+                <CheckIcon />
+                <span>{benefit}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Technical Features */}
@@ -296,7 +374,7 @@ const AboutPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center mt-12 text-slate-500 dark:text-slate-400">
-          <p className="font-medium">كيورا دنت | CuraDent - الحل الأمثل لإدارة عيادات الأسنان بكفاءة واحترافية</p>
+          <p className="font-medium">CuraDent - الحل الأمثل لإدارة عيادات الأسنان بكفاءة واحترافية</p>
           <p className="text-sm mt-2">© 2024 جميع الحقوق محفوظة</p>
         </div>
       </div>

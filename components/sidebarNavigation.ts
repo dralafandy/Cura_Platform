@@ -52,7 +52,7 @@ const SIDEBAR_GROUP_DEFINITIONS: ReadonlyArray<SidebarGroupDefinition> = [
   },
 ] as const;
 
-export const SIDEBAR_DEFAULT_EXPANDED_GROUPS = SIDEBAR_GROUP_DEFINITIONS.map(
+export const SIDEBAR_DEFAULT_COLLAPSED_GROUPS = SIDEBAR_GROUP_DEFINITIONS.map(
   (group) => group.id,
 ) as SidebarGroupId[];
 
@@ -61,7 +61,7 @@ export const SIDEBAR_RECENT_LIMIT = 4;
 export const SIDEBAR_STORAGE_KEYS = {
   pinned: 'sidebar-pinned-items',
   recent: 'sidebar-recent-items',
-  collapsedGroups: 'sidebar-collapsed-groups-v2',
+  collapsedGroups: 'sidebar-collapsed-groups-v3',
 } as const;
 
 export function buildSidebarGroups<T extends { id: string }>(
