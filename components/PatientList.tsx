@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ClinicData } from '../hooks/useClinicData';
 import { Patient, NotificationType, View, Permission, UserRole } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
 import AddEditPatientModal from './patient/AddEditPatientModal';
 import { useI18n } from '../hooks/useI18n';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../supabaseClient';
 
 // Modern Icons with Gold + Purple theme
 const SearchIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
@@ -122,7 +123,7 @@ const PatientCardSkeleton = () => (
     </div>
 );
 
-const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData; canEdit?: boolean; canDelete?: boolean }> = ({ patient, onSelect, onEdit, onDelete, clinicData, canEdit = false, canDelete = false }) => {
+const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit: () => void; onDelete: () => void; clinicData: ClinicData; canEdit?: boolean; canDelete?: boolean; insuranceLink?: { patientId: string; companyName: string } }> = ({ patient, onSelect, onEdit, onDelete, clinicData, canEdit = false, canDelete = false, insuranceLink }) => {
     const { t } = useI18n();
     const { hasPermission } = useAuth();
     const [expanded, setExpanded] = useState(false);
@@ -199,6 +200,15 @@ const PatientListItem: React.FC<{ patient: Patient; onSelect: () => void; onEdit
                                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 ring-2 ring-white dark:ring-slate-800 shadow-sm" title={t('patientList.noBalance')}></div>
                                 )}
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{patient.name}</h3>
+                                {/* Insurance Icon */}
+                                {insuranceLink && (
+                                    <div className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg px-2 py-0.5" title={insuranceLink.companyName}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{insuranceLink.companyName}</span>
+                                    </div>
+                                )}
                             </div>
                             
                             {/* Outstanding Balance Badge */}
@@ -354,7 +364,12 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const { patients, addPatient, updatePatient, deletePatient, payments, treatmentRecords } = clinicData;
     const { addNotification } = useNotification();
     const { t, locale } = useI18n();
-    const { userProfile } = useAuth();
+    const { userProfile, currentClinic, accessibleClinics } = useAuth();
+    
+    const activeClinicId = useMemo(
+        () => currentClinic?.id || accessibleClinics.find((c) => c.isDefault)?.clinicId || accessibleClinics[0]?.clinicId || null,
+        [currentClinic, accessibleClinics]
+    );
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -362,6 +377,31 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
     const [sortBy, setSortBy] = useState<'name' | 'balance' | 'lastVisit'>('lastVisit');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [timelineModalPatient, setTimelineModalPatient] = useState<Patient | null>(null);
+    const [patientInsuranceLinks, setPatientInsuranceLinks] = useState<{ patientId: string; companyName: string }[]>([]);
+    
+    // Load insurance links
+    useEffect(() => {
+        const loadInsuranceLinks = async () => {
+            if (!supabase || !activeClinicId) return;
+            try {
+                const { data, error } = await supabase
+                    .from('patient_insurance_link')
+                    .select('patient_id, insurance_companies(name)')
+                    .eq('clinic_id', activeClinicId);
+                if (error) throw error;
+                if (data) {
+                    const links = data.map((item: any) => ({
+                        patientId: item.patient_id,
+                        companyName: item.insurance_companies?.name || ''
+                    })).filter((link: any) => link.companyName);
+                    setPatientInsuranceLinks(links);
+                }
+            } catch (err) {
+                console.error('Failed to load insurance links:', err);
+            }
+        };
+        void loadInsuranceLinks();
+    }, [activeClinicId]);
     
     const currencyFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
@@ -389,16 +429,20 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
         return patients.filter(p => linkedPatientIds.has(p.id));
     }, [userProfile?.role, linkedDoctorId, patients, clinicData.appointments, treatmentRecords]);
 
-    const handleSavePatient = useCallback((patientData: Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'> | Patient) => {
+    const handleSavePatient = useCallback(async (patientData: Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'> | Patient): Promise<string | null> => {
         if ('id' in patientData && patientData.id) {
-            updatePatient(patientData as Patient);
+            await updatePatient(patientData as Patient);
             addNotification({ message: t('notifications.patientUpdated'), type: NotificationType.SUCCESS });
+            setIsAddEditModalOpen(false);
+            setPatientToEdit(undefined);
+            return patientData.id;
         } else {
-            addPatient(patientData as Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'>);
+            const newPatientId = await addPatient(patientData as Omit<Patient, 'id' | 'dentalChart' | 'treatmentRecords'>);
             addNotification({ message: t('notifications.patientAdded'), type: NotificationType.SUCCESS });
+            setIsAddEditModalOpen(false);
+            setPatientToEdit(undefined);
+            return newPatientId;
         }
-        setIsAddEditModalOpen(false);
-        setPatientToEdit(undefined);
     }, [addNotification, updatePatient, addPatient, t]);
 
     const handleDeletePatient = useCallback((patient: Patient) => {
@@ -566,23 +610,27 @@ const PatientList: React.FC<{ clinicData: ClinicData; setCurrentView: (view: Vie
 
             <div className="space-y-4">
                 {filteredPatients.length > 0 ? (
-                    filteredPatients.map(patient => (
-                        <PatientListItem
-                            key={patient.id}
-                            patient={patient}
-                            onSelect={() => {
-                                setCurrentView('patient-details');
-                                setSelectedPatientId(patient.id);
-                                window.scrollTo(0, 0);
-                            }}
-                            onEdit={() => {
-                                setPatientToEdit(patient);
-                                setIsAddEditModalOpen(true);
-                            }}
-                            onDelete={() => handleDeletePatient(patient)}
-                            clinicData={clinicData}
-                        />
-                    ))
+                    filteredPatients.map(patient => {
+                        const insuranceLink = patientInsuranceLinks.find(link => link.patientId === patient.id);
+                        return (
+                            <PatientListItem
+                                key={patient.id}
+                                patient={patient}
+                                onSelect={() => {
+                                    setCurrentView('patient-details');
+                                    setSelectedPatientId(patient.id);
+                                    window.scrollTo(0, 0);
+                                }}
+                                onEdit={() => {
+                                    setPatientToEdit(patient);
+                                    setIsAddEditModalOpen(true);
+                                }}
+                                onDelete={() => handleDeletePatient(patient)}
+                                clinicData={clinicData}
+                                insuranceLink={insuranceLink}
+                            />
+                        );
+                    })
                 ) : (
                     <div className="text-center py-12">
                         <div className="bg-gradient-to-br from-purple-50 to-amber-50 dark:from-purple-900/20 dark:to-amber-900/20 p-8 rounded-2xl inline-block mb-4 border border-purple-100 dark:border-purple-800">

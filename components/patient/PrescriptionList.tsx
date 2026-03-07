@@ -854,7 +854,7 @@ const PrescriptionList: React.FC<{
                                         </button>
                                         <button
                                             onClick={() => setSelectedPrescription(prescription)}
-                                            className="flex-1 sm:flex-none bg-primary text-white px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 rounded-lg hover:bg-primary-dark transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm font-medium active:scale-95"
+                                            className="flex-1 sm:flex-none bg-purple-600 text-white px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 rounded-lg hover:bg-purple-700 transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm font-medium active:scale-95"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

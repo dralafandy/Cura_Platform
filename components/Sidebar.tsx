@@ -122,6 +122,14 @@ const StatisticsIcon = ({ isActive }: { isActive: boolean }) => (
   </svg>
 );
 
+const PrintIcon = ({ isActive }: { isActive: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 6 2 18 2 18 9" />
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <rect x="6" y="14" width="12" height="8" />
+  </svg>
+);
+
 const AboutIcon = ({ isActive }: { isActive: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -262,7 +270,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'settings', label: t('sidebar.settings'), icon: SettingsIcon, permission: Permission.SETTINGS_VIEW, adminOnly: false },
       { id: 'about', label: 'عن البرنامج', icon: AboutIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: null, adminOnly: true },
-      { id: 'clinicManagement', label: 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW },
+      { id: 'clinicManagement', label: 'Clinic & Branches', icon: ClinicIcon, permission: Permission.CLINIC_BRANCH_VIEW, adminOnly: false },
       { id: 'subscriptionOverview', label: locale === 'ar' ? 'الاشتراك والباقات' : 'Subscription', icon: SubscriptionIcon, permission: null, adminOnly: true },
     ];
 

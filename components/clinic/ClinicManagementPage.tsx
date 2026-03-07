@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useI18n } from '../../hooks/useI18n';
 import { NotificationType, Permission, UserRole } from '../../types';
 
 type AccessTable = 'user_clinics' | 'user_clinic_access';
@@ -97,6 +98,7 @@ const assignmentDefaultForm = {
 const ClinicManagementPage: React.FC = () => {
   const { user, isAdmin, hasPermission, accessibleClinics } = useAuth();
   const { addNotification } = useNotification();
+  const { t, locale } = useI18n();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -358,7 +360,7 @@ const ClinicManagementPage: React.FC = () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      notifyError('Failed to load clinics', error.message);
+      notifyError(t('clinicManagement.feedback.loadClinicsFailed'), error.message);
       return;
     }
 
@@ -386,7 +388,7 @@ const ClinicManagementPage: React.FC = () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      notifyError('Failed to load branches', error.message);
+      notifyError(t('clinicManagement.feedback.loadBranchesFailed'), error.message);
       return;
     }
 
@@ -406,7 +408,7 @@ const ClinicManagementPage: React.FC = () => {
       .order('created_at', { ascending: false });
 
     if (selfScoped.error) {
-      notifyError('Failed to load users', selfScoped.error.message);
+      notifyError(t('clinicManagement.feedback.loadUsersFailed'), selfScoped.error.message);
       return;
     }
 
@@ -437,7 +439,7 @@ const ClinicManagementPage: React.FC = () => {
       }
 
       if (!isTableMissingError(fromView.error.message)) {
-        notifyError('Failed to load user assignments', fromView.error.message);
+        notifyError(t('clinicManagement.feedback.loadAssignmentsFailed'), fromView.error.message);
       }
 
       const raw = await supabase
@@ -447,7 +449,7 @@ const ClinicManagementPage: React.FC = () => {
         .eq('user_id', user.id);
 
       if (raw.error) {
-        notifyError('Failed to load user assignments', raw.error.message);
+        notifyError(t('clinicManagement.feedback.loadAssignmentsFailed'), raw.error.message);
         return;
       }
 
@@ -547,13 +549,13 @@ const ClinicManagementPage: React.FC = () => {
   const createClinic = async () => {
     if (!supabase || !user?.id) return;
     if (!clinicForm.name.trim()) {
-      addNotification({ message: 'Clinic name is required', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.clinicNameRequired'), type: NotificationType.WARNING });
       return;
     }
     if (clinicSupportsTenantId && !userTenantId) {
       notifyError(
-        'Cannot create clinic without tenant context',
-        'Current admin account has no tenant_id. Link tenant first, then create clinic.',
+        t('clinicManagement.feedback.missingTenantTitle'),
+        t('clinicManagement.feedback.missingTenantMessage'),
       );
       return;
     }
@@ -588,11 +590,11 @@ const ClinicManagementPage: React.FC = () => {
     if (insert.error || !insert.data) {
       if (isRlsError(insert.error?.message)) {
         notifyError(
-          'Clinic creation blocked by database policy. Create a secure RPC for clinic bootstrap/ownership first',
+          t('clinicManagement.feedback.createClinicBlocked'),
           insert.error?.message,
         );
       } else {
-        notifyError('Failed to create clinic', insert.error?.message);
+        notifyError(t('clinicManagement.feedback.createClinicFailed'), insert.error?.message);
       }
       setSaving(false);
       return;
@@ -628,10 +630,10 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     if (assignmentResult.error && !isRlsError(assignmentResult.error.message)) {
-      notifyError('Clinic created but owner assignment failed', assignmentResult.error.message);
+      notifyError(t('clinicManagement.feedback.ownerAssignmentFailed'), assignmentResult.error.message);
     }
 
-    addNotification({ message: 'Clinic created successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.clinicCreated'), type: NotificationType.SUCCESS });
     resetClinicForm();
     await fetchClinics();
     setSelectedClinicId(createdClinic.id);
@@ -642,7 +644,7 @@ const ClinicManagementPage: React.FC = () => {
   const updateClinic = async () => {
     if (!supabase || !editingClinicId || !user?.id) return;
     if (!clinicForm.name.trim()) {
-      addNotification({ message: 'Clinic name is required', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.clinicNameRequired'), type: NotificationType.WARNING });
       return;
     }
 
@@ -662,12 +664,12 @@ const ClinicManagementPage: React.FC = () => {
       .eq('id', editingClinicId);
 
     if (error) {
-      notifyError('Failed to update clinic', error.message);
+      notifyError(t('clinicManagement.feedback.updateClinicFailed'), error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Clinic updated successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.clinicUpdated'), type: NotificationType.SUCCESS });
     resetClinicForm();
     await fetchClinics();
     setSaving(false);
@@ -675,17 +677,17 @@ const ClinicManagementPage: React.FC = () => {
 
   const deleteClinic = async (id: string) => {
     if (!supabase) return;
-    if (!window.confirm('Delete this clinic? This may fail if related records exist.')) return;
+    if (!window.confirm(t('clinicManagement.feedback.confirmDeleteClinic'))) return;
 
     setSaving(true);
     const { error } = await supabase.from('clinics').delete().eq('id', id);
     if (error) {
-      notifyError('Failed to delete clinic', error.message);
+      notifyError(t('clinicManagement.feedback.deleteClinicFailed'), error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Clinic deleted successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.clinicDeleted'), type: NotificationType.SUCCESS });
     await fetchClinics();
     setSaving(false);
   };
@@ -693,11 +695,11 @@ const ClinicManagementPage: React.FC = () => {
   const createBranch = async () => {
     if (!supabase || !user?.id) return;
     if (!selectedClinicId) {
-      addNotification({ message: 'Select a clinic first', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.selectClinicFirst'), type: NotificationType.WARNING });
       return;
     }
     if (!branchForm.name.trim()) {
-      addNotification({ message: 'Branch name is required', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.branchNameRequired'), type: NotificationType.WARNING });
       return;
     }
 
@@ -725,12 +727,12 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     if (branchInsert.error) {
-      notifyError('Failed to create branch', branchInsert.error.message);
+      notifyError(t('clinicManagement.feedback.createBranchFailed'), branchInsert.error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Branch created successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.branchCreated'), type: NotificationType.SUCCESS });
     resetBranchForm();
     await fetchBranches();
     setSaving(false);
@@ -739,7 +741,7 @@ const ClinicManagementPage: React.FC = () => {
   const updateBranch = async () => {
     if (!supabase || !editingBranchId || !user?.id) return;
     if (!branchForm.name.trim()) {
-      addNotification({ message: 'Branch name is required', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.branchNameRequired'), type: NotificationType.WARNING });
       return;
     }
 
@@ -761,12 +763,12 @@ const ClinicManagementPage: React.FC = () => {
       .eq('id', editingBranchId);
 
     if (error) {
-      notifyError('Failed to update branch', error.message);
+      notifyError(t('clinicManagement.feedback.updateBranchFailed'), error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Branch updated successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.branchUpdated'), type: NotificationType.SUCCESS });
     resetBranchForm();
     await fetchBranches();
     setSaving(false);
@@ -774,29 +776,29 @@ const ClinicManagementPage: React.FC = () => {
 
   const deleteBranch = async (id: string) => {
     if (!supabase) return;
-    if (!window.confirm('Delete this branch?')) return;
+    if (!window.confirm(t('clinicManagement.feedback.confirmDeleteBranch'))) return;
 
     setSaving(true);
     const { error } = await supabase.from('clinic_branches').delete().eq('id', id);
     if (error) {
-      notifyError('Failed to delete branch', error.message);
+      notifyError(t('clinicManagement.feedback.deleteBranchFailed'), error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Branch deleted successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.branchDeleted'), type: NotificationType.SUCCESS });
     await fetchBranches();
     setSaving(false);
   };
 
   const assignUserToClinic = async () => {
     if (!supabase || !selectedClinicId || !assignmentForm.user_id) {
-      addNotification({ message: 'Select a user first', type: NotificationType.WARNING });
+      addNotification({ message: t('clinicManagement.feedback.selectUserFirst'), type: NotificationType.WARNING });
       return;
     }
     if (!user?.id || assignmentForm.user_id !== user.id) {
       addNotification({
-        message: 'Account isolation is enabled. You can assign only your own user.',
+        message: t('clinicManagement.feedback.assignOwnUserOnly'),
         type: NotificationType.ERROR,
       });
       return;
@@ -833,12 +835,12 @@ const ClinicManagementPage: React.FC = () => {
     }
 
     if (result.error) {
-      notifyError('Failed to assign user', result.error.message);
+      notifyError(t('clinicManagement.feedback.assignUserFailed'), result.error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'User assigned successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.userAssigned'), type: NotificationType.SUCCESS });
     resetAssignmentForm();
     await fetchAssignments(accessTable);
     setSaving(false);
@@ -848,12 +850,12 @@ const ClinicManagementPage: React.FC = () => {
     if (!supabase) return;
     if (!user?.id || row.user_id !== user.id) {
       addNotification({
-        message: 'Account isolation is enabled. You can remove only your own assignment.',
+        message: t('clinicManagement.feedback.removeOwnAssignmentOnly'),
         type: NotificationType.ERROR,
       });
       return;
     }
-    if (!window.confirm('Remove this user assignment?')) return;
+    if (!window.confirm(t('clinicManagement.feedback.confirmRemoveAssignment'))) return;
 
     setSaving(true);
 
@@ -871,22 +873,77 @@ const ClinicManagementPage: React.FC = () => {
 
     const { error } = await query;
     if (error) {
-      notifyError('Failed to remove assignment', error.message);
+      notifyError(t('clinicManagement.feedback.removeAssignmentFailed'), error.message);
       setSaving(false);
       return;
     }
 
-    addNotification({ message: 'Assignment removed successfully', type: NotificationType.SUCCESS });
+    addNotification({ message: t('clinicManagement.feedback.assignmentRemoved'), type: NotificationType.SUCCESS });
     await fetchAssignments(accessTable);
     setSaving(false);
   };
 
+  const selectedClinic = clinics.find((clinic) => clinic.id === selectedClinicId) || null;
+  const selectedClinicBranches = branchOptions;
+  const selectedClinicAssignments = assignments;
+  const activeClinicsCount = clinics.filter((clinic) => (clinic.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
+  const activeBranchesCount = branches.filter((branch) => branch.is_active ?? true).length;
+  const defaultAssignmentsCount = assignments.filter((assignment) => assignment.is_default).length;
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return t('clinicManagement.recentlyUpdated');
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return t('clinicManagement.recentlyUpdated');
+    return parsed.toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getStatusLabel = (status?: string | null) => t(`clinicManagement.status.${(status || 'ACTIVE').toUpperCase()}`);
+  const getBranchTypeLabel = (branchType?: string | null) => t(`clinicManagement.branchType.${(branchType || 'BRANCH').toUpperCase()}`);
+
+  const clinicStatusTone = (status?: string | null) => {
+    switch ((status || 'ACTIVE').toUpperCase()) {
+      case 'INACTIVE':
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200';
+      case 'SUSPENDED':
+        return 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200';
+      default:
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+    }
+  };
+
+  const branchTypeTone = (branchType?: string | null) => {
+    switch ((branchType || 'BRANCH').toUpperCase()) {
+      case 'MAIN':
+        return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200';
+      case 'VIRTUAL':
+        return 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200';
+      case 'MOBILE':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-200';
+      default:
+        return 'bg-slate-200 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200';
+    }
+  };
+
+  const panelClass =
+    'relative overflow-hidden rounded-[28px] border border-white/60 bg-white/90 p-5 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/85';
+  const softPanelClass =
+    'rounded-[24px] border border-slate-200/70 bg-slate-50/90 p-4 dark:border-slate-700/70 dark:bg-slate-800/55';
+  const inputClass =
+    'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:border-cyan-500 dark:focus:ring-cyan-500/10';
+  const labelClass = 'mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400';
+  const primaryButtonClass =
+    'inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400';
+  const secondaryButtonClass =
+    'inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700';
+  const dangerButtonClass =
+    'inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/20';
+
   if (!supabase) {
     return (
       <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-red-200 dark:border-red-900">
-        <h2 className="text-lg font-semibold text-red-700 dark:text-red-300">Supabase Not Configured</h2>
+        <h2 className="text-lg font-semibold text-red-700 dark:text-red-300">{t('clinicManagement.supabaseNotConfigured')}</h2>
         <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-          Clinic Management requires an active Supabase connection.
+          {t('clinicManagement.supabaseRequired')}
         </p>
       </div>
     );
@@ -895,368 +952,401 @@ const ClinicManagementPage: React.FC = () => {
   if (loading) {
     return (
       <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-        <p className="text-sm text-slate-600 dark:text-slate-300">Loading clinic management...</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{t('clinicManagement.loading')}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Clinic Management</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Rebuilt module: clinics, branches, and user assignments.
+      <section className={`${panelClass} bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.94),rgba(240,249,255,0.92))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.2),_transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(17,24,39,0.9))]`}>
+        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_center,_rgba(15,23,42,0.12),_transparent_60%)] lg:block dark:bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_60%)]" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <span className="inline-flex rounded-full border border-cyan-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-200">
+              {t('clinicManagement.badge')}
+            </span>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              {t('clinicManagement.heroTitle')}
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {t('clinicManagement.heroSubtitle')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refreshAll}
-            disabled={saving}
-            className="px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 disabled:opacity-60"
-          >
-            Refresh
-          </button>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
+            {[
+              { label: t('clinicManagement.summary.clinics'), value: clinics.length, note: `${activeClinicsCount} ${t('clinicManagement.summary.active')}`, tone: 'from-cyan-500/20 to-sky-500/10 text-cyan-900 dark:text-cyan-100' },
+              { label: t('clinicManagement.summary.branches'), value: branches.length, note: `${activeBranchesCount} ${t('clinicManagement.summary.active')}`, tone: 'from-emerald-500/20 to-teal-500/10 text-emerald-900 dark:text-emerald-100' },
+              { label: t('clinicManagement.summary.assignments'), value: assignments.length, note: `${defaultAssignmentsCount} ${t('clinicManagement.summary.default')}`, tone: 'from-violet-500/20 to-fuchsia-500/10 text-violet-900 dark:text-violet-100' },
+              { label: t('clinicManagement.summary.accessMode'), value: accessTable === 'user_clinic_access' ? t('clinicManagement.mode.new') : t('clinicManagement.mode.legacy'), note: accessTable, tone: 'from-slate-900/10 to-slate-700/5 text-slate-900 dark:text-slate-100' },
+            ].map((item) => (
+              <div key={item.label} className={`rounded-[22px] border border-white/70 bg-gradient-to-br ${item.tone} p-4 shadow-sm dark:border-slate-700/60`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{item.label}</p>
+                <p className="mt-3 text-2xl font-semibold">{item.value}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{item.note}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+        <div className="relative mt-6 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={refreshAll} disabled={saving} className={primaryButtonClass}>
+            {saving ? t('clinicManagement.saving') : t('clinicManagement.refreshWorkspace')}
+          </button>
+          <div className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+            {t('clinicManagement.tenantContext')}: <span className="font-mono text-[11px]">{userTenantId || t('clinicManagement.unavailable')}</span>
+          </div>
+          <div className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+            {t('clinicManagement.clinicSchema')}: {clinicSupportsTenantId ? t('clinicManagement.mode.tenantAware') : t('clinicManagement.mode.legacy')}
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Clinics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={clinicForm.name}
-              onChange={(e) => setClinicForm((s) => ({ ...s, name: e.target.value }))}
-              placeholder="Clinic Name"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={clinicForm.code}
-              onChange={(e) => setClinicForm((s) => ({ ...s, code: e.target.value }))}
-              placeholder="Code"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={clinicForm.address}
-              onChange={(e) => setClinicForm((s) => ({ ...s, address: e.target.value }))}
-              placeholder="Address"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={clinicForm.city}
-              onChange={(e) => setClinicForm((s) => ({ ...s, city: e.target.value }))}
-              placeholder="City"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={clinicForm.phone}
-              onChange={(e) => setClinicForm((s) => ({ ...s, phone: e.target.value }))}
-              placeholder="Phone"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={clinicForm.email}
-              onChange={(e) => setClinicForm((s) => ({ ...s, email: e.target.value }))}
-              placeholder="Email"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
+        <section className={panelClass}>
+          <div className={`${softPanelClass} bg-[linear-gradient(145deg,rgba(8,145,178,0.08),rgba(255,255,255,0.95))] dark:bg-[linear-gradient(145deg,rgba(8,145,178,0.14),rgba(15,23,42,0.78))]`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 dark:text-cyan-200">{t('clinicManagement.clinics.badge')}</p>
+            <h3 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{t('clinicManagement.clinics.title')}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {t('clinicManagement.clinics.subtitle')}
+            </p>
           </div>
-          <div className="mt-3">
-            <select
-              value={clinicForm.status}
-              onChange={(e) => setClinicForm((s) => ({ ...s, status: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-              <option value="SUSPENDED">SUSPENDED</option>
-            </select>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.clinicName')}</label>
+              <input value={clinicForm.name} onChange={(e) => setClinicForm((s) => ({ ...s, name: e.target.value }))} placeholder={t('clinicManagement.placeholder.clinicName')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.clinicCode')}</label>
+              <input value={clinicForm.code} onChange={(e) => setClinicForm((s) => ({ ...s, code: e.target.value }))} placeholder={t('clinicManagement.placeholder.clinicCode')} className={inputClass} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>{t('clinicManagement.form.address')}</label>
+              <input value={clinicForm.address} onChange={(e) => setClinicForm((s) => ({ ...s, address: e.target.value }))} placeholder={t('clinicManagement.placeholder.address')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.city')}</label>
+              <input value={clinicForm.city} onChange={(e) => setClinicForm((s) => ({ ...s, city: e.target.value }))} placeholder={t('clinicManagement.placeholder.city')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.status')}</label>
+              <select value={clinicForm.status} onChange={(e) => setClinicForm((s) => ({ ...s, status: e.target.value }))} className={inputClass}>
+                <option value="ACTIVE">{t('clinicManagement.status.ACTIVE')}</option>
+                <option value="INACTIVE">{t('clinicManagement.status.INACTIVE')}</option>
+                <option value="SUSPENDED">{t('clinicManagement.status.SUSPENDED')}</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.phone')}</label>
+              <input value={clinicForm.phone} onChange={(e) => setClinicForm((s) => ({ ...s, phone: e.target.value }))} placeholder={t('clinicManagement.placeholder.phone')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.email')}</label>
+              <input value={clinicForm.email} onChange={(e) => setClinicForm((s) => ({ ...s, email: e.target.value }))} placeholder={t('clinicManagement.placeholder.email')} className={inputClass} />
+            </div>
           </div>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              disabled={!canManageClinics || saving}
-              onClick={editingClinicId ? updateClinic : createClinic}
-              className="px-4 py-2 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-60"
-            >
-              {editingClinicId ? 'Update Clinic' : 'Create Clinic'}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="button" disabled={!canManageClinics || saving} onClick={editingClinicId ? updateClinic : createClinic} className={primaryButtonClass}>
+              {editingClinicId ? t('clinicManagement.actions.updateClinic') : t('clinicManagement.actions.createClinic')}
             </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={resetClinicForm}
-              className="px-4 py-2 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 disabled:opacity-60"
-            >
-              Clear
+            <button type="button" disabled={saving} onClick={resetClinicForm} className={secondaryButtonClass}>
+              {t('clinicManagement.actions.clearForm')}
             </button>
           </div>
-          <div className="mt-4 space-y-2 max-h-72 overflow-auto">
-            {clinics.map((clinic) => (
-              <div
-                key={clinic.id}
-                className={`p-3 rounded-lg border ${
-                  selectedClinicId === clinic.id
-                    ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
-                    : 'border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    className="text-left"
-                    onClick={() => setSelectedClinicId(clinic.id)}
-                  >
-                    <p className="font-medium text-slate-800 dark:text-slate-100">{clinic.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {clinic.code || 'No code'} | {clinic.status || 'ACTIVE'}
-                    </p>
-                  </button>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={!canManageClinics || saving}
-                      onClick={() => handleEditClinic(clinic)}
-                      className="text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800"
-                    >
-                      Edit
+          <div className="mt-6 space-y-3 max-h-[420px] overflow-auto pr-1">
+            {clinics.map((clinic) => {
+              const clinicBranches = branches.filter((branch) => branch.clinic_id === clinic.id);
+              const isSelected = selectedClinicId === clinic.id;
+
+              return (
+                <div
+                  key={clinic.id}
+                  className={`rounded-[24px] border p-4 transition ${
+                    isSelected
+                      ? 'border-cyan-300 bg-cyan-50/80 shadow-[0_20px_45px_-30px_rgba(8,145,178,0.7)] dark:border-cyan-500/40 dark:bg-cyan-500/10'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-[0_18px_40px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-800/55 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <button type="button" className="flex-1 text-left" onClick={() => setSelectedClinicId(clinic.id)}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-lg font-semibold text-white dark:bg-cyan-500 dark:text-slate-950">
+                          {clinic.name?.charAt(0)?.toUpperCase() || 'C'}
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-slate-900 dark:text-white">{clinic.name}</p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {clinic.city || t('clinicManagement.cityPending')} {clinic.code ? `- ${clinic.code}` : `- ${t('clinicManagement.noCode')}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${clinicStatusTone(clinic.status)}`}>
+                          {getStatusLabel(clinic.status)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600 dark:bg-slate-700/70 dark:text-slate-200">
+                          {clinicBranches.length} {t('clinicManagement.summary.branches')}
+                        </span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-slate-900/70">
+                          <p className="uppercase tracking-[0.22em]">{t('clinicManagement.form.phone')}</p>
+                          <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">{clinic.phone || t('clinicManagement.notSet')}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-slate-900/70">
+                          <p className="uppercase tracking-[0.22em]">{t('clinicManagement.updated')}</p>
+                          <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">{formatDate(clinic.created_at)}</p>
+                        </div>
+                      </div>
                     </button>
-                    <button
-                      type="button"
-                      disabled={!canManageClinics || saving}
-                      onClick={() => deleteClinic(clinic.id)}
-                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button type="button" disabled={!canManageClinics || saving} onClick={() => handleEditClinic(clinic)} className={secondaryButtonClass}>
+                        {t('common.edit')}
+                      </button>
+                      <button type="button" disabled={!canManageClinics || saving} onClick={() => deleteClinic(clinic.id)} className={dangerButtonClass}>
+                        {t('common.delete')}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {clinics.length === 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No clinics found.</p>
+              <div className={`${softPanelClass} text-sm text-slate-500 dark:text-slate-400`}>
+                {t('clinicManagement.empty.clinics')}
+              </div>
             )}
           </div>
         </section>
 
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Branches</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Selected clinic: {clinics.find((c) => c.id === selectedClinicId)?.name || 'None'}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={branchForm.name}
-              onChange={(e) => setBranchForm((s) => ({ ...s, name: e.target.value }))}
-              placeholder="Branch Name"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={branchForm.code}
-              onChange={(e) => setBranchForm((s) => ({ ...s, code: e.target.value }))}
-              placeholder="Code"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <select
-              value={branchForm.branch_type}
-              onChange={(e) => setBranchForm((s) => ({ ...s, branch_type: e.target.value }))}
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            >
-              <option value="MAIN">MAIN</option>
-              <option value="BRANCH">BRANCH</option>
-              <option value="MOBILE">MOBILE</option>
-              <option value="VIRTUAL">VIRTUAL</option>
-            </select>
-            <input
-              value={branchForm.city}
-              onChange={(e) => setBranchForm((s) => ({ ...s, city: e.target.value }))}
-              placeholder="City"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={branchForm.address}
-              onChange={(e) => setBranchForm((s) => ({ ...s, address: e.target.value }))}
-              placeholder="Address"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={branchForm.phone}
-              onChange={(e) => setBranchForm((s) => ({ ...s, phone: e.target.value }))}
-              placeholder="Phone"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-            <input
-              value={branchForm.email}
-              onChange={(e) => setBranchForm((s) => ({ ...s, email: e.target.value }))}
-              placeholder="Email"
-              className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
+        <section className={panelClass}>
+          <div className={`${softPanelClass} bg-[linear-gradient(145deg,rgba(16,185,129,0.08),rgba(255,255,255,0.96))] dark:bg-[linear-gradient(145deg,rgba(16,185,129,0.12),rgba(15,23,42,0.78))]`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-700 dark:text-emerald-200">{t('clinicManagement.branches.badge')}</p>
+            <h3 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{t('clinicManagement.branches.title')}</h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {selectedClinic
+                ? t('clinicManagement.branches.subtitleSelected', { clinic: selectedClinic.name })
+                : t('clinicManagement.branches.subtitleEmpty')}
+            </p>
           </div>
-          <div className="mt-3 flex gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={branchForm.is_active}
-                onChange={(e) => setBranchForm((s) => ({ ...s, is_active: e.target.checked }))}
-              />
-              Active
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+              <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.selectedClinic')}</p>
+              <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{selectedClinic?.name || t('clinicManagement.noneSelected')}</p>
+            </div>
+            <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+              <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.branchCount')}</p>
+              <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{selectedClinicBranches.length}</p>
+            </div>
+            <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+              <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.activeBranches')}</p>
+              <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{selectedClinicBranches.filter((branch) => branch.is_active ?? true).length}</p>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.branchName')}</label>
+              <input value={branchForm.name} onChange={(e) => setBranchForm((s) => ({ ...s, name: e.target.value }))} placeholder={t('clinicManagement.placeholder.branchName')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.code')}</label>
+              <input value={branchForm.code} onChange={(e) => setBranchForm((s) => ({ ...s, code: e.target.value }))} placeholder={t('clinicManagement.placeholder.branchCode')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.branchType')}</label>
+              <select value={branchForm.branch_type} onChange={(e) => setBranchForm((s) => ({ ...s, branch_type: e.target.value }))} className={inputClass}>
+                <option value="MAIN">{t('clinicManagement.branchType.MAIN')}</option>
+                <option value="BRANCH">{t('clinicManagement.branchType.BRANCH')}</option>
+                <option value="MOBILE">{t('clinicManagement.branchType.MOBILE')}</option>
+                <option value="VIRTUAL">{t('clinicManagement.branchType.VIRTUAL')}</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.city')}</label>
+              <input value={branchForm.city} onChange={(e) => setBranchForm((s) => ({ ...s, city: e.target.value }))} placeholder={t('clinicManagement.placeholder.city')} className={inputClass} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>{t('clinicManagement.form.address')}</label>
+              <input value={branchForm.address} onChange={(e) => setBranchForm((s) => ({ ...s, address: e.target.value }))} placeholder={t('clinicManagement.placeholder.branchAddress')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.phone')}</label>
+              <input value={branchForm.phone} onChange={(e) => setBranchForm((s) => ({ ...s, phone: e.target.value }))} placeholder={t('clinicManagement.placeholder.phone')} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('clinicManagement.form.email')}</label>
+              <input value={branchForm.email} onChange={(e) => setBranchForm((s) => ({ ...s, email: e.target.value }))} placeholder={t('clinicManagement.placeholder.branchEmail')} className={inputClass} />
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-300">
+            <label className="inline-flex items-center gap-3">
+              <input type="checkbox" checked={branchForm.is_active} onChange={(e) => setBranchForm((s) => ({ ...s, is_active: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+              {t('clinicManagement.actions.activeBranch')}
             </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={branchForm.is_main_branch}
-                onChange={(e) => setBranchForm((s) => ({ ...s, is_main_branch: e.target.checked }))}
-              />
-              Main Branch
+            <label className="inline-flex items-center gap-3">
+              <input type="checkbox" checked={branchForm.is_main_branch} onChange={(e) => setBranchForm((s) => ({ ...s, is_main_branch: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+              {t('clinicManagement.actions.mainBranch')}
             </label>
           </div>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              disabled={!canManageBranches || saving || !selectedClinicId}
-              onClick={editingBranchId ? updateBranch : createBranch}
-              className="px-4 py-2 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-60"
-            >
-              {editingBranchId ? 'Update Branch' : 'Create Branch'}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="button" disabled={!canManageBranches || saving || !selectedClinicId} onClick={editingBranchId ? updateBranch : createBranch} className={primaryButtonClass}>
+              {editingBranchId ? t('clinicManagement.actions.updateBranch') : t('clinicManagement.actions.createBranch')}
             </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={resetBranchForm}
-              className="px-4 py-2 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 disabled:opacity-60"
-            >
-              Clear
+            <button type="button" disabled={saving} onClick={resetBranchForm} className={secondaryButtonClass}>
+              {t('clinicManagement.actions.clearForm')}
             </button>
           </div>
-          <div className="mt-4 space-y-2 max-h-72 overflow-auto">
-            {branchOptions.map((branch) => (
-              <div key={branch.id} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-800 dark:text-slate-100">{branch.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {(branch.branch_type || 'BRANCH').toUpperCase()} | {branch.is_active ? 'ACTIVE' : 'INACTIVE'}
+          <div className="mt-6 space-y-3 max-h-[420px] overflow-auto pr-1">
+            {selectedClinicBranches.map((branch) => (
+              <div key={branch.id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-slate-900 dark:text-white">{branch.name}</p>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${branchTypeTone(branch.branch_type)}`}>
+                        {getBranchTypeLabel(branch.branch_type)}
+                      </span>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${branch.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200' : 'bg-slate-200 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200'}`}>
+                        {branch.is_active ? t('clinicManagement.status.ACTIVE') : t('clinicManagement.status.INACTIVE')}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                      {branch.address || t('clinicManagement.addressPending')}{branch.city ? `, ${branch.city}` : ''}
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      {branch.code && <span className="rounded-full bg-slate-100 px-3 py-1 font-mono dark:bg-slate-700/70">{branch.code}</span>}
+                      {branch.is_main_branch && <span className="rounded-full bg-cyan-100 px-3 py-1 font-semibold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200">{t('clinicManagement.actions.mainBranch')}</span>}
+                      <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-700/70">{branch.phone || t('clinicManagement.noPhone')}</span>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={!canManageBranches || saving}
-                      onClick={() => handleEditBranch(branch)}
-                      className="text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800"
-                    >
-                      Edit
+                  <div className="flex flex-col gap-2">
+                    <button type="button" disabled={!canManageBranches || saving} onClick={() => handleEditBranch(branch)} className={secondaryButtonClass}>
+                      {t('common.edit')}
                     </button>
-                    <button
-                      type="button"
-                      disabled={!canManageBranches || saving}
-                      onClick={() => deleteBranch(branch.id)}
-                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    >
-                      Delete
+                    <button type="button" disabled={!canManageBranches || saving} onClick={() => deleteBranch(branch.id)} className={dangerButtonClass}>
+                      {t('common.delete')}
                     </button>
                   </div>
                 </div>
               </div>
             ))}
-            {branchOptions.length === 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No branches for selected clinic.</p>
+            {selectedClinicBranches.length === 0 && (
+              <div className={`${softPanelClass} text-sm text-slate-500 dark:text-slate-400`}>
+                {t('clinicManagement.empty.branches')}
+              </div>
             )}
           </div>
         </section>
       </div>
 
-      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">User Assignments</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          Access table: <span className="font-mono">{accessTable}</span>
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <select
-            value={assignmentForm.user_id}
-            onChange={(e) => setAssignmentForm((s) => ({ ...s, user_id: e.target.value }))}
-            className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-          >
-            <option value="">Select User</option>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.username || p.email || p.id}
-              </option>
-            ))}
-          </select>
-          <select
-            value={assignmentForm.branch_id}
-            onChange={(e) => setAssignmentForm((s) => ({ ...s, branch_id: e.target.value }))}
-            className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-          >
-            <option value="">All Branches</option>
-            {branchOptions.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={assignmentForm.role_at_clinic}
-            onChange={(e) =>
-              setAssignmentForm((s) => ({ ...s, role_at_clinic: e.target.value as UserRole }))
-            }
-            className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-          >
-            {Object.values(UserRole).map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={saving || !selectedClinicId || !assignmentForm.user_id}
-            onClick={assignUserToClinic}
-            className="px-4 py-2 rounded-lg text-sm bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-60"
-          >
-            Assign User
-          </button>
+      <section className={panelClass}>
+        <div className={`${softPanelClass} bg-[linear-gradient(145deg,rgba(139,92,246,0.08),rgba(255,255,255,0.96))] dark:bg-[linear-gradient(145deg,rgba(139,92,246,0.14),rgba(15,23,42,0.78))]`}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-700 dark:text-violet-200">{t('clinicManagement.assignments.badge')}</p>
+              <h3 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{t('clinicManagement.assignments.title')}</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {t('clinicManagement.assignments.subtitle')}
+              </p>
+            </div>
+            <div className="rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+              {t('clinicManagement.accessTable')}: <span className="font-mono">{accessTable}</span>
+            </div>
+          </div>
         </div>
-        <label className="mt-3 inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={assignmentForm.is_default}
-            onChange={(e) => setAssignmentForm((s) => ({ ...s, is_default: e.target.checked }))}
-          />
-          Set as default clinic for user
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.summary.clinics')}</p>
+            <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{selectedClinic?.name || t('clinicManagement.noneSelected')}</p>
+          </div>
+          <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.summary.assignments')}</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{selectedClinicAssignments.length}</p>
+          </div>
+          <div className="rounded-[22px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/55">
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">{t('clinicManagement.defaultAccess')}</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">{selectedClinicAssignments.filter((assignment) => assignment.is_default).length}</p>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className={labelClass}>{t('clinicManagement.form.user')}</label>
+            <select value={assignmentForm.user_id} onChange={(e) => setAssignmentForm((s) => ({ ...s, user_id: e.target.value }))} className={inputClass}>
+              <option value="">{t('clinicManagement.selectUser')}</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.username || p.email || p.id}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>{t('clinicManagement.branchScope')}</label>
+            <select value={assignmentForm.branch_id} onChange={(e) => setAssignmentForm((s) => ({ ...s, branch_id: e.target.value }))} className={inputClass}>
+              <option value="">{t('clinicManagement.allBranches')}</option>
+              {selectedClinicBranches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>{t('clinicManagement.form.role')}</label>
+            <select value={assignmentForm.role_at_clinic} onChange={(e) => setAssignmentForm((s) => ({ ...s, role_at_clinic: e.target.value as UserRole }))} className={inputClass}>
+              {Object.values(UserRole).map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button type="button" disabled={saving || !selectedClinicId || !assignmentForm.user_id} onClick={assignUserToClinic} className={`${primaryButtonClass} w-full`}>
+              {t('clinicManagement.actions.assignUser')}
+            </button>
+          </div>
+        </div>
+        <label className="mt-4 inline-flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+          <input type="checkbox" checked={assignmentForm.is_default} onChange={(e) => setAssignmentForm((s) => ({ ...s, is_default: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+          {t('clinicManagement.actions.setDefaultClinic')}
         </label>
-        <div className="mt-4 space-y-2 max-h-80 overflow-auto">
-          {assignments.map((row) => {
+        <div className="mt-6 space-y-3 max-h-[420px] overflow-auto pr-1">
+          {selectedClinicAssignments.map((row) => {
             const profile = profiles.find((p) => p.id === row.user_id);
+
             return (
-              <div key={`${row.user_id}-${row.clinic_id}-${row.branch_id || 'all'}`} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {profile?.username || profile?.email || row.user_id}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Role: {(row.role_at_clinic || 'DOCTOR').toUpperCase()} | Branch:{' '}
-                      {row.branch_name || 'All'} | {row.access_active ? 'ACTIVE' : 'INACTIVE'}
+              <div key={`${row.user_id}-${row.clinic_id}-${row.branch_id || 'all'}`} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-slate-900 dark:text-white">{profile?.username || profile?.email || row.user_id}</p>
+                      <span className="rounded-full bg-violet-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                        {row.role_at_clinic || 'DOCTOR'}
+                      </span>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${row.access_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200' : 'bg-slate-200 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200'}`}>
+                        {row.access_active ? t('clinicManagement.status.ACTIVE') : t('clinicManagement.status.INACTIVE')}
+                      </span>
+                      {row.is_default && (
+                        <span className="rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200">
+                          {t('clinicManagement.summary.default')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                      {t('clinicManagement.branchScope')}: {row.branch_name || t('clinicManagement.allBranches')}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => removeAssignment(row)}
-                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                  >
-                    Remove
+                  <button type="button" disabled={saving} onClick={() => removeAssignment(row)} className={dangerButtonClass}>
+                    {t('clinicManagement.actions.remove')}
                   </button>
                 </div>
               </div>
             );
           })}
-          {assignments.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              No user assignments for selected clinic.
-            </p>
+          {selectedClinicAssignments.length === 0 && (
+            <div className={`${softPanelClass} text-sm text-slate-500 dark:text-slate-400`}>
+              {t('clinicManagement.empty.assignments')}
+            </div>
           )}
         </div>
       </section>

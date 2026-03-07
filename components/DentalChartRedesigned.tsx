@@ -204,7 +204,7 @@ const EditToothModal: React.FC<{
                 </main>
                 <footer className="p-5 bg-slate-50 dark:bg-slate-700/50 flex justify-end space-x-3 rounded-b-2xl">
                     <button onClick={onClose} className="px-5 py-2 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 transition-colors">{t('common.cancel')}</button>
-                    <button onClick={handleSave} className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors">{t('common.save')}</button>
+                    <button onClick={handleSave} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-colors">{t('common.save')}</button>
                 </footer>
             </div>
         </div>
@@ -260,7 +260,7 @@ const BulkEditModal: React.FC<{
                 </main>
                 <footer className="p-5 bg-slate-50 dark:bg-slate-700/50 flex justify-end space-x-3 rounded-b-2xl">
                     <button onClick={onClose} className="px-5 py-2 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-500 transition-colors">{t('common.cancel')}</button>
-                    <button onClick={handleSave} className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light transition-colors">{t('common.save')}</button>
+                    <button onClick={handleSave} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-colors">{t('common.save')}</button>
                 </footer>
             </div>
         </div>
@@ -370,10 +370,10 @@ const DentalChartRedesigned: React.FC<{
     return (
         <div className="space-y-6">
             {/* Modern Control Panel */}
-            <div className="bg-gradient-to-r from-primary to-primary-dark rounded-2xl shadow-lg p-4 flex flex-wrap gap-3 justify-center items-center">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-2xl shadow-lg p-4 flex flex-wrap gap-3 justify-center items-center">
                 <button
                     onClick={() => { setIsMultiSelectMode(!isMultiSelectMode); setSelectedTeeth([]); setSelectedToothId(null); }}
-                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${isMultiSelectMode ? 'bg-white text-primary shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${isMultiSelectMode ? 'bg-white text-purple-700 shadow-lg' : 'bg-slate-100 text-slate-800 hover:bg-white'}`}
                 >
                     {isMultiSelectMode ? t('dentalChart.exitMultiSelect') : t('dentalChart.multiSelect')}
                 </button>
@@ -389,7 +389,7 @@ const DentalChartRedesigned: React.FC<{
 
                 <button
                     onClick={() => setIsCompactView(!isCompactView)}
-                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${isCompactView ? 'bg-white text-primary shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${isCompactView ? 'bg-white text-purple-700 shadow-lg' : 'bg-slate-100 text-slate-800 hover:bg-white'}`}
                 >
                     {isCompactView ? t('dentalChart.exitCompactView') : t('dentalChart.compactView')}
                 </button>
@@ -401,14 +401,14 @@ const DentalChartRedesigned: React.FC<{
                     {t('dentalChart.exportChart')}
                 </button>
 
-                <div className="flex items-center gap-2 bg-white/20 p-2 rounded-lg">
+                <div className="flex items-center gap-2 bg-slate-100 text-slate-800 p-2 rounded-lg shadow-sm">
                     <input type="range" min="0.6" max="2" step="0.1" value={zoomLevel} onChange={(e) => setZoomLevel(parseFloat(e.target.value))} className="w-20" />
-                    <span className="text-white font-medium">{Math.round(zoomLevel * 100)}%</span>
+                    <span className="font-medium">{Math.round(zoomLevel * 100)}%</span>
                 </div>
 
                 <button
                     onClick={() => setShowLegend(!showLegend)}
-                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${showLegend ? 'bg-white text-primary shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+                    className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 ${showLegend ? 'bg-white text-purple-700 shadow-lg' : 'bg-slate-100 text-slate-800 hover:bg-white'}`}
                 >
                     {showLegend ? t('dentalChart.hideLegend') : t('dentalChart.showLegend')}
                 </button>

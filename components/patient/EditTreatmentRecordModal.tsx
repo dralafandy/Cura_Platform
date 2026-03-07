@@ -109,7 +109,7 @@ const EditTreatmentRecordModal: React.FC<EditTreatmentRecordModalProps> = ({
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-600 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 text-slate-700 dark:text-slate-200">
                             {t('common.cancel')}
                         </button>
-                        <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light shadow-md">
+                        <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-md">
                             {t('editTreatmentRecord.saveChanges')}
                         </button>
                     </footer>

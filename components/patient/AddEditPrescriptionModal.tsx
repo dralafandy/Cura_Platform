@@ -576,7 +576,7 @@ const AddEditPrescriptionModal: React.FC<AddEditPrescriptionModalProps> = ({ pre
                         <button
                             type="button"
                             onClick={onClose}
-                            className={`w-full sm:w-auto px-4 sm:px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center justify-center gap-2 shadow-sm text-sm sm:text-base ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-600 bg-slate-100 border-slate-300 hover:bg-slate-200 focus:ring-slate-300'}`}
+                            className={`w-full sm:w-auto px-4 sm:px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center justify-center gap-2 shadow-sm text-sm sm:text-base ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-700 bg-slate-100 border-slate-300 hover:bg-slate-200 hover:text-slate-900 focus:ring-slate-300'}`}
                         >
                             <CloseIcon />
                             {t('common.cancel')}
@@ -584,7 +584,7 @@ const AddEditPrescriptionModal: React.FC<AddEditPrescriptionModalProps> = ({ pre
 
                         <button
                             type="submit"
-                            className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 text-sm sm:text-base ${isDark ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/30 focus:ring-primary-400' : 'bg-primary hover:bg-primary-dark shadow-primary/30 focus:ring-primary-light focus:ring-offset-2'}`}
+                            className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 text-sm sm:text-base ${isDark ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30 focus:ring-purple-400' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/25 focus:ring-purple-400 focus:ring-offset-2'}`}
                         >
                             {prescription ? t('prescriptionModal.savePrescription') : t('prescriptionModal.createPrescription')}
                         </button>

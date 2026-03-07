@@ -10,8 +10,8 @@ import { useMemo } from 'react';
 
 // Icons
 const CloseIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
 
@@ -109,7 +109,7 @@ const TrashIcon = () => (
 interface AddEditPatientModalProps {
     patient?: Patient;
     onClose: () => void;
-    onSave: (patientData: Omit<Patient, 'id' | 'dentalChart'> | Patient) => void;
+    onSave: (patientData: Omit<Patient, 'id' | 'dentalChart'> | Patient) => Promise<string | null>;
 }
 
 interface FormSectionProps {
@@ -121,12 +121,12 @@ interface FormSectionProps {
 }
 
 const FormSection: React.FC<FormSectionProps> = ({ title, icon, children, className = '', isDark = false }) => (
-    <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 ${className}`}>
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
-            <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-primary/10 text-primary'}`}>
+    <div className={`rounded-xl p-4 sm:p-5 border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-purple-200 bg-purple-50'} ${className}`}>
+        <div className={`flex items-center gap-2 mb-4 pb-3 border-b ${isDark ? 'border-slate-700' : 'border-purple-200'}`}>
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary-300' : 'bg-purple-500 text-white'}`}>
                 {icon}
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200">{title}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{title}</h3>
         </div>
         {children}
     </div>
@@ -146,22 +146,23 @@ interface InputFieldProps {
     isTextarea?: boolean;
     rows?: number;
     isDark?: boolean;
+    autoFocus?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
-    id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = '', isTextarea, rows = 3, isDark = false
+    id, name, label, value, onChange, type = 'text', placeholder, required, icon, className = '', isTextarea, rows = 3, isDark = false, autoFocus = false
 }) => {
     const inputClasses = `
-        w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg
-        focus:ring-2 focus:ring-primary/20 focus:border-primary
+        w-full px-4 py-3 bg-white dark:bg-slate-700 border ${isDark ? 'border-slate-600' : 'border-purple-300'} rounded-lg
+        focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500
         transition-all duration-200 ease-in-out
-        placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200
+        placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200
         ${icon ? 'ps-12' : ''}
     `;
 
     return (
         <div className={`relative ${className}`}>
-            <label htmlFor={id} className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+            <label htmlFor={id} className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                 {label}
                 {required && <span className="text-red-500 mr-1">*</span>}
             </label>
@@ -186,10 +187,11 @@ const InputField: React.FC<InputFieldProps> = ({
                         placeholder={placeholder}
                         className={inputClasses}
                         required={required}
+                        autoFocus={autoFocus}
                     />
                 )}
                 {icon && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none flex-shrink-0">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-slate-500 pointer-events-none flex-shrink-0">
                         {icon}
                     </div>
                 )}
@@ -325,23 +327,31 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
             return;
         }
         
-        // Save patient first
-        await onSave(formData);
+        // Save patient first and get the patient ID
+        const patientId = await onSave(formData);
         
-        // Create insurance link if insurance is selected
-        if (selectedInsuranceId && patient?.id) {
+        // Create/update insurance link if insurance is selected
+        if (selectedInsuranceId && patientId) {
             try {
                 if (!supabase || !user?.id || !activeClinicId) return;
+                
+                // First delete existing insurance link for this patient
                 await supabase
                     .from('patient_insurance_link')
-                    .upsert({
-                        patient_id: patient.id,
+                    .delete()
+                    .eq('patient_id', patientId);
+                
+                // Then insert the new insurance link
+                await supabase
+                    .from('patient_insurance_link')
+                    .insert({
+                        patient_id: patientId,
                         insurance_company_id: selectedInsuranceId,
                         coverage_percentage: coveragePercentage,
                         policy_number: policyNumber || null,
                         user_id: user.id,
                         clinic_id: activeClinicId
-                    }, { onConflict: 'patient_id,insurance_company_id' });
+                    });
             } catch (err) {
                 console.error('Failed to save insurance link:', err);
             }
@@ -359,14 +369,14 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4" aria-modal="true" role="dialog">
             <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className={`px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-shrink-0 ${isDark ? 'bg-gradient-to-r from-slate-800 to-slate-900' : 'bg-gradient-to-r from-primary to-primary-dark'}`}>
+                <header className={`px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-shrink-0 ${isDark ? 'bg-gradient-to-r from-slate-800 to-slate-900' : 'bg-gradient-to-r from-purple-500 via-purple-600 to-purple-500'}`}>
                     <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 min-w-0">
                         <UserIcon />
                         <span className="truncate">{patient ? t('addPatientModal.editTitle') : t('addPatientModal.title')}</span>
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                        className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
                         aria-label={t('addPatientModal.closeAriaLabel')}
                     >
                         <CloseIcon />
@@ -374,7 +384,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                 </header>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0 overflow-x-auto">
+                <div className="flex border-b border-purple-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 flex-shrink-0 overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -382,12 +392,12 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                             className={`
                                 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200
                                 ${activeTab === tab.id
-                                    ? `text-primary border-b-2 ${isDark ? 'bg-slate-800 border-primary-400' : 'bg-white border-primary'}`
-                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                    ? `border-b-2 ${isDark ? 'bg-slate-800 text-purple-300 border-purple-400' : 'bg-purple-50 text-purple-700 border-purple-500'}`
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
                                 }
                             `}
                         >
-                            <span className={activeTab === tab.id ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}>
+                            <span className={activeTab === tab.id ? (isDark ? 'text-purple-300' : 'text-purple-600') : 'text-slate-400 dark:text-slate-500'}>
                                 {tab.icon}
                             </span>
 
@@ -413,6 +423,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                         required
                                         icon={<UserIcon />}
                                         isDark={isDark}
+                                        autoFocus
                                     />
                                     <InputField
                                         id="dob"
@@ -436,17 +447,17 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 name="gender"
                                                 value={formData.gender}
                                                 onChange={handleChange}
-                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 appearance-none"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200 appearance-none"
                                                 required
                                             >
                                                 <option value="Male">ذكر</option>
                                                 <option value="Female">أنثى</option>
                                             </select>
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-slate-500 pointer-events-none">
                                                 <GenderIcon />
                                             </div>
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                <svg className="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-4 h-4 text-purple-600 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                                 </svg>
                                             </div>
@@ -494,7 +505,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 onChange={handleChange}
                                                 placeholder="أدخل العنوان الكامل"
                                                 rows={3}
-                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                             />
                                             <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
                                                 <LocationIcon />
@@ -512,7 +523,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         <div className="space-y-5 animate-fadeIn">
                             <FormSection title="التاريخ الطبي" icon={<FileTextIcon />} isDark={isDark}>
                                 <div className="relative">
-                                        <label htmlFor="medicalHistory" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                        <label htmlFor="medicalHistory" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                         {t('addPatientModal.medicalHistory')}
                                     </label>
                                     <div className="relative">
@@ -523,9 +534,9 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.medicalHistoryPlaceholder')}
                                                 rows={4}
-                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                             />
-                                        <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                        <div className="absolute right-3 top-3 text-purple-600 dark:text-slate-500 pointer-events-none">
                                             <FileTextIcon />
                                         </div>
                                     </div>
@@ -536,7 +547,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                             <FormSection title="الحساسية والأدوية" icon={<HeartIcon />} isDark={isDark}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="relative">
-                                        <label htmlFor="allergies" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                        <label htmlFor="allergies" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                             {t('addPatientModal.allergies')}
                                         </label>
                                         <div className="relative">
@@ -546,16 +557,16 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 value={formData.allergies}
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.allergiesPlaceholder')}
-                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                             />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-slate-500 pointer-events-none">
                                                 <HeartIcon />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="relative">
-                                        <label htmlFor="medications" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                        <label htmlFor="medications" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                             {t('addPatientModal.currentMedications')}
                                         </label>
                                         <div className="relative">
@@ -565,9 +576,9 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                 value={formData.medications}
                                                 onChange={handleChange}
                                                 placeholder={t('addPatientModal.currentMedicationsPlaceholder')}
-                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
+                                                className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                             />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-slate-500 pointer-events-none">
                                                 <PillIcon />
                                             </div>
                                         </div>
@@ -611,21 +622,21 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                 <div className="space-y-4">
                                     {/* Insurance Company Selection */}
                                     <div className="relative">
-                                        <label htmlFor="insurance_company" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                        <label htmlFor="insurance_company" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                             شركة التأمين
                                         </label>
                                         <select
                                             id="insurance_company"
                                             value={selectedInsuranceId}
                                             onChange={(e) => setSelectedInsuranceId(e.target.value)}
-                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200 appearance-none"
+                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200 appearance-none"
                                         >
                                             <option value="">بدون تأمين</option>
                                             {insuranceCompanies.map(company => (
                                                 <option key={company.id} value={company.id}>{company.name}</option>
                                             ))}
                                         </select>
-                                        <div className="absolute right-3 top-1/2 translate-y-1 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                        <div className="absolute right-3 top-1/2 translate-y-1 text-purple-600 dark:text-slate-500 pointer-events-none">
                                             <ShieldIcon />
                                         </div>
                                     </div>
@@ -634,7 +645,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                     {selectedInsuranceId && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="relative">
-                                                <label htmlFor="policy_number" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                                <label htmlFor="policy_number" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                                     رقم البوليصة
                                                 </label>
                                                 <input
@@ -643,11 +654,11 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                     value={policyNumber}
                                                     onChange={(e) => setPolicyNumber(e.target.value)}
                                                     placeholder="رقم بوليصة التأمين"
-                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200"
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                             <div className="relative">
-                                                <label htmlFor="coverage_percentage" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                                <label htmlFor="coverage_percentage" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                                     نسبة التغطية (%)
                                                 </label>
                                                 <input
@@ -658,7 +669,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                                     step="0.01"
                                                     value={coveragePercentage}
                                                     onChange={(e) => setCoveragePercentage(Number(e.target.value))}
-                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-slate-700 dark:text-slate-200"
+                                                    className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-slate-800 dark:text-slate-200"
                                                 />
                                             </div>
                                         </div>
@@ -698,7 +709,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                             <FormSection title="صور المريض" icon={<ImageIcon />} isDark={isDark}>
                                 <div className="space-y-4">
                                     <div className="relative">
-                                        <label className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                             {t('addPatientModal.patientImages')}
                                         </label>
                                         <div className="relative">
@@ -713,14 +724,14 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                             />
                                             <label
                                                 htmlFor="images"
-                                                className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white dark:bg-slate-700 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/20 group"
+                                                className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white dark:bg-slate-700 border-2 border-dashed border-purple-200 dark:border-slate-600 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-primary/20 group"
                                             >
                                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                    <div className="p-3 mb-2 rounded-full bg-slate-100 dark:bg-slate-600 group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors">
+                                                    <div className="p-3 mb-2 rounded-full bg-purple-100 dark:bg-slate-600 group-hover:bg-purple-200 dark:group-hover:bg-primary/20 transition-colors">
                                                         <UploadIcon />
                                                     </div>
 
-                                                    <p className="text-sm text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-purple-600 transition-colors">
                                                         اضغط لاختيار الصور أو اسحبها هنا
                                                     </p>
                                                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
@@ -733,13 +744,13 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
 
                                     {formData.images && formData.images.length > 0 && (
                                         <div className="mt-4">
-                                            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-400 mb-3">
                                                 الصور المرفقة ({formData.images.length})
                                             </p>
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                                 {formData.images.map((image, index) => (
                                                     <div key={index} className="relative group">
-                                                        <div className="aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-600">
+                                                        <div className="aspect-square rounded-lg overflow-hidden border border-purple-200 dark:border-slate-600 bg-purple-50 dark:bg-slate-600">
 
                                                             <img
                                                                 src={image}
@@ -768,7 +779,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
 
                             <FormSection title="ملاحظات العلاج" icon={<FileTextIcon />} isDark={isDark}>
                                 <div className="relative">
-                                        <label htmlFor="treatmentNotes" className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                                    <label htmlFor="treatmentNotes" className="block text-sm font-semibold text-slate-700 dark:text-slate-400 mb-2">
                                         {t('addPatientModal.initialTreatmentNotes')}
                                     </label>
                                     <div className="relative">
@@ -779,9 +790,9 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                                             onChange={handleChange}
                                             placeholder={t('addPatientModal.initialTreatmentNotesPlaceholder')}
                                             rows={4}
-                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 resize-none placeholder:text-slate-500 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200"
+                                            className="w-full px-4 py-3 ps-12 bg-white dark:bg-slate-700 border border-purple-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-800 dark:text-slate-200"
                                         />
-                                        <div className="absolute right-3 top-3 text-slate-400 dark:text-slate-500 pointer-events-none">
+                                        <div className="absolute right-3 top-3 text-purple-600 dark:text-slate-500 pointer-events-none">
                                             <FileTextIcon />
                                         </div>
                                     </div>
@@ -793,7 +804,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                 </form>
 
                 {/* Footer */}
-                <footer className="px-4 sm:px-6 py-3 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0">
+                <footer className="px-4 sm:px-6 py-3 sm:py-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4 bg-white dark:bg-slate-800/50 border-t border-purple-200 dark:border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0">
                     <div className="flex gap-2 justify-center sm:justify-start">
                         {tabs.map((tab, index) => (
                             <button
@@ -813,7 +824,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         <button
                             type="button"
                             onClick={onClose}
-                            className={`w-full sm:w-auto px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center justify-center gap-2 shadow-sm ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-600 bg-slate-100 border-slate-300 hover:bg-slate-200 focus:ring-slate-300'}`}
+                            className={`w-full sm:w-auto px-5 py-2.5 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 border flex items-center justify-center gap-2 shadow-sm ${isDark ? 'text-white bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 focus:ring-blue-400/50' : 'text-slate-700 bg-slate-100 border-slate-300 hover:bg-slate-200 hover:text-slate-900 focus:ring-slate-300'}`}
                         >
                             <CloseIcon />
                             {t('common.cancel')}
@@ -822,7 +833,7 @@ const AddEditPatientModal: React.FC<AddEditPatientModalProps> = ({ patient, onCl
                         <button
                             type="submit"
                             onClick={handleSubmit}
-                            className={`w-full sm:w-auto px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 ${isDark ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/30 focus:ring-primary-400' : 'bg-primary hover:bg-primary-dark shadow-primary/30 focus:ring-primary-light focus:ring-offset-2'}`}
+                            className={`w-full sm:w-auto px-6 py-2.5 text-white font-medium rounded-lg shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 hover:shadow-xl hover:-translate-y-0.5 ${isDark ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30 focus:ring-purple-400' : 'bg-purple-500 hover:bg-purple-600 shadow-purple-500/30 focus:ring-purple-300 focus:ring-offset-2'}`}
                         >
                             {patient ? 'تحديث البيانات' : t('addPatientModal.savePatient')}
                         </button>

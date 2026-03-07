@@ -258,8 +258,8 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                         <div className="grid grid-cols-2 gap-3">
                             <label className={`relative flex flex-col items-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                                 discountType === 'fixed' 
-                                    ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary' 
-                                    : 'border-slate-200 dark:border-slate-600 hover:border-primary/50 dark:hover:border-primary/50 text-slate-600 dark:text-slate-300'
+                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' 
+                                    : 'border-slate-200 dark:border-slate-600 hover:border-purple-400 dark:hover:border-purple-500 text-slate-600 dark:text-slate-300'
                             }`}>
                                 <input
                                     type="radio"
@@ -274,15 +274,15 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                 </svg>
                                 <span className="font-medium text-sm">{t('addDiscountModal.fixedAmount')}</span>
                                 {discountType === 'fixed' && (
-                                    <div className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} w-5 h-5 bg-primary rounded-full flex items-center justify-center`}>
+                                    <div className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center text-white`}>
                                         <CheckIcon />
                                     </div>
                                 )}
                             </label>
                             <label className={`relative flex flex-col items-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                                 discountType === 'percentage' 
-                                    ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary' 
-                                    : 'border-slate-200 dark:border-slate-600 hover:border-primary/50 dark:hover:border-primary/50 text-slate-600 dark:text-slate-300'
+                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' 
+                                    : 'border-slate-200 dark:border-slate-600 hover:border-purple-400 dark:hover:border-purple-500 text-slate-600 dark:text-slate-300'
                             }`}>
                                 <input
                                     type="radio"
@@ -295,7 +295,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                                 <CalculatorIcon />
                                 <span className="font-medium text-sm">{t('addDiscountModal.percentage')}</span>
                                 {discountType === 'percentage' && (
-                                    <div className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} w-5 h-5 bg-primary rounded-full flex items-center justify-center`}>
+                                    <div className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center text-white`}>
                                         <CheckIcon />
                                     </div>
                                 )}
@@ -414,7 +414,7 @@ const AddDiscountModal: React.FC<AddDiscountModalProps> = ({ patientId, clinicDa
                         </button>
                         <button 
                             type="submit" 
-                            className="flex-1 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 shadow-lg shadow-primary/25"
+                            className="flex-1 px-4 py-3 bg-purple-600 text-white font-medium rounded-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 shadow-lg shadow-purple-600/25"
                         >
                             {t('addDiscountModal.saveDiscount')}
                         </button>

@@ -59,9 +59,9 @@ const DashboardHeader = () => {
             </button>
             
             {/* زر إضافة مريض (الإجراء الرئيسي) */}
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-blue-700 hover:bg-blue-50 px-6 py-3.5 rounded-2xl font-bold shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
-              <div className="bg-blue-100 p-1 rounded-full">
-                <Plus className="h-4 w-4 text-blue-700" />
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white dark:bg-white dark:text-blue-700 dark:hover:bg-blue-50 px-6 py-3.5 rounded-2xl font-bold shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+              <div className="bg-white/20 dark:bg-blue-100 p-1 rounded-full">
+                <Plus className="h-4 w-4 text-white dark:text-blue-700" />
               </div>
               <span>{t('dashboard.addPatient')}</span>
             </button>

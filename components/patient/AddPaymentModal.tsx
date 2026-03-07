@@ -325,7 +325,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                         onClick={() => handleQuickAmount(amount)}
                                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                                             formData.amount === amount 
-                                                ? 'bg-primary text-white shadow-md' 
+                                                ? 'bg-purple-600 text-white shadow-md' 
                                                 : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600'
                                         }`}
                                     >
@@ -409,7 +409,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                                         onClick={() => setFormData(prev => ({ ...prev, method }))}
                                         className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
                                             formData.method === method
-                                                ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-md'
+                                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-md'
                                                 : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
                                         }`}
                                     >
@@ -514,7 +514,7 @@ const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ patientId, clinicData
                         </button>
                         <button 
                             type="submit" 
-                            className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-lg shadow-primary/25 font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50 shadow-lg shadow-purple-600/25 font-medium transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             <MoneyIcon />
                             {t('addPaymentModal.savePayment')}

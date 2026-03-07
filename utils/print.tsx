@@ -3,8 +3,27 @@ import ReactDOM from 'react-dom/client';
 import { I18nProvider } from '../contexts/I18nContext';
 import { AuthProvider } from '../contexts/AuthContext';
 
-export const openPrintWindow = (title: string, component: React.ReactElement) => {
-    const printWindow = window.open('', '_blank', 'height=800,width=1000');
+export interface OpenPrintWindowOptions {
+    pageSize?: string;
+    mode?: 'standard' | 'minimal';
+    width?: number;
+    height?: number;
+}
+
+export const openPrintWindow = (
+    title: string,
+    component: React.ReactElement,
+    options: OpenPrintWindowOptions = {}
+) => {
+    const {
+        pageSize = 'A4 portrait',
+        mode = 'standard',
+        width = 1000,
+        height = 800,
+    } = options;
+    const isMinimal = mode === 'minimal';
+
+    const printWindow = window.open('', '_blank', `height=${height},width=${width}`);
     if (!printWindow) {
         alert('Please allow popups for this website to print reports.');
         return;
@@ -39,23 +58,50 @@ export const openPrintWindow = (title: string, component: React.ReactElement) =>
                     font-size: 12pt;
                     line-height: 1.6;
                     color: #1e293b;
-                    background: white;
-                    padding: 1.5cm;
-                    padding-top: 80px; /* Space for close button */
+                    background: ${isMinimal ? '#f8fafc' : 'white'};
+                    padding: ${isMinimal ? '16px' : '1.5cm'};
+                    padding-top: 80px;
                 }
                 
                 @media (max-width: 640px) {
                     body {
-                        padding: 0.5cm;
-                        padding-top: 90px; /* More space for close button on mobile */
+                        padding: ${isMinimal ? '8px' : '0.5cm'};
+                        padding-top: 90px;
                     }
                 }
 
-                
+                ${isMinimal ? `
+                @media print {
+                    @page {
+                        size: ${pageSize};
+                        margin: 8mm;
+                    }
+
+                    html, body {
+                        background: #ffffff !important;
+                    }
+
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    .no-print {
+                        display: none !important;
+                    }
+
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                }
+                ` : `
                 /* Print-specific styles */
                 @media print {
                     @page {
-                        size: A4 portrait;
+                        size: ${pageSize};
                         margin: 1cm;
                     }
                     
@@ -162,6 +208,7 @@ export const openPrintWindow = (title: string, component: React.ReactElement) =>
                         color: #334155 !important;
                     }
                 }
+                `}
                 
                 /* Background colors */
                 .bg-white { background-color: #ffffff; }

@@ -397,7 +397,7 @@ export const PatientDetailsModal: React.FC<{
                                     onClick={() => setActiveTab(key as PatientDetailTab)}
                                     className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium rounded-t-lg transition-all duration-200 ${
                                         activeTab === key
-                                            ? 'bg-primary text-white shadow-md'
+                                            ? 'bg-purple-600 text-white shadow-md'
                                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
                                     } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-slate-800`}
                                 >
@@ -634,7 +634,7 @@ export const PatientDetailsModal: React.FC<{
                             <div className="flex justify-end mb-4">
                                 <button
                                     onClick={() => setIsAddTreatmentModalOpen(true)}
-                                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-purple-400"
                                 >
                                     <PlusIcon /> {t('patientDetails.addTreatmentRecord')}
                                 </button>
@@ -650,7 +650,7 @@ export const PatientDetailsModal: React.FC<{
                             <div className="flex justify-end mb-4">
                                 <button
                                     onClick={() => setIsAddPrescriptionModalOpen(true)}
-                                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary-light"
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-purple-400"
                                 >
                                     <PlusIcon /> {t('patientDetails.addPrescription')}
                                 </button>

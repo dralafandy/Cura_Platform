@@ -30,7 +30,7 @@ export interface ClinicInfo {
 
 export interface ClinicData {
     patients: Patient[];
-    addPatient: (patient: Omit<Patient, 'id' | 'dentalChart'>) => Promise<void>;
+    addPatient: (patient: Omit<Patient, 'id' | 'dentalChart'>) => Promise<string | null>;
     updatePatient: (patient: Patient) => Promise<void>;
     deletePatient: (id: string) => Promise<void>;
     dentists: Dentist[];
@@ -1215,14 +1215,14 @@ export const useClinicData = (): ClinicData => {
     };
 
     // Patient Management
-    const addPatient = async (patient: Omit<Patient, 'id' | 'dentalChart'>) => {
+    const addPatient = async (patient: Omit<Patient, 'id' | 'dentalChart'>): Promise<string | null> => {
         if (!user || !supabase) {
             console.error('User not authenticated or Supabase not configured');
             addNotification('User not authenticated', NotificationType.ERROR);
-            return;
+            return null;
         }
         const activeClinic = await requireActiveClinic('patient');
-        if (!activeClinic) return;
+        if (!activeClinic) return null;
 
         const patientData = {
             name: patient.name,
@@ -1281,7 +1281,10 @@ export const useClinicData = (): ClinicData => {
             }));
             setPatients((prev: Patient[]) => [...prev, ...formattedData as Patient[]]);
             addNotification('Patient added successfully', NotificationType.SUCCESS);
+            // Return the patient ID
+            return newData[0]?.id || null;
         }
+        return null;
     };
     const updatePatient = async (patient: Patient) => {
         if (!supabase) return;

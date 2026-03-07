@@ -128,8 +128,8 @@ const AddEditLabCaseModal: React.FC<{
                         <textarea id="notes" name="notes" value={formData.notes} onChange={handleChange} placeholder={t('labCases.notesPlaceholder')} className={`p-2 border rounded-lg w-full h-20 focus:ring-primary focus:border-primary ${isDark ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'border-slate-300 text-slate-700'}`} />
                     </div>
                     <footer className="pt-2 flex justify-end space-x-4">
-                        <button type="button" onClick={onClose} className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600 focus:ring-slate-500' : 'bg-neutral-dark rounded-lg hover:bg-slate-300 focus:ring-slate-300'}`}>{t('common.cancel')}</button>
-                        <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light">{t('common.save')}</button>
+                        <button type="button" onClick={onClose} className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600 focus:ring-slate-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300'}`}>{t('common.cancel')}</button>
+                        <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">{t('common.save')}</button>
                     </footer>
                 </form>
             </div>

@@ -4,6 +4,8 @@ import { useClinicData } from '../../hooks/useClinicData';
 import { useReportsFilters } from '../../contexts/ReportsFilterContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import LowStockPurchaseOrderModal from '../finance/LowStockPurchaseOrderModal';
+import { openPrintWindow } from '../../utils/print';
+import ComprehensiveClinicReportPage from './ComprehensiveClinicReportPage';
 import { motion } from 'framer-motion';
 import {
   LineChart,
@@ -823,7 +825,7 @@ const QuickDateFilter: React.FC<{
 // ============================================
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview', initialType = 'overview' }) => {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const clinicData = useClinicData();
   const { filters, updateFilter, getPreviousPeriod: getPrevPeriod } = useReportsFilters();
   const { isDark } = useTheme();
@@ -1230,57 +1232,19 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ initialCategory = 'overview',
 
   // Print Report
   const printDetailedReport = () => {
-    const isArabic = locale.toLowerCase().startsWith('ar');
-    const dir = isArabic ? 'rtl' : 'ltr';
-    
-    const reportHtml = `
-      <!doctype html>
-      <html lang="${isArabic ? 'ar' : 'en'}" dir="${dir}">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>${t('reports.title')}</title>
-          <style>
-            * { box-sizing: border-box; }
-            body { font-family: "Segoe UI", sans-serif; margin: 0; color: #0f172a; background: #f8fafc; }
-            .page { max-width: 1280px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(130deg, #06b6d4, #8b5cf6); color: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 28px; }
-            .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-            .kpi { background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius: 12px; padding: 16px; color: #fff; }
-            .kpi span { display: block; font-size: 12px; opacity: 0.9; }
-            .kpi strong { font-size: 20px; }
-            .section { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-            .section h2 { margin: 0 0 12px; font-size: 16px; color: #0f172a; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-            th { background: #f1f5f9; font-weight: 600; }
-            @media print { @page { size: A4; margin: 10mm; } }
-          </style>
-        </head>
-        <body>
-          <div class="page">
-            <header class="header">
-              <h1>${t('reports.title')}</h1>
-              <p>${t('reports.dateRange')}: ${dateRange.startDate} - ${dateRange.endDate}</p>
-            </header>
-            <div class="kpi-grid">
-              <div class="kpi"><span>${t('reports.totalRevenue')}</span><strong>${formatCurrency(reportData.financial.totalRevenue)}</strong></div>
-              <div class="kpi"><span>${t('reports.netProfit')}</span><strong>${formatCurrency(reportData.financial.netProfit)}</strong></div>
-              <div class="kpi"><span>${t('reports.totalExpenses')}</span><strong>${formatCurrency(reportData.financial.totalExpenses)}</strong></div>
-              <div class="kpi"><span>${t('reports.totalAppointments')}</span><strong>${formatNumber(reportData.appointment.stats.total)}</strong></div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    const printWindow = window.open('', '_blank', 'width=1400,height=900');
-    if (!printWindow) return;
-    printWindow.document.open();
-    printWindow.document.write(reportHtml);
-    printWindow.document.close();
-    printWindow.focus();
+    openPrintWindow(
+      'التقرير الشامل للعيادة',
+      <ComprehensiveClinicReportPage
+        isPrintWindow={true}
+        initialDateRange={dateRange}
+      />,
+      {
+        pageSize: 'A4 landscape',
+        mode: 'minimal',
+        width: 1440,
+        height: 1020,
+      }
+    );
   };
 
   // Render Overview Dashboard

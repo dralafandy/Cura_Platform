@@ -127,6 +127,24 @@ const PrintableInsuranceReport: React.FC<PrintableInsuranceReportProps> = ({
     }
   };
 
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+      case 'APPROVED':
+      case 'PAID':
+        return { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' };
+      case 'PENDING':
+        return { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' };
+      case 'REJECTED':
+      case 'SUSPENDED':
+        return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' };
+      case 'INACTIVE':
+        return { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
+      default:
+        return { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
+    }
+  };
+
   const getTransactionTypeColor = (type: string) => {
     return type === 'CREDIT' ? '#10B981' : '#EF4444';
   };
@@ -182,30 +200,64 @@ const PrintableInsuranceReport: React.FC<PrintableInsuranceReportProps> = ({
     .print-card-value { font-size: 14pt; font-weight: bold; }
     .print-section-title { font-size: 12pt; color: #1e3a5f; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin: 15px 0 10px 0; }
     .print-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-    .print-table th { background: #1e3a5f; color: white; padding: 6px 4px; text-align: right; }
-    .print-table td { padding: 5px 4px; border-bottom: 1px solid #e2e8f0; }
-    .print-table tr:nth-child(even) { background: #f7fafc; }
+    .print-table th { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 8px 6px; text-align: right; border-radius: 4px 4px 0 0; }
+    .print-table td { padding: 6px 5px; border-bottom: 1px solid #e2e8f0; }
+    .print-table tr:nth-child(even) { background: #f0f9ff; }
+    .print-table tr:hover { background: #e0f2fe; }
     .print-footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8pt; color: #718096; }
+    
+    /* Colorful status badges */
+    .status-active, .status-approved, .status-paid { background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 8pt; }
+    .status-pending { background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 8pt; }
+    .status-rejected, .status-suspended { background-color: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 8pt; }
+    .status-inactive { background-color: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 9999px; font-weight: 600; font-size: 8pt; }
+    
+    /* Colorful summary cards */
+    .summary-card-blue { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #93c5fd; }
+    .summary-card-green { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #6ee7b7; }
+    .summary-card-purple { background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 1px solid #c4b5fd; }
+    .summary-card-amber { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; }
+    .summary-card-red { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
   `;
 
   const renderSummaryReport = () => (
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <p className="text-sm text-blue-600 mb-1">شركات التأمين</p>
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <p className="text-sm text-blue-600 mb-1 font-semibold">شركات التأمين</p>
           <p className="text-2xl font-bold text-blue-800">{companies.length}</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <p className="text-sm text-green-600 mb-1">الحسابات النشطة</p>
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-green-600 mb-1 font-semibold">الحسابات النشطة</p>
           <p className="text-2xl font-bold text-green-800">{accounts.filter(a => a.status === 'ACTIVE').length}</p>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-          <p className="text-sm text-purple-600 mb-1">المرضى المؤمن لهم</p>
+        <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-purple-600 mb-1 font-semibold">المرضى المؤمن لهم</p>
           <p className="text-2xl font-bold text-purple-800">{patientLinks.length}</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-          <p className="text-sm text-amber-600 mb-1">إجمالي المطالبات</p>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 text-center shadow-sm">
+          <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-amber-600 mb-1 font-semibold">إجمالي المطالبات</p>
           <p className="text-2xl font-bold text-amber-800">{formatCurrency(totalClaims)}</p>
         </div>
       </div>

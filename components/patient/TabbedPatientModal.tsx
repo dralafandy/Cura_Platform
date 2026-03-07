@@ -11,7 +11,7 @@ type TabType = 'basic' | 'medical' | 'emergency' | 'images';
 interface TabbedPatientModalProps {
     patient?: Patient; // Optional patient object for editing
     onClose: () => void;
-    onSave: (patientData: Omit<Patient, 'id' | 'dentalChart'> | Patient) => void;
+    onSave: (patientData: Omit<Patient, 'id' | 'dentalChart'> | Patient) => Promise<string | null>;
 }
 
 const TabbedPatientModal: React.FC<TabbedPatientModalProps> = ({ patient, onClose, onSave }) => {
@@ -168,7 +168,7 @@ const TabbedPatientModal: React.FC<TabbedPatientModalProps> = ({ patient, onClos
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
                 <header className="p-4 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center flex-shrink-0">
                     <h2 className="text-xl font-bold text-slate-700 dark:text-white">{patient ? t('addPatientModal.editTitle') : t('addPatientModal.title')}</h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300" aria-label={t('addPatientModal.closeAriaLabel')}>
+                    <button onClick={onClose} className="p-1 rounded-full text-slate-600 hover:bg-slate-200 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300" aria-label={t('addPatientModal.closeAriaLabel')}>
                         <CloseIcon />
                     </button>
                 </header>
@@ -179,8 +179,8 @@ const TabbedPatientModal: React.FC<TabbedPatientModalProps> = ({ patient, onClos
                             <li key={key}>
                                 <button
                                     onClick={() => handleTabChange(key as TabType)}
-                                    className={`inline-block p-4 border-b-2 ${
-                                        activeTab === key ? 'border-primary text-primary' : 'border-transparent hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500'
+                                    className={`inline-block p-4 border-b-2 transition-colors ${
+                                        activeTab === key ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500'
                                     }`}
                                 >
                                     {label}
@@ -412,8 +412,8 @@ const TabbedPatientModal: React.FC<TabbedPatientModalProps> = ({ patient, onClos
                     )}
 
                     <footer className="pt-2 flex justify-end space-x-4 flex-shrink-0">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-dark rounded-lg hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300">{t('common.cancel')}</button>
-                        <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light">{t('addPatientModal.savePatient')}</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300">{t('common.cancel')}</button>
+                        <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">{t('addPatientModal.savePatient')}</button>
                     </footer>
                 </form>
             </div>

@@ -412,10 +412,12 @@ export const PatientDetailsPanel: React.FC<{
         setCurrentImageIndex(index);
     };
 
-    const handleSavePatient = useCallback((patientData: Patient | Omit<Patient, 'id' | 'dentalChart'>) => {
-        updatePatient(patientData as Patient);
+    const handleSavePatient = useCallback(async (patientData: Patient | Omit<Patient, 'id' | 'dentalChart'>): Promise<string | null> => {
+        await updatePatient(patientData as Patient);
         setShowEditModal(false);
         addNotification({ message: t('notifications.patientUpdated'), type: NotificationType.SUCCESS });
+        // Return the patient ID (for existing patients, it's in the data)
+        return 'id' in patientData ? patientData.id : null;
     }, [updatePatient, addNotification, t]);
 
 
@@ -445,7 +447,7 @@ export const PatientDetailsPanel: React.FC<{
                                 <span className="hidden sm:inline">{t('common.back')}</span>
                             </button>
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-primary to-primary-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md shrink-0">
                                     <span className="text-white font-bold text-lg">
                                         {patient.name.charAt(0).toUpperCase()}
                                     </span>
@@ -458,7 +460,7 @@ export const PatientDetailsPanel: React.FC<{
                         <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={() => setShowEditModal(true)}
-                                className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-600 text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400/50"
                             >
                                 <EditIcon />
                                 <span className="hidden sm:inline">{t('common.edit')}</span>
@@ -478,8 +480,8 @@ export const PatientDetailsPanel: React.FC<{
                                     onClick={() => setActiveTab(key as PatientDetailTab)}
                                     className={`inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap ${
                                         activeTab === key
-                                            ? 'border-primary text-primary'
-                                            : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500'
+                                            ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10'
+                                            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500'
                                     }`}
                                     aria-label={t(label)}
                                     title={t(label)}
@@ -623,7 +625,7 @@ export const PatientDetailsPanel: React.FC<{
                                         <div className="flex justify-end pt-2">
                                             <button
                                                 onClick={() => window.location.href = `/insurance/patient-links?patientId=${patient.id}`}
-                                                className="text-sm text-primary hover:text-primary-600 dark:hover:text-primary-400 font-medium flex items-center gap-1"
+                                                className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15 hover:text-primary-700 dark:bg-primary/15 dark:hover:bg-primary/20 dark:hover:text-primary-300"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -703,7 +705,7 @@ export const PatientDetailsPanel: React.FC<{
                                     </div>
                                     <button
                                         onClick={() => setIsAddTreatmentModalOpen(true)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm font-medium w-full sm:w-auto"
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400/50 text-sm font-medium w-full sm:w-auto"
                                     >
                                         <PlusIcon /> {t('patientDetails.addTreatmentRecord')}
                                     </button>
@@ -735,7 +737,7 @@ export const PatientDetailsPanel: React.FC<{
                                     </div>
                                     <button
                                         onClick={() => setIsAddPrescriptionModalOpen(true)}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm font-medium w-full sm:w-auto"
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400/50 text-sm font-medium w-full sm:w-auto"
                                     >
                                         <PlusIcon /> {t('patientDetails.addPrescription')}
                                     </button>

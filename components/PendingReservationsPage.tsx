@@ -60,9 +60,34 @@ const PendingReservationsPage: React.FC<PendingReservationsPageProps> = ({ clini
     const params = new URLSearchParams();
     if (currentClinic?.id) params.set('clinicId', currentClinic.id);
     if (currentBranch?.id) params.set('branchId', currentBranch.id);
+    if (currentClinic?.name || clinicData.clinicInfo.name) {
+      params.set('clinic', currentClinic?.name || clinicData.clinicInfo.name);
+    }
+    if (currentBranch?.name) {
+      params.set('branch', currentBranch.name);
+    }
+    if (clinicPhone) {
+      params.set('phone', clinicPhone);
+    }
+    if (clinicEmail) {
+      params.set('email', clinicEmail);
+    }
+    if (clinicAddress) {
+      params.set('address', clinicAddress);
+    }
     params.set('lang', locale);
     return `${window.location.origin}/online-booking.html?${params.toString()}`;
-  }, [currentBranch?.id, currentClinic?.id, locale]);
+  }, [
+    clinicAddress,
+    clinicData.clinicInfo.name,
+    clinicEmail,
+    clinicPhone,
+    currentBranch?.id,
+    currentBranch?.name,
+    currentClinic?.id,
+    currentClinic?.name,
+    locale,
+  ]);
 
   const bookingQrUrl = useMemo(() => {
     if (!bookingUrl) return '';

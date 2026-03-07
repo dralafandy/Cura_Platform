@@ -998,8 +998,8 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                     <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-cyan-100 text-sm">{t('suppliers.totalSuppliersLabel')}</p>
-                                <p className="text-2xl font-bold">{totalSuppliers}</p>
+                                <p className="text-cyan-950/85 text-sm font-medium">{t('suppliers.totalSuppliersLabel')}</p>
+                                <p className="text-2xl font-bold text-white">{totalSuppliers}</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-lg">
                                 <PackageIcon />
@@ -1009,8 +1009,8 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                     <div className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-violet-100 text-sm">{t('suppliers.totalOutstandingLabel')}</p>
-                                <p className="text-2xl font-bold">{currencyFormatter.format(totalOutstanding)}</p>
+                                <p className="text-violet-950/85 text-sm font-medium">{t('suppliers.totalOutstandingLabel')}</p>
+                                <p className="text-2xl font-bold text-white">{currencyFormatter.format(totalOutstanding)}</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-lg">
                                 <DollarIcon />
@@ -1020,10 +1020,10 @@ export const SuppliersManagement: React.FC<{ clinicData: ClinicData }> = ({ clin
                     <div className="bg-gradient-to-br from-rose-500 to-rose-600 text-white p-4 rounded-2xl shadow-sm glass">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-rose-100 text-sm">{t('suppliers.suppliersByTypeLabel')}</p>
+                                <p className="text-rose-950/85 text-sm font-medium">{t('suppliers.suppliersByTypeLabel')}</p>
                                 <div className="flex gap-4 mt-1">
-                                    <span className="text-sm">{t('suppliers.suppliesLabel')}: {materialSuppliers}</span>
-                                    <span className="text-sm">{t('suppliers.labsLabel')}: {dentalLabs}</span>
+                                    <span className="text-sm text-white font-medium">{t('suppliers.suppliesLabel')}: {materialSuppliers}</span>
+                                    <span className="text-sm text-white font-medium">{t('suppliers.labsLabel')}: {dentalLabs}</span>
                                 </div>
                             </div>
                             <div className="bg-white/20 p-3 rounded-lg">

@@ -164,7 +164,7 @@ const PatientAttachments: React.FC<PatientAttachmentsProps> = ({
                         <div>
                             <label
                                 htmlFor="file-upload"
-                                className="cursor-pointer inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 disabled:opacity-50"
+                                className="cursor-pointer inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400/20 transition-all duration-200 disabled:opacity-50"
                             >
                                 {isUploading ? t('patient_attachments.uploading') : t('patient_attachments.choose_file')}
                                 <input

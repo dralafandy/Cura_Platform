@@ -31,6 +31,7 @@ import Settings from './components/Settings';
 import { PatientDetailsPanel } from './components/patient/PatientDetailsPanel';
 import TestPatientCards from './TestPatientCards';
 import ReportsPage from './components/reports/ReportsPage';
+import ComprehensiveClinicReportPage from './components/reports/ComprehensiveClinicReportPage';
 import PublicBookingPage from './components/PublicBookingPage';
 import PendingReservationsPage from './components/PendingReservationsPage';
 import EmployeesManagement from './components/employees/EmployeesManagement';
@@ -195,6 +196,8 @@ const AppContent: React.FC = () => {
         return hasPermission(Permission.REPORTS_VIEW) ? (
           <ReportsPage />
         ) : <AccessDenied />;
+      case 'comprehensiveReport':
+        return <ComprehensiveClinicReportPage />;
       case 'insuranceUnified':
         return hasPermission(Permission.FINANCE_ACCOUNTS_VIEW) ? (
           <InsuranceManagementPage />
@@ -254,6 +257,7 @@ const AppContent: React.FC = () => {
       'insuranceIntegration': t('sidebar.insuranceIntegration'),
       'insuranceUnified': t('sidebar.insuranceUnified'),
       'reports': 'Reports',
+      'comprehensiveReport': locale === 'ar' ? 'تقرير شامل' : 'Comprehensive Report',
       'publicBooking': t('publicBooking.title') || 'Book Appointment',
       'about': 'ط¹ظ† ط§ظ„ط¨ط±ظ†ط§ظ…ط¬',
       'pendingReservations': t('onlineReservations.title') || 'Online Reservations',

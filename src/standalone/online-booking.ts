@@ -1,9 +1,9 @@
-import { createEphemeralSupabaseClient } from '../../supabaseClient';
 import {
   createReservation,
   getAvailableDentists,
   getAvailableServices,
   getAvailableSlots,
+  getPublicBookingContext,
 } from '../../services/publicBookingService';
 
 type Scope = {
@@ -46,6 +46,7 @@ type Copy = {
   summaryHint: string;
   clinicInfo: string;
   branchInfo: string;
+  address: string;
   selectedService: string;
   selectedDentist: string;
   selectedDate: string;
@@ -68,106 +69,116 @@ const scope: Scope = {
   branchId: params.get('branchId') || undefined,
 };
 
-const copy: Copy = {
-  en: {
-    title: 'Reserve Your Visit',
-    subtitle: 'Pick the service, date, and time that fit your schedule and send your booking request online.',
-    loading: 'Preparing your booking experience...',
-    missingScope: 'This booking link is missing clinic information.',
-    heroKicker: 'Online Reservation',
-    trustOne: 'Fast confirmation',
-    trustTwo: 'Clinic-specific booking link',
-    trustThree: 'Works on mobile and desktop',
-    detailsTitle: 'Appointment details',
-    detailsSubtitle: 'Select the service, provider, and preferred slot.',
-    contactTitle: 'Patient details',
-    contactSubtitle: 'We will use these details to confirm the reservation.',
-    service: 'Service',
-    dentist: 'Dentist',
-    anyDentist: 'Any available dentist',
-    date: 'Date',
-    time: 'Time',
-    noTimes: 'No available times for this date',
-    loadingTimes: 'Loading available times...',
-    name: 'Full name',
-    dob: 'Date of birth',
-    gender: 'Gender',
-    male: 'Male',
-    female: 'Female',
-    other: 'Other',
-    phone: 'Phone number',
-    email: 'Email address',
-    reason: 'Reason for visit',
-    submit: 'Send reservation request',
-    submitting: 'Submitting...',
-    summary: 'Reservation summary',
-    summaryHint: 'Your selected details will appear here before submission.',
-    clinicInfo: 'Clinic',
-    branchInfo: 'Branch',
-    selectedService: 'Selected service',
-    selectedDentist: 'Selected dentist',
-    selectedDate: 'Selected date',
-    selectedTime: 'Selected time',
-    selectedDob: 'Date of birth',
-    selectedGender: 'Gender',
-    contactInfo: 'Contact',
-    notSelected: 'Not selected yet',
-    notesHint: 'Optional notes to help the clinic prepare for your visit.',
-    success: 'Reservation request sent successfully',
-    successBody: 'The clinic team can now review your request and contact you to confirm the appointment.',
-    reservationId: 'Reservation ID',
-    errorFallback: 'Something went wrong. Please try again.',
-  },
-  ar: {
-    title: 'احجز موعدك بسهولة',
-    subtitle: 'اختر الخدمة والتاريخ والوقت المناسب ثم أرسل طلب الحجز مباشرة إلى العيادة.',
-    loading: 'يتم تجهيز صفحة الحجز...',
-    missingScope: 'رابط الحجز لا يحتوي على بيانات العيادة.',
-    heroKicker: 'الحجز الإلكتروني',
-    trustOne: 'تأكيد أسرع للموعد',
-    trustTwo: 'رابط مخصص لكل عيادة أو فرع',
-    trustThree: 'يعمل على الجوال والكمبيوتر',
-    detailsTitle: 'تفاصيل الموعد',
-    detailsSubtitle: 'حدد الخدمة والطبيب والوقت المناسب لك.',
-    contactTitle: 'بيانات المريض',
-    contactSubtitle: 'ستستخدم العيادة هذه البيانات لتأكيد الحجز معك.',
-    service: 'الخدمة',
-    dentist: 'الطبيب',
-    anyDentist: 'أي طبيب متاح',
-    date: 'التاريخ',
-    time: 'الوقت',
-    noTimes: 'لا توجد أوقات متاحة في هذا التاريخ',
-    loadingTimes: 'يتم تحميل الأوقات المتاحة...',
-    name: 'الاسم الكامل',
-    dob: 'تاريخ الميلاد',
-    gender: 'النوع',
-    male: 'ذكر',
-    female: 'أنثى',
-    other: 'أخرى',
-    phone: 'رقم الهاتف',
-    email: 'البريد الإلكتروني',
-    reason: 'سبب الزيارة',
-    submit: 'إرسال طلب الحجز',
-    submitting: 'جاري الإرسال...',
-    summary: 'ملخص الحجز',
-    summaryHint: 'ستظهر هنا التفاصيل التي اخترتها قبل الإرسال.',
-    clinicInfo: 'العيادة',
-    branchInfo: 'الفرع',
-    selectedService: 'الخدمة المختارة',
-    selectedDentist: 'الطبيب المختار',
-    selectedDate: 'التاريخ المختار',
-    selectedTime: 'الوقت المختار',
-    selectedDob: 'تاريخ الميلاد',
-    selectedGender: 'النوع',
-    contactInfo: 'وسيلة التواصل',
-    notSelected: 'لم يتم الاختيار بعد',
-    notesHint: 'ملاحظات اختيارية تساعد العيادة على تجهيز زيارتك.',
-    success: 'تم إرسال طلب الحجز بنجاح',
-    successBody: 'يمكن لفريق العيادة الآن مراجعة الطلب والتواصل معك لتأكيد الموعد.',
-    reservationId: 'رقم الحجز',
-    errorFallback: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
-  },
-}[lang];
+const copy: Copy = lang === 'ar'
+  ? {
+      title: 'احجز موعدك بسهولة',
+      subtitle: 'اختر الخدمة والتاريخ والوقت المناسب ثم أرسل طلب الحجز مباشرة إلى العيادة.',
+      loading: 'يتم تجهيز صفحة الحجز...',
+      missingScope: 'رابط الحجز لا يحتوي على بيانات العيادة.',
+      heroKicker: 'الحجز الإلكتروني',
+      trustOne: 'تأكيد أسرع للموعد',
+      trustTwo: 'رابط مخصص لكل عيادة أو فرع',
+      trustThree: 'يعمل على الجوال والكمبيوتر',
+      detailsTitle: 'تفاصيل الموعد',
+      detailsSubtitle: 'حدد الخدمة والطبيب والوقت المناسب لك.',
+      contactTitle: 'بيانات المريض',
+      contactSubtitle: 'ستستخدم العيادة هذه البيانات لتأكيد الحجز معك.',
+      service: 'الخدمة',
+      dentist: 'الطبيب',
+      anyDentist: 'أي طبيب متاح',
+      date: 'التاريخ',
+      time: 'الوقت',
+      noTimes: 'لا توجد أوقات متاحة في هذا التاريخ',
+      loadingTimes: 'يتم تحميل الأوقات المتاحة...',
+      name: 'الاسم الكامل',
+      dob: 'تاريخ الميلاد',
+      gender: 'النوع',
+      male: 'ذكر',
+      female: 'أنثى',
+      other: 'أخرى',
+      phone: 'رقم الهاتف',
+      email: 'البريد الإلكتروني',
+      reason: 'سبب الزيارة',
+      submit: 'إرسال طلب الحجز',
+      submitting: 'جارٍ الإرسال...',
+      summary: 'ملخص الحجز',
+      summaryHint: 'ستظهر هنا التفاصيل التي اخترتها قبل الإرسال.',
+      clinicInfo: 'العيادة',
+      branchInfo: 'الفرع',
+      address: 'العنوان',
+      selectedService: 'الخدمة المختارة',
+      selectedDentist: 'الطبيب المختار',
+      selectedDate: 'التاريخ المختار',
+      selectedTime: 'الوقت المختار',
+      selectedDob: 'تاريخ الميلاد',
+      selectedGender: 'النوع',
+      contactInfo: 'وسيلة التواصل',
+      notSelected: 'لم يتم الاختيار بعد',
+      notesHint: 'ملاحظات اختيارية تساعد العيادة على تجهيز زيارتك.',
+      success: 'تم إرسال طلب الحجز بنجاح',
+      successBody: 'يمكن لفريق العيادة الآن مراجعة الطلب والتواصل معك لتأكيد الموعد.',
+      reservationId: 'رقم الحجز',
+      errorFallback: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+    }
+  : {
+      title: 'Reserve Your Visit',
+      subtitle: 'Pick the service, date, and time that fit your schedule and send your booking request online.',
+      loading: 'Preparing your booking experience...',
+      missingScope: 'This booking link is missing clinic information.',
+      heroKicker: 'Online Reservation',
+      trustOne: 'Fast confirmation',
+      trustTwo: 'Clinic-specific booking link',
+      trustThree: 'Works on mobile and desktop',
+      detailsTitle: 'Appointment details',
+      detailsSubtitle: 'Select the service, provider, and preferred slot.',
+      contactTitle: 'Patient details',
+      contactSubtitle: 'We will use these details to confirm the reservation.',
+      service: 'Service',
+      dentist: 'Dentist',
+      anyDentist: 'Any available dentist',
+      date: 'Date',
+      time: 'Time',
+      noTimes: 'No available times for this date',
+      loadingTimes: 'Loading available times...',
+      name: 'Full name',
+      dob: 'Date of birth',
+      gender: 'Gender',
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
+      phone: 'Phone number',
+      email: 'Email address',
+      reason: 'Reason for visit',
+      submit: 'Send reservation request',
+      submitting: 'Submitting...',
+      summary: 'Reservation summary',
+      summaryHint: 'Your selected details will appear here before submission.',
+      clinicInfo: 'Clinic',
+      branchInfo: 'Branch',
+      address: 'Address',
+      selectedService: 'Selected service',
+      selectedDentist: 'Selected dentist',
+      selectedDate: 'Selected date',
+      selectedTime: 'Selected time',
+      selectedDob: 'Date of birth',
+      selectedGender: 'Gender',
+      contactInfo: 'Contact',
+      notSelected: 'Not selected yet',
+      notesHint: 'Optional notes to help the clinic prepare for your visit.',
+      success: 'Reservation request sent successfully',
+      successBody: 'The clinic team can now review your request and contact you to confirm the appointment.',
+      reservationId: 'Reservation ID',
+      errorFallback: 'Something went wrong. Please try again.',
+    };
+
+const fallbackContext = {
+  clinicName: params.get('clinic') || '',
+  branchName: params.get('branch') || '',
+  displayName: params.get('branch') || params.get('clinic') || '',
+  phone: params.get('phone') || '',
+  email: params.get('email') || '',
+  address: params.get('address') || '',
+};
 
 document.documentElement.lang = lang;
 document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -240,7 +251,7 @@ const renderLoadingState = () => {
 const renderSuccessState = (reservationId: string) => {
   renderShell(`
     <section class="booking-panel booking-panel--success">
-      <div class="booking-success-mark">✓</div>
+      <div class="booking-success-mark">&#10003;</div>
       <span class="booking-kicker">${escapeHtml(copy.heroKicker)}</span>
       <h1>${escapeHtml(copy.success)}</h1>
       <p>${escapeHtml(copy.successBody)}</p>
@@ -259,55 +270,42 @@ const getToday = () => {
   return localDate.toISOString().slice(0, 10);
 };
 
+const genderLabel = (value: string) => {
+  if (value === 'Male') return copy.male;
+  if (value === 'Female') return copy.female;
+  if (value === 'Other') return copy.other;
+  return copy.notSelected;
+};
+
 const renderState = async () => {
-  if (!scope.clinicId) {
+  if (!scope.clinicId && !scope.branchId) {
     renderMessageState(copy.title, copy.missingScope);
     return;
   }
 
   renderLoadingState();
 
-  const client = createEphemeralSupabaseClient();
-  let clinicName = lang === 'ar' ? 'العيادة' : 'Clinic';
-  let clinicMeta = '';
-  let clinicAddress = '';
-  let branchName = '';
-
-  if (client) {
-    const { data: clinic } = await client
-      .from('clinics')
-      .select('name,address,phone,email')
-      .eq('id', scope.clinicId)
-      .maybeSingle();
-
-    const branchQuery = scope.branchId
-      ? await client
-          .from('clinic_branches')
-          .select('name,address,phone,email')
-          .eq('id', scope.branchId)
-          .maybeSingle()
-      : { data: null };
-
-    clinicName = branchQuery.data?.name || clinic?.name || clinicName;
-    branchName = branchQuery.data?.name || '';
-    clinicAddress = branchQuery.data?.address || clinic?.address || '';
-    clinicMeta = formatMeta([
-      branchQuery.data?.phone || clinic?.phone,
-      branchQuery.data?.email || clinic?.email,
-      clinicAddress,
-    ]);
-  }
-
-  const [services, dentists] = await Promise.all([
+  const [bookingContext, services, dentists] = await Promise.all([
+    getPublicBookingContext(scope),
     getAvailableServices(scope),
     getAvailableDentists(scope),
+  ]);
+
+  const clinicName = bookingContext?.clinicName || fallbackContext.clinicName || copy.clinicInfo;
+  const branchName = bookingContext?.branchName || fallbackContext.branchName;
+  const displayName = bookingContext?.displayName || fallbackContext.displayName || clinicName;
+  const clinicAddress = bookingContext?.address || fallbackContext.address;
+  const clinicMeta = formatMeta([
+    bookingContext?.phone || fallbackContext.phone,
+    bookingContext?.email || fallbackContext.email,
+    clinicAddress,
   ]);
 
   renderShell(`
     <section class="booking-hero">
       <div class="booking-hero__content">
         <span class="booking-kicker">${escapeHtml(copy.heroKicker)}</span>
-        <h1>${escapeHtml(clinicName)}</h1>
+        <h1>${escapeHtml(displayName)}</h1>
         <p>${escapeHtml(copy.subtitle)}</p>
         <div class="booking-meta">
           <span class="booking-meta__item">${escapeHtml(copy.trustOne)}</span>
@@ -321,16 +319,8 @@ const renderState = async () => {
           <span>${escapeHtml(copy.clinicInfo)}</span>
           <strong>${escapeHtml(clinicName)}</strong>
         </div>
-        ${
-          branchName
-            ? `<div class="booking-hero__stat"><span>${escapeHtml(copy.branchInfo)}</span><strong>${escapeHtml(branchName)}</strong></div>`
-            : ''
-        }
-        ${
-          clinicAddress
-            ? `<div class="booking-hero__stat"><span>${lang === 'ar' ? 'العنوان' : 'Address'}</span><strong>${escapeHtml(clinicAddress)}</strong></div>`
-            : ''
-        }
+        ${branchName ? `<div class="booking-hero__stat"><span>${escapeHtml(copy.branchInfo)}</span><strong>${escapeHtml(branchName)}</strong></div>` : ''}
+        ${clinicAddress ? `<div class="booking-hero__stat"><span>${escapeHtml(copy.address)}</span><strong>${escapeHtml(clinicAddress)}</strong></div>` : ''}
       </div>
       <div class="booking-hero__glow"></div>
     </section>
@@ -348,9 +338,7 @@ const renderState = async () => {
             copy.service,
             `<select name="serviceId" class="booking-control" required>
               <option value="">${escapeHtml(copy.service)}</option>
-              ${services
-                .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`)
-                .join('')}
+              ${services.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('')}
             </select>`,
           )}
           ${field(
@@ -442,7 +430,7 @@ const renderState = async () => {
         label: copy.selectedGender,
         value:
           typeof patientGender === 'string' && patientGender
-            ? escapeHtml(patientGender === 'Male' ? copy.male : patientGender === 'Female' ? copy.female : copy.other)
+            ? escapeHtml(genderLabel(patientGender))
             : copy.notSelected,
       },
       {
@@ -474,6 +462,7 @@ const renderState = async () => {
 
   const loadSlots = async () => {
     if (!timeSelect || !dateInput) return;
+
     if (!dateInput.value) {
       timeSelect.innerHTML = `<option value="">${escapeHtml(copy.time)}</option>`;
       updateSummary();
@@ -485,7 +474,11 @@ const renderState = async () => {
     timeSelect.innerHTML = `<option value="">${escapeHtml(copy.loadingTimes)}</option>`;
 
     try {
-      const response = await getAvailableSlots(dateInput.value, dentistSelect?.value || undefined, scope);
+      const response = await getAvailableSlots(
+        dateInput.value,
+        dentistSelect?.value || undefined,
+        scope,
+      );
       const available = response.slots.filter((slot) => slot.available);
 
       if (!available.length) {
@@ -532,6 +525,7 @@ const renderState = async () => {
         submitButton.disabled = true;
         submitButton.textContent = copy.submitting;
       }
+
       setFeedback('');
 
       const response = await createReservation({
@@ -549,6 +543,15 @@ const renderState = async () => {
         reason: String(values.get('reason') || '') || undefined,
         durationMinutes: selectedService?.duration || 30,
       });
+
+      if (!response.success) {
+        setFeedback(response.message || copy.errorFallback, 'error');
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = copy.submit;
+        }
+        return;
+      }
 
       renderSuccessState(response.reservationId);
     } catch (error) {

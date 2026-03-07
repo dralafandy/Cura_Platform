@@ -250,7 +250,7 @@ export type FilterOptions = {
 
 export type PatientDetailTab = 'details' | 'chart' | 'treatments' | 'prescriptions' | 'financials' | 'attachments'; // Added 'attachments' tab
 export type DoctorDetailTab = 'details' | 'treatments' | 'financials' | 'schedule';
-export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement' | 'subscriptionOverview';
+export type View = 'dashboard' | 'patients' | 'scheduler' | 'doctors' | 'employees' | 'suppliers' | 'inventory' | 'labCases' | 'expenses' | 'treatmentDefinitions' | 'statistics' | 'accounting' | 'financialAccounts' | 'doctorAccounts' | 'settings' | 'userManagement' | 'accountSelection' | 'patient-details' | 'doctor-details' | 'test-patient-cards' | 'experimental-patient-reports' | 'insuranceCompanies' | 'insuranceAccounts' | 'insuranceTransactions' | 'patientInsuranceLink' | 'treatmentInsuranceLink' | 'insuranceIntegration' | 'insuranceUnified' | 'databaseVerification' | 'systemTesting' | 'reports' | 'comprehensiveReport' | 'publicBooking' | 'pendingReservations' | 'about' | 'clinicManagement' | 'subscriptionOverview';
 
 
 
