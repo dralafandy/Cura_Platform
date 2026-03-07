@@ -284,7 +284,7 @@ const AboutPage: React.FC = () => {
 
   const founders: Founder[] = [
     { name: 'Dr. Mohamed Alafandy', role: 'Founder & Product Strategy', photoUrl: '/founders/alafandy.jpg' },
-    { name: 'Dr. Sherif Gamal', role: 'Co-Founder & Clinical Advisor', photoUrl: '/founders/sherif-gamal.jpg' },
+    { name: 'Dr. Sherif Gamal', role: 'Founder & Clinical Advisor', photoUrl: '/founders/sherif-gamal.jpg' },
     { name: 'Asmaa Toson', role: 'Co-Founder & Operations', photoUrl: '/founders/asmaa-toson.jpg' }
   ];
 
