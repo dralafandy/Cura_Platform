@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Permission, View } from '../types';
 import { useI18n } from '../hooks/useI18n';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { SIDEBAR_STORAGE_KEYS } from './sidebarNavigation';
 
 interface MobileQuickNavProps {
@@ -131,6 +132,8 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
 }) => {
   const { t, locale } = useI18n();
   const { toggleTheme, isDark } = useTheme();
+  const { user, userProfile } = useAuth();
+  const isPlatformOwner = String(userProfile?.email || user?.email || '').trim().toLowerCase() === 'dralafandy@gmail.com';
   const [pinnedItemIds, setPinnedItemIds] = useState<string[]>([]);
   const [recentItemIds, setRecentItemIds] = useState<string[]>([]);
   const translatedMenuLabel = t('common.menu');
@@ -264,6 +267,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
         id: 'subscriptionOverview' as View,
         label: t('sidebar.subscriptionOverview'),
         icon: CardIcon,
+        platformOwnerOnly: true,
       },
     ],
     [t]
@@ -280,6 +284,7 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
       .map((itemId) => candidateItemsById.get(itemId as View))
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
       .filter((item) => (item.permission ? hasPermission(item.permission) : true))
+      .filter((item) => (!(item as any).platformOwnerOnly || isPlatformOwner))
       .slice(0, 4);
 
     if (quickAccessItems.length > 0) {
@@ -288,8 +293,9 @@ const MobileQuickNav: React.FC<MobileQuickNavProps> = ({
 
     return candidateItems
       .filter((item) => (item.permission ? hasPermission(item.permission) : true))
+      .filter((item) => (!(item as any).platformOwnerOnly || isPlatformOwner))
       .slice(0, 4);
-  }, [candidateItems, candidateItemsById, hasPermission, pinnedItemIds, recentItemIds]);
+  }, [candidateItems, candidateItemsById, hasPermission, isPlatformOwner, pinnedItemIds, recentItemIds]);
 
   return (
     <nav className="mobile-quick-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/90 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90 dark:shadow-[0_-12px_30px_rgba(2,6,23,0.62)] md:hidden" style={{ height: 'auto', minHeight: 'calc(3.5rem + env(safe-area-inset-bottom))' }}>

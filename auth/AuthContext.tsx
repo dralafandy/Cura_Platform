@@ -147,6 +147,8 @@ let clinicSettingsTableMissing = false;
 type DbObjectState = 'unknown' | 'available' | 'missing';
 let userClinicAccessTableState: DbObjectState = 'unknown';
 let userClinicsTableState: DbObjectState = 'unknown';
+let tenantLinkRpcState: DbObjectState = 'unknown';
+let warnedMissingTenantLinkRpc = false;
 
 const isMissingDbObjectError = (error: any, objectName: string): boolean => {
   if (!error) return false;
@@ -158,6 +160,19 @@ const isMissingDbObjectError = (error: any, objectName: string): boolean => {
     code === '42P01' ||
     message.includes('could not find the table') ||
     (message.includes('does not exist') && message.includes(target))
+  );
+};
+
+const isMissingRpcFunctionError = (error: any, functionName: string): boolean => {
+  if (!error) return false;
+  const code = String(error.code || '').toUpperCase();
+  const message = String(error.message || '').toLowerCase();
+  const target = functionName.toLowerCase();
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    message.includes('could not find the function') ||
+    (message.includes('function') && message.includes(target) && message.includes('does not exist'))
   );
 };
 
@@ -698,7 +713,7 @@ const fetchClinicSettingsFromDB = async (clinicId: string, branchId?: string): P
       query = query.is('branch_id', null);
     }
 
-    const { data, error } = await query.single();
+    const { data, error } = await query.maybeSingle();
 
     if (error || !data) {
       if (isMissingDbObjectError(error, 'clinic_settings')) {
@@ -867,6 +882,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAuthState({ ...EMPTY_AUTH_STATE, isLoading: false });
   }, []);
 
+  const tryLinkCurrentUserTenantContext = useCallback(
+    async (preferredTenantId?: string | null): Promise<string | null> => {
+      if (!supabase) return null;
+      if (tenantLinkRpcState === 'missing') return null;
+
+      try {
+        const { data, error } = await supabase.rpc('link_current_user_tenant_context', {
+          p_preferred_tenant_id: preferredTenantId ?? null,
+        });
+
+        if (error) {
+          if (isMissingRpcFunctionError(error, 'link_current_user_tenant_context')) {
+            tenantLinkRpcState = 'missing';
+            if (!warnedMissingTenantLinkRpc) {
+              warnedMissingTenantLinkRpc = true;
+              console.warn('Tenant link RPC is missing. Apply migration 048_link_current_user_tenant_context.sql.');
+            }
+            return null;
+          }
+          return null;
+        }
+
+        tenantLinkRpcState = 'available';
+        return extractTenantIdFromPayload(data);
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   const ensureUserProfile = useCallback(async (authUser: SupabaseUser): Promise<DBUserProfile | null> => {
     if (!supabase) return null;
 
@@ -909,33 +955,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (!tenantFromUsers) {
-      try {
-        const { data: linkedData, error: linkedError } = await supabase.rpc('link_current_user_tenant_context');
-        if (!linkedError) {
-          const linkedTenantId = extractTenantIdFromPayload(linkedData);
-          if (linkedTenantId) {
-            tenantFromUsers = linkedTenantId;
-          }
-        }
-      } catch {
-        // Ignore missing RPC or permission errors in mixed migration states.
+      const linkedTenantId = await tryLinkCurrentUserTenantContext(null);
+      if (linkedTenantId) {
+        tenantFromUsers = linkedTenantId;
       }
     }
 
     if (existing) {
       if (!existing.tenant_id) {
-        try {
-          const { data: linkedData, error: linkedError } = await supabase.rpc('link_current_user_tenant_context', {
-            p_preferred_tenant_id: tenantFromUsers || null,
-          });
-          if (!linkedError) {
-            const linkedTenantId = extractTenantIdFromPayload(linkedData);
-            if (linkedTenantId) {
-              existing = { ...(existing as DBUserProfile), tenant_id: linkedTenantId };
-            }
-          }
-        } catch {
-          // Ignore missing RPC or permission errors in mixed migration states.
+        const linkedTenantId = await tryLinkCurrentUserTenantContext(tenantFromUsers || null);
+        if (linkedTenantId) {
+          existing = { ...(existing as DBUserProfile), tenant_id: linkedTenantId };
         }
       }
 

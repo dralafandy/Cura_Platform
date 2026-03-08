@@ -1279,6 +1279,44 @@ export const useClinicData = (): ClinicData => {
         const activeClinic = await requireActiveClinic('patient');
         if (!activeClinic) return null;
 
+        try {
+            let tenantId: string | null = null;
+
+            const tenantRpc = await supabase.rpc('current_user_tenant_id');
+            if (!tenantRpc.error && typeof tenantRpc.data === 'string' && tenantRpc.data) {
+                tenantId = tenantRpc.data;
+            }
+
+            if (!tenantId) {
+                const clinicRow = await supabase
+                    .from('clinics')
+                    .select('tenant_id')
+                    .eq('id', activeClinic.clinicId)
+                    .maybeSingle();
+
+                if (!clinicRow.error && clinicRow.data && typeof (clinicRow.data as any).tenant_id === 'string') {
+                    tenantId = (clinicRow.data as any).tenant_id;
+                }
+            }
+
+            if (tenantId) {
+                const limitResult = await supabase.rpc('check_limits', {
+                    p_tenant_id: tenantId,
+                    p_resource: 'patients'
+                });
+
+                if (!limitResult.error) {
+                    const row = Array.isArray(limitResult.data) ? limitResult.data[0] : null;
+                    if (row && row.allowed === false) {
+                        addNotification(row.message || 'Patient limit reached for current plan', NotificationType.ERROR);
+                        return null;
+                    }
+                }
+            }
+        } catch (limitError) {
+            console.warn('Pre-insert patient limit check failed; DB-level enforcement will still apply.', limitError);
+        }
+
         const patientData = {
             name: patient.name,
             dob: patient.dob,

@@ -833,7 +833,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                     }
                                 >
                                     <div className="h-64 sm:h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <AreaChart data={dailyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                                 <defs>
                                                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -877,7 +877,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                                     delay={5}
                                 >
                                     <div className="h-64 sm:h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <PieChart>
                                                 <Pie
                                                     data={revenueByTreatment}
@@ -1129,7 +1129,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                             {/* Daily Financial Chart */}
                             <ChartCard title={t('dashboard.dailyTrends') || 'Daily Trends'} subtitle={t('dashboard.last7Days') || 'Last 7 days'} delay={4}>
                                 <div className="h-72">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                         <BarChart data={dailyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                                             <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
@@ -1229,7 +1229,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <ChartCard title={t('dashboard.revenueVsExpenses') || 'Revenue vs Expenses'} subtitle={t('dashboard.last6Months') || 'Last 6 months'} delay={10}>
                                     <div className="h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <BarChart data={monthlyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
@@ -1248,7 +1248,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
 
                                 <ChartCard title={t('dashboard.profitAnalysis') || 'Profit Trend'} subtitle={t('dashboard.monthlyTrends') || 'Monthly analysis'} delay={11}>
                                     <div className="h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <LineChart data={monthlyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
@@ -1357,7 +1357,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <ChartCard title={t('dashboard.appointmentStatus') || 'Appointment Status'} subtitle={t('dashboard.currentDistribution') || 'Current distribution'} delay={4}>
                                     <div className="h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <PieChart>
                                                 <Pie
                                                     data={appointmentStatusData}
@@ -1389,7 +1389,7 @@ const Dashboard: React.FC<{ clinicData: ClinicData, setCurrentView: (view: View)
 
                                 <ChartCard title={t('dashboard.dailyAppointments') || 'Daily Appointments'} subtitle={t('dashboard.last7Days') || 'Last 7 days'} delay={5}>
                                     <div className="h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                                             <BarChart data={dailyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                                                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />

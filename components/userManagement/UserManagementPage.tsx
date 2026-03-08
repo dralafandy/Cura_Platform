@@ -62,6 +62,7 @@ interface FormErrors {
   username?: string;
   email?: string;
   password?: string;
+  role?: string;
   clinicId?: string;
   branchId?: string;
   dentistId?: string;
@@ -70,6 +71,7 @@ interface FormErrors {
 const ROLE_SET = new Set(Object.values(UserRole));
 const STATUS_SET = new Set(Object.values(UserStatus));
 const PERMISSION_SET = new Set(Object.values(Permission));
+const SCOPED_ASSIGNABLE_ROLES: UserRole[] = [UserRole.DOCTOR, UserRole.ASSISTANT, UserRole.RECEPTIONIST];
 
 const emptyForm = (): FormState => ({
   username: '',
@@ -458,10 +460,13 @@ const UserManagementPage: React.FC = () => {
     if (formState.role === UserRole.DOCTOR && !formState.dentistId) {
       errors.dentistId = 'Doctor link is required';
     }
+    if (formState.role === UserRole.ADMIN && !(formMode === 'edit' && editingUser?.role === UserRole.ADMIN)) {
+      errors.role = 'ADMIN role is disabled here. Create a DOCTOR account, then grant ADMIN permissions.';
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formMode, formState]);
+  }, [editingUser?.role, formMode, formState]);
 
   const syncLocalUserStatus = useCallback((ids: string[], status: UserStatus): void => {
     const updatedAt = new Date().toISOString();
@@ -507,6 +512,9 @@ const UserManagementPage: React.FC = () => {
 
   const createUser = useCallback(async (): Promise<void> => {
     if (!supabase) throw new Error('Supabase client is not initialized');
+    if (formState.role === UserRole.ADMIN) {
+      throw new Error('ADMIN role is disabled in scoped user creation. Create DOCTOR and grant ADMIN permissions.');
+    }
 
     const isolated = createEphemeralSupabaseClient();
     if (!isolated) throw new Error('Failed to initialize isolated auth client');
@@ -746,6 +754,10 @@ const UserManagementPage: React.FC = () => {
   const panelClass = theme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-slate-200 text-slate-900';
   const textMuted = theme === 'dark' ? 'text-slate-400' : 'text-slate-600';
   const inputClass = theme === 'dark' ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900';
+  const formRoleOptions: UserRole[] =
+    formMode === 'edit' && editingUser?.role === UserRole.ADMIN
+      ? [UserRole.ADMIN]
+      : SCOPED_ASSIGNABLE_ROLES;
 
   const nonSelfVisibleIds = users.filter((row) => !isCurrentUserManagedUser(row)).map((row) => row.id);
   const allVisibleSelected = nonSelfVisibleIds.length > 0 && nonSelfVisibleIds.every((id) => selectedIds.includes(id));
@@ -1141,11 +1153,18 @@ const UserManagementPage: React.FC = () => {
                     className={`w-full rounded-lg border px-3 py-2.5 text-sm ${inputClass}`}
                     disabled={formMode === 'edit' && editingUser?.role === UserRole.ADMIN}
                   >
-                    <option value={UserRole.ADMIN} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>ADMIN</option>
-                    <option value={UserRole.DOCTOR} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>DOCTOR</option>
-                    <option value={UserRole.ASSISTANT} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>ASSISTANT</option>
-                    <option value={UserRole.RECEPTIONIST} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>RECEPTIONIST</option>
+                    {formRoleOptions.map((role) => (
+                      <option key={role} value={role} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
+                        {role}
+                      </option>
+                    ))}
                   </select>
+                  {formErrors.role && <p className="mt-1 text-xs text-rose-500">{formErrors.role}</p>}
+                  {formMode === 'create' && (
+                    <p className={`mt-1 text-xs ${textMuted}`}>
+                      For full admin access, create as DOCTOR then assign needed permissions.
+                    </p>
+                  )}
                 </div>
                 {formState.role === UserRole.DOCTOR && (
                   <div>

@@ -177,6 +177,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
   const { toggleTheme, isDark } = useTheme();
   const { checkPermission, isAdmin: permIsAdmin } = usePermissions(userProfile);
   const isAdmin = permIsAdmin || authIsAdmin;
+  const isPlatformOwner = String(userProfile?.email || user?.email || '').trim().toLowerCase() === 'dralafandy@gmail.com';
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<SidebarGroupId>>(() => {
@@ -238,8 +239,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
       { id: 'about', label: t('sidebar.about'), icon: AboutIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: UserManagementIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
       { id: 'clinicManagement', label: t('sidebar.clinicManagement'), icon: BuildingIcon, permission: Permission.SETTINGS_EDIT, adminOnly: false },
-      { id: 'subscriptionOverview', label: t('sidebar.subscriptionOverview'), icon: CardIcon, permission: null, adminOnly: true },
     ];
+
+    if (isPlatformOwner) {
+      baseItems.push({ id: 'subscriptionOverview', label: t('sidebar.subscriptionOverview'), icon: CardIcon, permission: null, adminOnly: false });
+    }
 
     return baseItems.filter((item) => {
       if (item.adminOnly) {
@@ -252,7 +256,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, clinicDa
 
       return checkPermission(item.permission);
     });
-  }, [checkPermission, isAdmin, t]);
+  }, [checkPermission, isAdmin, isPlatformOwner, t]);
 
   const groups = useMemo(() => buildSidebarGroups(navItems, t), [navItems, t]);
   const pendingReservationsBadgeLabel = pendingReservationsCount > 99 ? '99+' : String(pendingReservationsCount);

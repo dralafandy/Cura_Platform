@@ -50,14 +50,16 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ clinicData, setCurr
         console.log('Loading bell position:', savedPosition);
         if (savedPosition) {
             try {
-                const parsed = JSON.parse(savedPosition);
+                const parsed = savedPosition.trim().startsWith('{')
+                    ? JSON.parse(savedPosition)
+                    : null;
                 console.log('Parsed position:', parsed);
                 // Validate position is within viewport bounds
                 const maxX = window.innerWidth - 60;
                 const maxY = window.innerHeight - 60;
                 const validPosition = {
-                    x: Math.max(20, Math.min(parsed.x || window.innerWidth - 100, maxX)),
-                    y: Math.max(20, Math.min(parsed.y || window.innerHeight - 100, maxY))
+                    x: Math.max(20, Math.min(parsed?.x || window.innerWidth - 100, maxX)),
+                    y: Math.max(20, Math.min(parsed?.y || window.innerHeight - 100, maxY))
                 };
                 console.log('Setting valid position:', validPosition);
                 setPosition(validPosition);

@@ -167,7 +167,8 @@ type NavItem = {
 
 const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView, isOpen, onClose, clinicData, pendingReservationsCount = 0 }) => {
   const { t, locale } = useI18n();
-  const { userProfile, isAdmin, logout } = useAuth();
+  const { user, userProfile, isAdmin, logout } = useAuth();
+  const isPlatformOwner = String(userProfile?.email || user?.email || '').trim().toLowerCase() === 'dralafandy@gmail.com';
   const { toggleTheme, isDark } = useTheme();
   const { checkPermission } = usePermissions(userProfile);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -219,15 +220,18 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ currentView, setCurrentView
       { id: 'about', label: t('sidebar.about'), icon: DocumentIcon, permission: null, adminOnly: false },
       { id: 'userManagement', label: t('sidebar.userManagement'), icon: GroupIcon, permission: Permission.USER_MANAGEMENT_VIEW, adminOnly: false },
       { id: 'clinicManagement', label: t('sidebar.clinicManagement'), icon: BuildingIcon, permission: Permission.SETTINGS_EDIT, adminOnly: false },
-      { id: 'subscriptionOverview', label: t('sidebar.subscriptionOverview'), icon: CardIcon, permission: null, adminOnly: true },
     ];
+
+    if (isPlatformOwner) {
+      baseItems.push({ id: 'subscriptionOverview', label: t('sidebar.subscriptionOverview'), icon: CardIcon, permission: null, adminOnly: false });
+    }
 
     return baseItems.filter((item) => {
       if (item.adminOnly) return isAdmin;
       if (!item.permission) return true;
       return checkPermission(item.permission);
     });
-  }, [checkPermission, isAdmin, t]);
+  }, [checkPermission, isAdmin, isPlatformOwner, t]);
 
   const groups = useMemo(() => buildSidebarGroups(navItems, t), [navItems, t]);
   const pinnedNavItems = useMemo(() => navItems.filter((item) => pinnedItems.has(item.id)), [navItems, pinnedItems]);

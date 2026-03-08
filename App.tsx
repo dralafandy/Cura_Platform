@@ -58,7 +58,8 @@ const AppContent: React.FC = () => {
   const [pendingReservationsCount, setPendingReservationsCount] = useState(0);
   const clinicData = useClinicData();
   const { t, direction, locale } = useI18n();
-  const { isLoading: authLoading, user, isAdmin, currentClinic, currentBranch } = useAuth();
+  const { isLoading: authLoading, user, currentClinic, currentBranch } = useAuth();
+  const isPlatformOwner = String(user?.email || '').trim().toLowerCase() === 'dralafandy@gmail.com';
   
   // Use new RBAC system for permission checking
   const { hasPermission, isReady } = useRBAC();
@@ -215,14 +216,14 @@ const AppContent: React.FC = () => {
           <ClinicManagementPage />
         ) : <AccessDenied />;
       case 'subscriptionOverview':
-        return isAdmin ? (
+        return isPlatformOwner ? (
           <SubscriptionOverviewPage />
         ) : <AccessDenied />;
 
       default:
         return <Dashboard clinicData={clinicData} setCurrentView={setCurrentView} />;
     }
-  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user, isAdmin]);
+  }, [currentView, clinicData, setCurrentView, selectedPatientId, selectedDoctorId, hasPermission, user, isPlatformOwner]);
   
   const viewTitles: Record<View, string> = {
       dashboard: t('sidebar.dashboard'),

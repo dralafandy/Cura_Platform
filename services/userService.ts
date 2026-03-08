@@ -202,6 +202,12 @@ export const createUser = async (request: CreateUserRequest): Promise<UserServic
     if (!supabase) {
       return { success: false, error: 'Supabase client not initialized' };
     }
+    if (request.role === UserRole.ADMIN) {
+      return {
+        success: false,
+        error: 'ADMIN role cannot be assigned in scoped create flow. Create DOCTOR and grant ADMIN permissions.',
+      };
+    }
 
     const { clinicId: scopedClinicId, branchId: scopedBranchId } = getCurrentClinicScope();
     const clinicId = request.clinicId || scopedClinicId;
@@ -286,6 +292,12 @@ export const updateUser = async (request: UpdateUserRequest): Promise<UserServic
       const { clinicId, branchId } = getCurrentClinicScope();
       if (!clinicId) {
         return { success: false, error: 'Clinic scope is required to update another user' };
+      }
+      if (request.role === UserRole.ADMIN) {
+        return {
+          success: false,
+          error: 'ADMIN role cannot be assigned in scoped update flow. Use permissions for elevated access.',
+        };
       }
 
       const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_profile_for_scope', {
@@ -442,6 +454,12 @@ export const updateUserRole = async (id: string, role: UserRole): Promise<UserSe
       const { clinicId, branchId } = getCurrentClinicScope();
       if (!clinicId) {
         return { success: false, error: 'Clinic scope is required to update another user role' };
+      }
+      if (role === UserRole.ADMIN) {
+        return {
+          success: false,
+          error: 'ADMIN role cannot be assigned in scoped role updates. Use permissions for elevated access.',
+        };
       }
 
       const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_role_for_scope', {

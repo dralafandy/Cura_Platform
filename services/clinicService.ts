@@ -402,10 +402,13 @@ export const getClinicSettings = async (
       query = query.is('branch_id', null);
     }
 
-    const { data, error } = await query.single();
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       return { success: false, error: error.message };
+    }
+    if (!data) {
+      return { success: false, error: 'Clinic settings not found' };
     }
 
     const settings: ClinicSettings = {

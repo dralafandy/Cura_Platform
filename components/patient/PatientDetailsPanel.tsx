@@ -28,7 +28,6 @@ const normalizeInsuranceCompanyName = (insuranceCompany: any): string => {
     }
     return insuranceCompany?.name?.trim() || '';
 };
-
 const buildFallbackInsuranceLink = (patient: Patient) => {
     const fallbackCompanyName = patient.insuranceProvider?.trim();
     if (!fallbackCompanyName) {
@@ -664,12 +663,12 @@ export const PatientDetailsPanel: React.FC<{
                                             <InfoCard 
                                                 icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" /></svg>}
                                                 label="نسبة التغطية"
-                                                value={`${patientInsuranceLink.coverage_percentage}%`}
+                                                value={`${patientInsuranceLink?.coverage_percentage ?? 0}%`}
                                             />
                                             <InfoCard 
                                                 icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
                                                 label="تاريخ الانتهاء"
-                                                value={patientInsuranceLink.expiry_date ? new Date(patientInsuranceLink.expiry_date).toLocaleDateString('ar-EG') : '-'}
+                                                value={patientInsuranceLink?.expiry_date ? new Date(patientInsuranceLink.expiry_date).toLocaleDateString('ar-EG') : '-'}
                                             />
                                         </div>
                                         <div className="flex justify-end pt-2">
@@ -1094,3 +1093,4 @@ export const PatientDetailsPanel: React.FC<{
         </div>
     );
 };
+

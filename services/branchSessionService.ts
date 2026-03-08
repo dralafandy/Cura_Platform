@@ -10,6 +10,19 @@ const normalizeBranchId = (value?: string | null): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const isMissingRpcError = (error: any, functionName: string): boolean => {
+  if (!error) return false;
+  const code = String(error.code || '').toUpperCase();
+  const message = String(error.message || '').toLowerCase();
+  const target = functionName.toLowerCase();
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    message.includes('could not find the function') ||
+    (message.includes('function') && message.includes(target) && message.includes('does not exist'))
+  );
+};
+
 export const applyBranchSession = async (branchId?: string | null, force = false): Promise<void> => {
   if (!supabase) return;
 
@@ -27,8 +40,7 @@ export const applyBranchSession = async (branchId?: string | null, force = false
   if (!normalized) {
     const { error } = await supabase.rpc('clear_current_branch');
     if (error) {
-      const message = String(error.message || '');
-      if (message.includes('Could not find the function public.clear_current_branch')) {
+      if (isMissingRpcError(error, 'clear_current_branch')) {
         branchSessionRpcState = 'missing';
         cachedBranchId = null;
         if (!warnedMissingRpc) {
@@ -52,8 +64,7 @@ export const applyBranchSession = async (branchId?: string | null, force = false
     return;
   }
 
-  const preferredMessage = String(preferred.error.message || '');
-  const preferredMissing = preferredMessage.includes('Could not find the function public.set_current_branch_uuid');
+  const preferredMissing = isMissingRpcError(preferred.error, 'set_current_branch_uuid');
   if (!preferredMissing) {
     throw new Error(`Failed to set branch session: ${preferred.error.message}`);
   }
@@ -61,11 +72,8 @@ export const applyBranchSession = async (branchId?: string | null, force = false
   // Backward-compatible fallback for environments without migration 040.
   const fallback = await supabase.rpc('set_current_branch', { bid: normalized });
   if (fallback.error) {
-    const message = String(fallback.error.message || '');
-    if (
-      message.includes('Could not find the function public.set_current_branch') ||
-      message.includes('Could not choose the best candidate function between')
-    ) {
+    const message = String(fallback.error.message || '').toLowerCase();
+    if (isMissingRpcError(fallback.error, 'set_current_branch') || message.includes('could not choose the best candidate function between')) {
       branchSessionRpcState = 'missing';
       cachedBranchId = normalized;
       if (!warnedMissingRpc) {

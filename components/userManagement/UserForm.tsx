@@ -16,7 +16,6 @@ import {
   getAllRoles,
   getRoleColor 
 } from '../../utils/permissions';
-import { hashPassword } from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
 
 // ============================================================================
@@ -46,6 +45,7 @@ interface FormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
+  role?: string;
   branchId?: string;
 }
 
@@ -77,6 +77,9 @@ export const UserForm: React.FC<UserFormProps> = ({
 }) => {
   const isEditing = !!user;
   const { accessibleClinics, currentClinic, currentBranch } = useAuth();
+  const roleOptions = (isEditing && user?.role === UserRole.ADMIN)
+    ? [UserRole.ADMIN]
+    : getAllRoles().filter((role) => role !== UserRole.ADMIN);
 
   const clinicOptions = Array.from(
     new Map(
@@ -172,10 +175,13 @@ export const UserForm: React.FC<UserFormProps> = ({
         newErrors.branchId = 'Branch selection is required';
       }
     }
+    if (formData.role === UserRole.ADMIN && !(isEditing && user?.role === UserRole.ADMIN)) {
+      newErrors.role = 'ADMIN role is disabled. Create a DOCTOR user and grant ADMIN permissions.';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, isEditing]);
+  }, [formData, isEditing, user?.role]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -366,12 +372,20 @@ export const UserForm: React.FC<UserFormProps> = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as UserRole }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                {getAllRoles().map(role => (
+                {roleOptions.map(role => (
                   <option key={role} value={role}>
                     {getRoleDisplayName(role)}
                   </option>
                 ))}
               </select>
+              {errors.role && (
+                <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+              )}
+              {!isEditing && (
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                  For full admin access, create as Doctor then assign needed permissions.
+                </p>
+              )}
             </div>
 
             <div>

@@ -176,6 +176,34 @@ const ClinicManagementPage: React.FC = () => {
     addNotification({ message: details, type: NotificationType.ERROR });
   };
 
+  const checkTenantLimit = useCallback(
+    async (resource: 'clinics' | 'branches') => {
+      if (!supabase || !userTenantId) {
+        return { allowed: true as const, message: null as string | null };
+      }
+
+      const { data, error } = await supabase.rpc('check_limits', {
+        p_tenant_id: userTenantId,
+        p_resource: resource,
+      });
+
+      if (error) {
+        return { allowed: true as const, message: error.message || null };
+      }
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row) {
+        return { allowed: true as const, message: null as string | null };
+      }
+
+      return {
+        allowed: row.allowed !== false,
+        message: row.message ? String(row.message) : null,
+      };
+    },
+    [userTenantId],
+  );
+
   const detectAccessTable = useCallback(async (): Promise<AccessTable> => {
     if (!supabase) return 'user_clinics';
 
@@ -560,6 +588,12 @@ const ClinicManagementPage: React.FC = () => {
       return;
     }
 
+    const clinicLimit = await checkTenantLimit('clinics');
+    if (!clinicLimit.allowed) {
+      notifyError(t('clinicManagement.feedback.createClinicBlocked'), clinicLimit.message || 'Clinic limit reached');
+      return;
+    }
+
     setSaving(true);
 
     const basePayload: Record<string, unknown> = {
@@ -700,6 +734,12 @@ const ClinicManagementPage: React.FC = () => {
     }
     if (!branchForm.name.trim()) {
       addNotification({ message: t('clinicManagement.feedback.branchNameRequired'), type: NotificationType.WARNING });
+      return;
+    }
+
+    const branchLimit = await checkTenantLimit('branches');
+    if (!branchLimit.allowed) {
+      notifyError(t('clinicManagement.feedback.createBranchFailed'), branchLimit.message || 'Branch limit reached');
       return;
     }
 
